@@ -126,89 +126,274 @@ def process_csv_to_db(csv_path: Path) -> int:
     return inserted
 
 
-def compute_session_agg():
-    """Return list of dict session aggregates (date-level volume & duration)."""
+def progressive_overload_data():
+    """Get strength progression for top exercises over time."""
     with get_conn() as conn:
-        cur = conn.execute(
+        # Get top 6 exercises by total volume
+        top_exercises_cur = conn.execute(
             """
-            SELECT date(substr(date,1,10)) as session_date,
-                   SUM(COALESCE(weight,0) * COALESCE(reps,0)) as volume,
-                   AVG(duration_min) as duration
+            SELECT exercise
             FROM sets
-            GROUP BY session_date
-            ORDER BY session_date
-            """
-        )
-        return [dict(r) for r in cur.fetchall()]
-
-
-def top_exercises(limit: int = 15):
-    with get_conn() as conn:
-        cur = conn.execute(
-            """
-            SELECT exercise,
-                   SUM(COALESCE(weight,0) * COALESCE(reps,0)) AS volume
-            FROM sets
+            WHERE weight IS NOT NULL
             GROUP BY exercise
-            ORDER BY volume DESC
-            LIMIT ?
-            """,
-            (limit,),
+            ORDER BY SUM(COALESCE(weight,0) * COALESCE(reps,0)) DESC
+            LIMIT 6
+            """
         )
-        return [dict(r) for r in cur.fetchall()]
+        top_exercises = [row[0] for row in top_exercises_cur.fetchall()]
+        
+        result = {}
+        for exercise in top_exercises:
+            cur = conn.execute(
+                """
+                SELECT date(substr(date,1,10)) as workout_date,
+                       MAX(weight) as max_weight,
+                       MAX(COALESCE(weight,0) * COALESCE(reps,0)) as best_set_volume,
+                       -- Estimate 1RM using Epley formula: weight * (1 + reps/30)
+                       MAX(COALESCE(weight,0) * (1 + COALESCE(reps,0)/30.0)) as estimated_1rm
+                FROM sets
+                WHERE exercise = ? AND weight IS NOT NULL
+                GROUP BY workout_date
+                ORDER BY workout_date
+                """,
+                (exercise,)
+            )
+            
+            data = []
+            for row in cur.fetchall():
+                data.append({
+                    "date": row[0],
+                    "max_weight": row[1],
+                    "best_set_volume": row[2],
+                    "estimated_1rm": round(row[3], 1)
+                })
+            result[exercise] = data
+        
+        return result
 
 
-def prs(exercise: str):
+def volume_progression():
+    """Get training volume progression over time with weekly rolling averages."""
     with get_conn() as conn:
         cur = conn.execute(
             """
-            SELECT date, weight, reps
+            SELECT date(substr(date,1,10)) as workout_date,
+                   SUM(COALESCE(weight,0) * COALESCE(reps,0)) as total_volume,
+                   COUNT(DISTINCT exercise) as exercises_count,
+                   AVG(duration_min) as avg_duration
             FROM sets
-            WHERE exercise = ? AND weight IS NOT NULL
-            ORDER BY weight DESC, reps DESC
-            LIMIT 1
-            """,
-            (exercise,),
+            GROUP BY workout_date
+            ORDER BY workout_date
+            """
         )
-        best = cur.fetchone()
-        if not best:
-            return {}
+        
+        data = []
+        volumes = []
+        for row in cur.fetchall():
+            volume = row[1]
+            volumes.append(volume)
+            
+            # Calculate 7-day rolling average
+            rolling_avg = sum(volumes[-7:]) / min(len(volumes), 7)
+            
+            data.append({
+                "date": row[0],
+                "volume": volume,
+                "volume_7day_avg": round(rolling_avg, 1),
+                "exercises_count": row[2],
+                "duration": row[3]
+            })
+        
+        return data
+
+
+def personal_records_timeline():
+    """Get timeline of personal records (new max weights achieved)."""
+    with get_conn() as conn:
+        cur = conn.execute(
+            """
+            WITH ranked_sets AS (
+                SELECT exercise, date, weight, reps,
+                       LAG(weight) OVER (PARTITION BY exercise ORDER BY date, weight) as prev_weight
+                FROM sets
+                WHERE weight IS NOT NULL
+                ORDER BY exercise, date, weight
+            )
+            SELECT exercise, 
+                   date(substr(date,1,10)) as pr_date,
+                   weight,
+                   reps,
+                   COALESCE(weight,0) * (1 + COALESCE(reps,0)/30.0) as estimated_1rm
+            FROM ranked_sets
+            WHERE prev_weight IS NULL OR weight > prev_weight
+            ORDER BY date DESC
+            """
+        )
+        
+        return [{
+            "exercise": row[0],
+            "date": row[1], 
+            "weight": row[2],
+            "reps": row[3],
+            "estimated_1rm": round(row[4], 1)
+        } for row in cur.fetchall()]
+
+
+def training_consistency():
+    """Get training frequency and consistency metrics."""
+    with get_conn() as conn:
+        # Get workout frequency by week
+        cur = conn.execute(
+            """
+            SELECT strftime('%Y-W%W', date) as week,
+                   COUNT(DISTINCT date(substr(date,1,10))) as workouts_per_week,
+                   SUM(COALESCE(weight,0) * COALESCE(reps,0)) as weekly_volume,
+                   AVG(duration_min) as avg_duration
+            FROM sets
+            GROUP BY week
+            ORDER BY week
+            """
+        )
+        
+        weekly_data = []
+        for row in cur.fetchall():
+            weekly_data.append({
+                "week": row[0],
+                "workouts": row[1],
+                "volume": row[2],
+                "avg_duration": row[3]
+            })
+        
+        # Get monthly summary
+        cur = conn.execute(
+            """
+            SELECT strftime('%Y-%m', date) as month,
+                   COUNT(DISTINCT date(substr(date,1,10))) as workouts_per_month,
+                   SUM(COALESCE(weight,0) * COALESCE(reps,0)) as monthly_volume,
+                   COUNT(DISTINCT exercise) as unique_exercises
+            FROM sets
+            GROUP BY month
+            ORDER BY month
+            """
+        )
+        
+        monthly_data = []
+        for row in cur.fetchall():
+            monthly_data.append({
+                "month": row[0],
+                "workouts": row[1],
+                "volume": row[2], 
+                "unique_exercises": row[3]
+            })
+        
         return {
-            "exercise": exercise,
-            "max_weight": best[1],
-            "best_set": {"date": best[0][:10], "weight": best[1], "reps": best[2]},
+            "weekly": weekly_data,
+            "monthly": monthly_data
         }
 
 
-def tuesday_strength():
+def strength_balance():
+    """Analyze strength balance across muscle groups/movement patterns."""
     with get_conn() as conn:
-        cur = conn.execute(
-            """
-            SELECT substr(date,1,10) as d, exercise, MAX(weight) as max_weight
-            FROM sets
-            WHERE weight IS NOT NULL AND strftime('%w', date) = '2'  -- Tuesday (0=Sun)
-            GROUP BY d, exercise
-            ORDER BY d, exercise
-            """
-        )
-        return [ {"date": row[0], "exercise": row[1], "max_weight": row[2]} for row in cur.fetchall() ]
+        # Categorize exercises by movement pattern
+        movement_patterns = {
+            'Push': ['Chest Press', 'Shoulder Press', 'Push'],
+            'Pull': ['Seated Row', 'Lat Pulldown', 'Bent Over Row', 'Pull'],
+            'Squat': ['Squat', 'Leg Press'],
+            'Deadlift': ['Deadlift', 'Romanian Deadlift'],
+            'Accessory': ['Bicep Curl', 'Pec Deck', 'Leg Extension', 'Glute Kickback']
+        }
+        
+        result = {}
+        for pattern, keywords in movement_patterns.items():
+            like_conditions = ' OR '.join([f"exercise LIKE '%{keyword}%'" for keyword in keywords])
+            
+            cur = conn.execute(f"""
+                SELECT date(substr(date,1,10)) as workout_date,
+                       MAX(weight) as max_weight,
+                       SUM(COALESCE(weight,0) * COALESCE(reps,0)) as total_volume,
+                       MAX(COALESCE(weight,0) * (1 + COALESCE(reps,0)/30.0)) as best_estimated_1rm
+                FROM sets
+                WHERE ({like_conditions}) AND weight IS NOT NULL
+                GROUP BY workout_date
+                HAVING COUNT(*) > 0
+                ORDER BY workout_date
+            """)
+            
+            pattern_data = []
+            for row in cur.fetchall():
+                pattern_data.append({
+                    "date": row[0],
+                    "max_weight": row[1],
+                    "volume": row[2],
+                    "estimated_1rm": round(row[3], 1)
+                })
+            
+            if pattern_data:  # Only include if we have data
+                result[pattern] = pattern_data
+        
+        return result
 
 
-def exercise_progress(exercise: str):
+def exercise_analysis(exercise: str):
+    """Detailed analysis for a specific exercise."""
     with get_conn() as conn:
+        # Get all sets for this exercise with trend analysis
         cur = conn.execute(
             """
-            SELECT substr(date,1,10) as d,
-                   MAX(weight) as max_weight,
-                   MAX(COALESCE(weight,0) * COALESCE(reps,0)) as top_set_volume
+            SELECT date(substr(date,1,10)) as workout_date,
+                   weight, reps,
+                   COALESCE(weight,0) * COALESCE(reps,0) as volume,
+                   COALESCE(weight,0) * (1 + COALESCE(reps,0)/30.0) as estimated_1rm
             FROM sets
-            WHERE exercise = ?
-            GROUP BY d
-            ORDER BY d
+            WHERE exercise = ? AND weight IS NOT NULL
+            ORDER BY date, set_order
             """,
-            (exercise,),
+            (exercise,)
         )
-        return [ {"date": r[0], "max_weight": r[1], "top_set_volume": r[2]} for r in cur.fetchall() ]
+        
+        all_sets = []
+        for row in cur.fetchall():
+            all_sets.append({
+                "date": row[0],
+                "weight": row[1],
+                "reps": row[2], 
+                "volume": row[3],
+                "estimated_1rm": round(row[4], 1)
+            })
+        
+        # Get session-level summary
+        cur = conn.execute(
+            """
+            SELECT date(substr(date,1,10)) as workout_date,
+                   MAX(weight) as max_weight,
+                   SUM(COALESCE(weight,0) * COALESCE(reps,0)) as session_volume,
+                   COUNT(*) as sets_count,
+                   AVG(reps) as avg_reps,
+                   MAX(COALESCE(weight,0) * (1 + COALESCE(reps,0)/30.0)) as best_estimated_1rm
+            FROM sets
+            WHERE exercise = ? AND weight IS NOT NULL
+            GROUP BY workout_date
+            ORDER BY workout_date
+            """,
+            (exercise,)
+        )
+        
+        session_summary = []
+        for row in cur.fetchall():
+            session_summary.append({
+                "date": row[0],
+                "max_weight": row[1],
+                "session_volume": row[2],
+                "sets_count": row[3],
+                "avg_reps": round(row[4], 1),
+                "estimated_1rm": round(row[5], 1)
+            })
+        
+        return {
+            "all_sets": all_sets,
+            "session_summary": session_summary
+        }
 
 
 def list_exercises():

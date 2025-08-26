@@ -16,11 +16,12 @@ from logging.handlers import RotatingFileHandler
 from .db import init_db, get_meta
 from .processing import (
     process_csv_to_db,
-    compute_session_agg,
-    top_exercises,
-    prs,
-    tuesday_strength,
-    exercise_progress,
+    progressive_overload_data,
+    volume_progression,
+    personal_records_timeline,
+    training_consistency,
+    strength_balance,
+    exercise_analysis,
     list_exercises,
 )
 
@@ -120,29 +121,40 @@ async def ingest(request: Request, token: str = Query(""), file: UploadFile | No
     return {"stored": stored_name, "rows": inserted}
 
 
-@app.get("/api/sessions")
-async def api_sessions():
-    return compute_session_agg()
+@app.get("/api/progressive-overload")
+async def api_progressive_overload():
+    """Get strength progression data for top exercises."""
+    return progressive_overload_data()
 
 
-@app.get("/api/top-exercises")
-async def api_top_exercises(limit: int = 15):
-    return top_exercises(limit=limit)
+@app.get("/api/volume-progression") 
+async def api_volume_progression():
+    """Get training volume progression over time."""
+    return volume_progression()
 
 
-@app.get("/api/prs")
-async def api_prs(exercise: str):
-    return prs(exercise)
+@app.get("/api/personal-records")
+async def api_personal_records():
+    """Get timeline of personal records."""
+    return personal_records_timeline()
 
 
-@app.get("/api/tuesday-strength")
-async def api_tuesday_strength():
-    return tuesday_strength()
+@app.get("/api/training-consistency")
+async def api_training_consistency():
+    """Get training frequency and consistency metrics."""
+    return training_consistency()
 
 
-@app.get("/api/exercise-progress")
-async def api_exercise_progress(exercise: str):
-    return exercise_progress(exercise)
+@app.get("/api/strength-balance")
+async def api_strength_balance():
+    """Get strength balance across movement patterns."""
+    return strength_balance()
+
+
+@app.get("/api/exercise-analysis")
+async def api_exercise_analysis(exercise: str):
+    """Get detailed analysis for a specific exercise."""
+    return exercise_analysis(exercise)
 
 
 @app.get("/api/exercises")

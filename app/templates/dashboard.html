@@ -2,34 +2,159 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Lifting Dashboard</title>
+  <title>Lifting Progress Dashboard</title>
   <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <style>
-    body { font-family: Arial, sans-serif; margin: 1rem; }
-    h1 { font-size: 1.4rem; }
-    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; }
-    .full { grid-column: 1 / -1; }
-    #top-bar { display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; }
-    select { padding: 0.25rem; }
-    footer { margin-top: 2rem; font-size: 0.8rem; color: #666; }
-    @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+    body { 
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+      margin: 0; 
+      padding: 1rem; 
+      background-color: #f5f5f5;
+    }
+    h1 { 
+      font-size: 2rem; 
+      color: #333; 
+      text-align: center;
+      margin-bottom: 0.5rem;
+    }
+    .subtitle {
+      text-align: center;
+      color: #666;
+      margin-bottom: 2rem;
+      font-size: 1.1rem;
+    }
+    .dashboard { 
+      display: grid; 
+      grid-template-columns: repeat(auto-fit, minmax(600px, 1fr)); 
+      gap: 1.5rem;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    .chart-container {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+    .chart-title {
+      background: #2c3e50;
+      color: white;
+      padding: 1rem;
+      margin: 0;
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+    .chart-content {
+      padding: 1rem;
+    }
+    .full-width { 
+      grid-column: 1 / -1; 
+    }
+    .half-width {
+      grid-column: span 1;
+    }
+    #top-bar { 
+      display: flex; 
+      gap: 1rem; 
+      align-items: center; 
+      justify-content: center;
+      flex-wrap: wrap; 
+      margin-bottom: 2rem;
+      background: white;
+      padding: 1rem;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    select { 
+      padding: 0.5rem; 
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 1rem;
+    }
+    #lastIngested {
+      color: #666;
+      font-size: 0.9rem;
+    }
+    footer { 
+      margin-top: 3rem; 
+      font-size: 0.9rem; 
+      color: #666; 
+      text-align: center;
+    }
+    @media (max-width: 1200px) { 
+      .dashboard { 
+        grid-template-columns: 1fr; 
+      }
+      .full-width, .half-width {
+        grid-column: 1;
+      }
+    }
   </style>
 </head>
 <body>
-  <h1>Lifting Dashboard</h1>
+  <h1>🏋️ Lifting Progress Dashboard</h1>
+  <div class="subtitle">Track your strength gains and training consistency</div>
+  
   <div id="top-bar">
-    <label>Exercise: <select id="exerciseSelect"></select></label>
+    <label>Detailed Exercise Analysis: <select id="exerciseSelect"></select></label>
     <span id="lastIngested"></span>
   </div>
-  <div class="grid">
-    <div id="volumeChart" class="full" style="height:320px;"></div>
-    <div id="durationChart" style="height:300px;"></div>
-    <div id="topExercisesChart" style="height:300px;"></div>
-    <div id="tuesdayStrengthChart" class="full" style="height:340px;"></div>
-    <div id="exerciseProgressChart" class="full" style="height:340px;"></div>
+
+  <div class="dashboard">
+    <!-- Progressive Overload - Most important chart -->
+    <div class="chart-container full-width">
+      <h2 class="chart-title">💪 Progressive Overload - Strength Gains Over Time</h2>
+      <div class="chart-content">
+        <div id="progressiveOverloadChart" style="height:400px;"></div>
+      </div>
+    </div>
+
+    <!-- Volume Progression -->
+    <div class="chart-container half-width">
+      <h2 class="chart-title">📈 Training Volume Progression</h2>
+      <div class="chart-content">
+        <div id="volumeProgressionChart" style="height:350px;"></div>
+      </div>
+    </div>
+
+    <!-- Personal Records Timeline -->
+    <div class="chart-container half-width">
+      <h2 class="chart-title">🏆 Personal Records Timeline</h2>
+      <div class="chart-content">
+        <div id="personalRecordsChart" style="height:350px;"></div>
+      </div>
+    </div>
+
+    <!-- Training Consistency -->
+    <div class="chart-container half-width">
+      <h2 class="chart-title">📅 Training Consistency</h2>
+      <div class="chart-content">
+        <div id="trainingConsistencyChart" style="height:300px;"></div>
+      </div>
+    </div>
+
+    <!-- Strength Balance -->
+    <div class="chart-container half-width">
+      <h2 class="chart-title">⚖️ Strength Balance</h2>
+      <div class="chart-content">
+        <div id="strengthBalanceChart" style="height:300px;"></div>
+      </div>
+    </div>
+
+    <!-- Exercise Analysis (selected exercise) -->
+    <div class="chart-container full-width">
+      <h2 class="chart-title">🔍 Exercise Deep Dive</h2>
+      <div class="chart-content">
+        <div id="exerciseAnalysisChart" style="height:400px;"></div>
+      </div>
+    </div>
   </div>
-  <footer>Self-hosted lifting analytics. Data stays local.</footer>
+
+  <footer>
+    <p>Self-hosted lifting analytics. Your data stays private and secure.</p>
+  </footer>
+  
   <script src="/static/main.js"></script>
 </body>
 </html>
