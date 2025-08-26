@@ -1,0 +1,59 @@
+# Python bytecode / cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Logs
+logs/*.log
+logs/*.log.*
+
+# Environment & secrets
+.env
+.env.*
+!.env.example
+
+# Data artifacts (keep schema code, ignore db + uploaded raw CSVs)
+data/lifting.db
+data/uploads/
+
+# Jupyter / notebooks
+.ipynb_checkpoints/
+
+# Coverage / testing
+.coverage
+coverage.xml
+htmlcov/
+.pytest_cache/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+
+# Cache
+*.cache
+
+# Node (if frontend experiments come later)
+node_modules/
+
+# Backup / temp
+*.swp
+*.tmp
+~$*
+
+.venv/
+out/

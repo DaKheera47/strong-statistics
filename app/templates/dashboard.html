@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Lifting Dashboard</title>
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    body { font-family: Arial, sans-serif; margin: 1rem; }
+    h1 { font-size: 1.4rem; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; }
+    .full { grid-column: 1 / -1; }
+    #top-bar { display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; }
+    select { padding: 0.25rem; }
+    footer { margin-top: 2rem; font-size: 0.8rem; color: #666; }
+    @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <h1>Lifting Dashboard</h1>
+  <div id="top-bar">
+    <label>Exercise: <select id="exerciseSelect"></select></label>
+    <span id="lastIngested"></span>
+  </div>
+  <div class="grid">
+    <div id="volumeChart" class="full" style="height:320px;"></div>
+    <div id="durationChart" style="height:300px;"></div>
+    <div id="topExercisesChart" style="height:300px;"></div>
+    <div id="tuesdayStrengthChart" class="full" style="height:340px;"></div>
+    <div id="exerciseProgressChart" class="full" style="height:340px;"></div>
+  </div>
+  <footer>Self-hosted lifting analytics. Data stays local.</footer>
+  <script src="/static/main.js"></script>
+</body>
+</html>

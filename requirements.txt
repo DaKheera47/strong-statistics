@@ -1,0 +1,8 @@
+fastapi
+uvicorn[standard]
+python-multipart
+jinja2
+pydantic
+pandas
+plotly
+python-dotenv
