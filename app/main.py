@@ -64,7 +64,7 @@ async def dashboard(request: Request):
 
 
 @app.post("/ingest")
-async def ingest(request: Request, token: str = Query(""), file: UploadFile = File(...)):
+async def ingest(request: Request, token: str = Query(""), file: UploadFile | None = File(None)):
     """Ingest a Strong export CSV.
 
     Auth: token provided either as query param (?token=...) or X-Token header.
@@ -79,12 +79,23 @@ async def ingest(request: Request, token: str = Query(""), file: UploadFile = Fi
     if provided != INGEST_TOKEN:
         raise HTTPException(status_code=401, detail="invalid token")
 
-    content_type = file.content_type or ""
-    if content_type not in ("text/csv", "application/vnd.ms-excel", "application/octet-stream"):
-        raise HTTPException(status_code=400, detail=f"unsupported content type: {content_type}")
+    # Determine content type & obtain raw bytes (multipart or raw body)
+    if file is not None:
+        content_type = file.content_type or ""
+        raw = await file.read()
+        mode = "multipart"
+    else:
+        content_type = request.headers.get("content-type", "")
+        raw = await request.body()
+        mode = "raw"
 
-    # Size guard (stream to temp file while counting)
-    raw = await file.read()
+    if content_type not in ("text/csv", "application/vnd.ms-excel", "application/octet-stream"):
+        raise HTTPException(status_code=400, detail=f"unsupported content type: {content_type} (mode={mode})")
+
+    if not raw:
+        raise HTTPException(status_code=400, detail="empty body")
+
+    # Size guard
     size_mb = len(raw) / (1024 * 1024)
     if size_mb > MAX_UPLOAD_MB:
         raise HTTPException(status_code=400, detail="file too large")
@@ -105,7 +116,7 @@ async def ingest(request: Request, token: str = Query(""), file: UploadFile = Fi
         logger.exception("failed ingest for %s", stored_name)
         raise HTTPException(status_code=500, detail=str(e))
 
-    logger.info("ingested file=%s inserted_rows=%s", stored_name, inserted)
+    logger.info("ingested file=%s inserted_rows=%s mode=%s size_bytes=%s", stored_name, inserted, mode, len(raw))
     return {"stored": stored_name, "rows": inserted}
 
 
@@ -144,3 +155,57 @@ async def health():
     payload = {"ok": True, "time": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"), "last_ingested_at": get_meta("last_ingested_at")}
     # Add diagnostic header so we can tell if Cloudflare is reaching origin.
     return JSONResponse(payload, headers={"X-Lifting-Origin": "fastapi"})
+
+
+@app.post("/debug/inspect")
+async def debug_inspect(request: Request, token: str = Query("")):
+    """Return detailed info about an incoming upload (diagnostic only).
+
+    Protected by the same token as ingest. DO NOT leave enabled in production long-term.
+    Reports headers, query params, limited body sample, and multipart form structure.
+    """
+    provided = token or request.headers.get("X-Token", "")
+    if not INGEST_TOKEN:
+        raise HTTPException(status_code=500, detail="server token not configured")
+    if provided != INGEST_TOKEN:
+        raise HTTPException(status_code=401, detail="invalid token")
+
+    # Raw body (may be large) – cap sample size
+    body_bytes = await request.body()
+    body_sample_max = 1024
+    body_sample = body_bytes[:body_sample_max]
+    body_truncated = len(body_bytes) > body_sample_max
+
+    info = {
+        "method": request.method,
+        "url": str(request.url),
+        "query_params": dict(request.query_params),
+        "headers": {k: v for k, v in request.headers.items() if k.lower() not in {"authorization"}},
+        "content_type": request.headers.get("content-type"),
+        "raw_body_length": len(body_bytes),
+        "raw_body_sample_hex": body_sample.hex(),
+        "raw_body_sample_ascii": body_sample.decode(errors="replace"),
+        "raw_body_truncated": body_truncated,
+        "parsed_form": None,
+    }
+
+    # Try parse multipart/form-data
+    try:
+        form = await request.form()
+        form_dict = {}
+        for key, val in form.multi_items():  # preserves duplicates
+            if hasattr(val, "filename") and val.filename:
+                file_bytes = await val.read()
+                form_dict.setdefault(key, []).append({
+                    "filename": val.filename,
+                    "content_type": val.content_type,
+                    "size": len(file_bytes),
+                    "head_ascii": file_bytes[:200].decode(errors="replace"),
+                })
+            else:
+                form_dict.setdefault(key, []).append(str(val))
+        info["parsed_form"] = form_dict
+    except Exception as e:  # noqa: BLE001
+        info["form_error"] = str(e)
+
+    return JSONResponse(info)
