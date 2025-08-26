@@ -511,3 +511,15 @@ Notes
 
 The unique index prevents duplicate set insertion across repeated CSV uploads.
 `last_ingested_at` stored in `meta` table and surfaced on the dashboard.
+
+Rebuilding / Resetting the Database
+
+Use the helper script to wipe and optionally restore data from existing CSV uploads:
+
+```bash
+python scripts/rebuild_db.py              # backup then delete + recreate empty schema
+python scripts/rebuild_db.py --with-imports  # backup, recreate, re-ingest all CSVs in data/uploads/
+python scripts/rebuild_db.py --no-backup --with-imports  # destructive quick rebuild
+```
+
+Backups are stored in `data/backups/` named `lifting_YYYYMMDD_HHMMSS.db`.
