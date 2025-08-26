@@ -141,4 +141,6 @@ async def api_exercises():
 
 @app.get("/health")
 async def health():
-    return {"ok": True, "time": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"), "last_ingested_at": get_meta("last_ingested_at")}
+    payload = {"ok": True, "time": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"), "last_ingested_at": get_meta("last_ingested_at")}
+    # Add diagnostic header so we can tell if Cloudflare is reaching origin.
+    return JSONResponse(payload, headers={"X-Lifting-Origin": "fastapi"})

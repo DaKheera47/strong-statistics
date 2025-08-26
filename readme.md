@@ -245,7 +245,7 @@ TZ=Europe/London
 
 Run app:
 
-uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
+uvicorn app.main:app --host 127.0.0.1 --port 8069 --reload
 
 
 Visit http://localhost:8000.
@@ -494,8 +494,8 @@ uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 Test Ingest
 
 ```bash
-curl -F "file=@tests_sample.csv" "http://127.0.0.1:8000/ingest?token=$INGEST_TOKEN"
-curl http://127.0.0.1:8000/api/sessions
+curl -F "file=@tests_sample.csv" "http://127.0.0.1:8069/ingest?token=$INGEST_TOKEN"
+curl http://127.0.0.1:8069/api/sessions
 ```
 
 Open http://127.0.0.1:8000 in a browser to view charts.

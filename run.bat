@@ -1,7 +1,10 @@
 @echo off
 REM Lifting Pipeline launcher (development convenience)
-REM Usage: run.bat [port]
-REM Example: run.bat 8001
+REM Usage: run.bat [host] [port]
+REM Examples:
+REM   run.bat            -> 0.0.0.0:8069 (LAN accessible)
+REM   run.bat 127.0.0.1  -> 127.0.0.1:8069 (loopback only)
+REM   run.bat 0.0.0.0 9000 -> 0.0.0.0:9000
 
 setlocal ENABLEDELAYEDEXPANSION
 set BASE_DIR=%~dp0
@@ -23,9 +26,15 @@ if errorlevel 1 (
   pip install -q -r requirements.txt || goto :fail
 )
 
-set HOST=127.0.0.1
-set PORT=8000
-if not "%1"=="" set PORT=%1
+REM Determine host / port (allow env override, then args)
+set HOST=%HOST%
+if "%HOST%"=="" set HOST=0.0.0.0
+set PORT=8069
+if not "%1"=="" (
+  REM If first arg contains a dot assume it's a host, else treat as port
+  echo %1 | findstr /R /C:"[0-9][0-9]*\.[0-9]" >NUL && (set HOST=%1) || (set PORT=%1)
+)
+if not "%2"=="" set PORT=%2
 
 if exist .env (
   echo [INFO] Using .env file.
@@ -33,7 +42,7 @@ if exist .env (
   echo [WARN] .env not found. Copy .env.example to .env and set INGEST_TOKEN.
 )
 
-echo [START] Lifting Pipeline at http://%HOST%:%PORT% (Ctrl+C to stop)
+echo [START] Lifting Pipeline binding %HOST%:%PORT% (Ctrl+C to stop)
 uvicorn app.main:app --host %HOST% --port %PORT% --reload
 set CODE=%ERRORLEVEL%
 
