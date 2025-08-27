@@ -1040,3 +1040,259 @@ def get_plateau_detection():
                 })
         
         return sorted(plateau_analysis, key=lambda x: x['current_1rm'], reverse=True)
+
+
+# ---------------------------------------------------------------------------
+# New consolidated dashboard data builder for progression-focused refactor
+# ---------------------------------------------------------------------------
+from datetime import date as _date, timedelta as _timedelta
+from collections import defaultdict
+
+PUSH_KEYWORDS = [
+    'Bench', 'Press', 'Dip', 'Push-Up', 'Push Up', 'Dip', 'Overhead Press', 'Incline'
+]
+PULL_KEYWORDS = [
+    'Row', 'Pulldown', 'Pull-Down', 'Pullup', 'Pull-Up', 'Chin', 'Deadlift', 'Curl'
+]
+LEGS_KEYWORDS = [
+    'Squat', 'Lunge', 'Leg Press', 'Leg Extension', 'Leg Curl', 'Calf', 'RDL', 'Romanian'
+]
+
+def _classify_group(ex_name: str) -> str:
+    n = ex_name.lower()
+    for k in PUSH_KEYWORDS:
+        if k.lower() in n:
+            return 'Push'
+    for k in PULL_KEYWORDS:
+        if k.lower() in n:
+            return 'Pull'
+    for k in LEGS_KEYWORDS:
+        if k.lower() in n:
+            return 'Legs'
+    # Fallback guess by heuristic
+    if any(x in n for x in ('press','push')):
+        return 'Push'
+    if any(x in n for x in ('row','pull','curl','dead')):
+        return 'Pull'
+    if any(x in n for x in ('squat','leg','lunge','rdl','romanian','calf')):
+        return 'Legs'
+    return 'Other'
+
+def build_dashboard_data(start: str | None, end: str | None, exercises: list[str] | None, metric: str = 'weight'):
+    """Aggregate and return data required for the new single-page dashboard.
+
+    Parameters
+    ----------
+    start, end : ISO date (YYYY-MM-DD) bounds (inclusive). If None, derive from data.
+    exercises : Optional list of exercise names to restrict; if None choose top 5 by volume in range.
+    metric : 'weight' | 'e1rm' (used only for PR flag convenience)
+    """
+    with get_conn() as conn:
+        # Determine overall date range if not supplied
+        cur = conn.execute("SELECT MIN(date(substr(date,1,10))), MAX(date(substr(date,1,10))) FROM sets WHERE weight IS NOT NULL AND reps > 0")
+        row = cur.fetchone()
+        if not row or row[0] is None:
+            return {
+                'filters': {'start': start, 'end': end, 'exercises': exercises or [], 'metric': metric},
+                'exercises_daily_max': [],
+                'sessions': [],
+                'weekly_ppl': [],
+                'rep_bins_weekly': [],
+                'rep_bins_total': {},
+                'muscle_recovery': [],
+                'muscle_28d': []
+            }
+        data_min, data_max = row
+        if start is None:
+            # Default: last 84 days (12w) or from data_min if more recent
+            end_date = _date.fromisoformat(end if end else data_max)
+            start_date_default = end_date - _timedelta(days=83)
+            data_min_date = _date.fromisoformat(data_min)
+            start = max(start_date_default, data_min_date).isoformat()
+        if end is None:
+            end = data_max
+
+        # Fetch all relevant sets in date range
+        cur = conn.execute(
+            """
+            SELECT date(substr(date,1,10)) as d, exercise, COALESCE(weight,0) as w, COALESCE(reps,0) as r
+            FROM sets
+            WHERE weight IS NOT NULL AND reps > 0
+              AND date(substr(date,1,10)) BETWEEN ? AND ?
+            ORDER BY d
+            """,
+            (start, end)
+        )
+        rows = cur.fetchall()
+        if not rows:
+            return {
+                'filters': {'start': start, 'end': end, 'exercises': exercises or [], 'metric': metric},
+                'exercises_daily_max': [],
+                'sessions': [],
+                'weekly_ppl': [],
+                'rep_bins_weekly': [],
+                'rep_bins_total': {},
+                'muscle_recovery': [],
+                'muscle_28d': []
+            }
+
+        # Pre-aggregate total volume per exercise for selection purposes
+        exercise_total_volume: dict[str, float] = defaultdict(float)
+        for d, ex, w, r in rows:
+            exercise_total_volume[ex] += w * r
+
+        if not exercises:
+            # Top 5 by volume
+            exercises = [ex for ex, _ in sorted(exercise_total_volume.items(), key=lambda x: x[1], reverse=True)[:5]]
+
+        selected_set = set(exercises)
+
+        # Daily maxima per exercise
+        per_day_ex: dict[tuple[str,str], dict] = {}
+        for d, ex, w, r in rows:
+            if ex not in selected_set:
+                continue
+            key = (ex, d)
+            rec = per_day_ex.setdefault(key, {'exercise': ex, 'date': d, 'max_weight': 0.0, 'e1rm': 0.0})
+            if w > rec['max_weight']:
+                rec['max_weight'] = w
+            e1rm_val = w * (1 + r/30.0)
+            if e1rm_val > rec['e1rm']:
+                rec['e1rm'] = e1rm_val
+
+        # Convert to list & compute PR flags per exercise based on chosen metric
+        exercises_daily_max: list[dict] = []
+        by_ex: dict[str, list[dict]] = defaultdict(list)
+        for rec in per_day_ex.values():
+            rec['e1rm'] = round(rec['e1rm'], 1)
+            by_ex[rec['exercise']].append(rec)
+        for ex, lst in by_ex.items():
+            lst.sort(key=lambda x: x['date'])
+            best = -1.0
+            metric_key = 'e1rm' if metric == 'e1rm' else 'max_weight'
+            for item in lst:
+                val = item[metric_key]
+                if val > best:
+                    item['is_pr'] = True
+                    best = val
+                else:
+                    item['is_pr'] = False
+            exercises_daily_max.extend(lst)
+
+        # Session (day) total volume & PPL split
+        sessions_map: dict[str, dict] = {}
+        # rep bin weekly & weekly PPL structures
+        weekly_ppl_acc = defaultdict(lambda: {'push':0.0,'pull':0.0,'legs':0.0})
+        rep_weekly_acc = defaultdict(lambda: {'bin_1_5':0.0,'bin_6_12':0.0,'bin_13_20':0.0, 'total':0.0})
+
+        def iso_week(dstr: str) -> str:
+            dt = _date.fromisoformat(dstr)
+            iso = dt.isocalendar()  # (year, week, weekday)
+            return f"{iso[0]}-W{iso[1]:02d}"
+
+        for d, ex, w, r in rows:
+            vol = w * r
+            group = _classify_group(ex)
+            sess = sessions_map.setdefault(d, {'date': d, 'total_volume': 0.0, 'push_volume':0.0,'pull_volume':0.0,'legs_volume':0.0})
+            sess['total_volume'] += vol
+            if group == 'Push':
+                sess['push_volume'] += vol
+            elif group == 'Pull':
+                sess['pull_volume'] += vol
+            elif group == 'Legs':
+                sess['legs_volume'] += vol
+
+            week = iso_week(d)
+            if group == 'Push':
+                weekly_ppl_acc[week]['push'] += vol
+            elif group == 'Pull':
+                weekly_ppl_acc[week]['pull'] += vol
+            elif group == 'Legs':
+                weekly_ppl_acc[week]['legs'] += vol
+
+            # Rep bins
+            if 1 <= r <= 5:
+                bin_key = 'bin_1_5'
+            elif 6 <= r <= 12:
+                bin_key = 'bin_6_12'
+            else:
+                bin_key = 'bin_13_20'
+            rep_weekly_acc[week][bin_key] += vol
+            rep_weekly_acc[week]['total'] += vol
+
+        sessions = sorted(sessions_map.values(), key=lambda x: x['date'])
+        # Rolling 4-week avg added client side (lighter)
+
+        weekly_ppl = []
+        for wk, vals in sorted(weekly_ppl_acc.items()):
+            weekly_ppl.append({
+                'iso_week': wk,
+                'push': round(vals['push'],1),
+                'pull': round(vals['pull'],1),
+                'legs': round(vals['legs'],1)
+            })
+
+        rep_bins_weekly = []
+        total_bins = {'bin_1_5':0.0,'bin_6_12':0.0,'bin_13_20':0.0,'total':0.0}
+        for wk, vals in sorted(rep_weekly_acc.items()):
+            rep_bins_weekly.append({
+                'iso_week': wk,
+                'bin_1_5': round(vals['bin_1_5'],1),
+                'bin_6_12': round(vals['bin_6_12'],1),
+                'bin_13_20': round(vals['bin_13_20'],1),
+                'total': round(vals['total'],1)
+            })
+            for k in total_bins:
+                total_bins[k] += vals[k]
+        rep_bins_total = {k: round(v,1) for k,v in total_bins.items()}
+
+        # Muscle recovery (P/P/L)
+        def recovery(group_key: str):
+            # gather days where group volume >0
+            ds = [s['date'] for s in sessions if s[f'{group_key.lower()}_volume'] > 0]
+            ds_sorted = sorted(set(ds))
+            if len(ds_sorted) < 2:
+                return None
+            intervals = []
+            prev = _date.fromisoformat(ds_sorted[0])
+            for dstr in ds_sorted[1:]:
+                curd = _date.fromisoformat(dstr)
+                intervals.append((curd - prev).days)
+                prev = curd
+            return {
+                'muscle': group_key,
+                'mean_days': round(sum(intervals)/len(intervals),1),
+                'min_days': min(intervals),
+                'max_days': max(intervals),
+                'n_intervals': len(intervals)
+            }
+        muscle_recovery_list = []
+        for g in ('Push','Pull','Legs'):
+            rec = recovery(g)
+            if rec:
+                muscle_recovery_list.append(rec)
+
+        # Muscle 28d volume (P/P/L proxy)
+        end_dt = _date.fromisoformat(end)
+        start_28 = end_dt - _timedelta(days=27)
+        volume_28 = {'Push':0.0,'Pull':0.0,'Legs':0.0}
+        for d, ex, w, r in rows:
+            dt = _date.fromisoformat(d)
+            if dt < start_28 or dt > end_dt:
+                continue
+            vol = w * r
+            group = _classify_group(ex)
+            if group in volume_28:
+                volume_28[group] += vol
+        muscle_28d = [{'group': g, 'volume': round(v,1)} for g,v in volume_28.items()]
+
+        return {
+            'filters': {'start': start, 'end': end, 'exercises': exercises, 'metric': metric},
+            'exercises_daily_max': exercises_daily_max,
+            'sessions': sessions,
+            'weekly_ppl': weekly_ppl,
+            'rep_bins_weekly': rep_bins_weekly,
+            'rep_bins_total': rep_bins_total,
+            'muscle_recovery': muscle_recovery_list,
+            'muscle_28d': muscle_28d
+        }

@@ -38,6 +38,7 @@ from .processing import (
     get_workout_duration_trends,
     get_best_sets_analysis,
     get_plateau_detection,
+    build_dashboard_data,
 )
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -332,6 +333,18 @@ async def get_best_sets():
 async def get_plateau_detection_endpoint():
     """Detect potential plateaus in strength progression"""
     return get_plateau_detection()
+
+
+# New consolidated dashboard endpoint (refactored progression-focused dashboard)
+@app.get("/api/dashboard")
+async def get_dashboard_endpoint(
+    start: str | None = Query(None),
+    end: str | None = Query(None),
+    exercises: str | None = Query(None, description="Comma separated exercise names to include"),
+    metric: str = Query("weight", pattern="^(weight|e1rm)$")
+):
+    ex_list = [e.strip() for e in exercises.split(',')] if exercises else None
+    return build_dashboard_data(start, end, ex_list, metric)
 
 
 @app.get("/health")

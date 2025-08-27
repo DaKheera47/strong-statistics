@@ -1,193 +1,321 @@
-// Strong-inspired Analytics Dashboard
+// Refactored progression-focused dashboard JS (ECharts + Tailwind)
+// Only required 7 charts + filters.
 
-// Utility functions
-async function fetchJSON(url) {
-  const r = await fetch(url);
-  if (!r.ok) throw new Error(await r.text());
-  return r.json();
-}
+// ------------------------------ State ----------------------------------
+const state = {
+  start: null,
+  end: null,
+  metric: 'weight',
+  exercises: [],
+  data: null,
+  cache: new Map()
+};
 
-function formatDate(dateStr) {
-  return new Date(dateStr).toLocaleDateString('en-US', { 
-    month: 'short', 
-    day: 'numeric' 
+const COLORS = {
+  primary: '#6366F1',
+  secondary: '#EC4899',
+  tertiary: '#10B981',
+  quaternary: '#F59E0B',
+  quinary: '#8B5CF6'
+};
+const SERIES_COLORS = [COLORS.primary, COLORS.secondary, COLORS.tertiary, COLORS.quaternary, COLORS.quinary];
+
+function fetchJSON(url) { return fetch(url).then(r => { if(!r.ok) throw new Error(r.statusText); return r.json(); }); }
+function fmtInt(x){ return x == null ? '-' : x.toLocaleString(); }
+function fmt1(x){ return x==null?'-': (Math.round(x*10)/10).toString(); }
+function parseISO(d){ return new Date(d+ (d.length===10?'T00:00:00Z':'')); }
+
+// --------------------------- Filters UI --------------------------------
+function initFilters(){
+  const ranges = [
+    {label:'8w', days:56},
+    {label:'12w', days:84},
+    {label:'YTD', ytd:true},
+    {label:'All', all:true}
+  ];
+  const container = document.getElementById('dateRangeButtons');
+  ranges.forEach(r=>{
+    const btn=document.createElement('button');
+    btn.textContent=r.label;btn.dataset.range=r.label;
+    btn.className='px-3 py-1.5 rounded-md text-sm font-medium bg-zinc-800 hover:bg-zinc-700 data-[active=true]:bg-indigo-600 data-[active=true]:text-white';
+    btn.addEventListener('click',()=>{ setActiveRange(r); });
+    container.appendChild(btn);
+  });
+
+  // Metric toggle
+  const metricWrap=document.getElementById('metricToggle');
+  ['weight','e1rm'].forEach(m=>{
+    const b=document.createElement('button');
+    b.textContent=m==='weight'? 'Weight':'e1RM';
+    b.dataset.metric=m;
+    b.className='px-3 py-1.5 rounded-md text-sm font-medium bg-zinc-800 hover:bg-zinc-700 data-[active=true]:bg-indigo-600 data-[active=true]:text-white';
+    b.addEventListener('click',()=>{ state.metric=m; updateMetricButtons(); refreshData(); });
+    metricWrap.appendChild(b);
   });
 }
 
-// Color palette for consistency
-const colors = {
-  primary: '#2c3e50',
-  secondary: '#3498db', 
-  success: '#27ae60',
-  warning: '#f39c12',
-  danger: '#e74c3c',
-  info: '#8e44ad',
-  light: '#95a5a6',
-  dark: '#2c3e50'
-};
+function updateMetricButtons(){
+  document.querySelectorAll('#metricToggle button').forEach(b=>{ b.dataset.active = (b.dataset.metric===state.metric); });
+}
 
-const exerciseColors = [
-  '#3498db', '#e74c3c', '#27ae60', '#f39c12', '#8e44ad', '#16a085'
-];
+function setActiveRange(r){
+  document.querySelectorAll('#dateRangeButtons button').forEach(b=> b.dataset.active = (b.dataset.range===r.label));
+  // We'll set start/end after we have initial dataset metadata (done in refreshData if null)
+  state._pendingRange=r; // store selection
+  refreshData();
+}
 
-// Initialize all charts when page loads
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('Initializing improved lifting dashboard...');
-    
-    // Load original charts
-    console.log('Loading original charts...');
-    loadProgressiveOverload();
-    loadVolumeProgression(); 
-    loadPersonalRecords();
-    loadTrainingConsistency();
-    loadStrengthBalance();
-    loadExerciseOptions();
-    
-    // Load Strong-inspired analytics
-    console.log('Loading Strong-inspired analytics...');
-    loadPersonalRecordsTable();
-    loadTrainingCalendar();
-    loadMuscleGroupBalance();
-    loadBodyMeasurements();
-    loadTrainingStreak();
-    
-    // Load advanced analytics - THE FULL ARSENAL
-    console.log('Loading advanced analytics...');
-    loadVolumeHeatmap();
-    loadRepDistribution();
-    loadExerciseFrequency();
-    loadStrengthRatios();
-    loadRecoveryTracking();
-    loadProgressionRate();
-    loadDurationTrends();
-    loadBestSets();
-    loadPlateauDetection();
-    
-    // Load metadata
-    console.log('Loading metadata...');
-    loadLastIngested();
-    
-    console.log('Dashboard loaded successfully!');
-});
+// Exercise multi-select (simple dropdown)
+function initExerciseMulti(exNames){
+  const root=document.getElementById('exerciseMulti');
+  root.innerHTML='';
+  const btn=document.createElement('button');
+  btn.className='px-3 py-1.5 rounded-md bg-zinc-800 text-sm';
+  btn.textContent='Exercises ▾';
+  const panel=document.createElement('div');
+  panel.className='absolute z-20 mt-2 w-64 max-h-72 overflow-auto bg-zinc-900 ring-1 ring-zinc-800 rounded-lg shadow-lg p-2 hidden';
+  exNames.forEach(name=>{
+    const id= 'ex_'+btoa(name).replace(/=/g,'');
+    const label=document.createElement('label');
+    label.className='flex items-center gap-2 px-2 py-1 rounded hover:bg-zinc-800 text-xs';
+    label.innerHTML=`<input type="checkbox" class="accent-indigo-600" id="${id}" value="${name}" ${state.exercises.includes(name)?'checked':''}/> <span>${name}</span>`;
+    panel.appendChild(label);
+  });
+  btn.addEventListener('click',()=> panel.classList.toggle('hidden'));
+  root.appendChild(btn);root.appendChild(panel);
+  panel.addEventListener('change',()=>{
+    state.exercises=[...panel.querySelectorAll('input:checked')].map(i=>i.value);
+    refreshData();
+  });
+  document.addEventListener('click',e=>{ if(!root.contains(e.target)) panel.classList.add('hidden'); });
+}
 
-// Progressive Overload Chart - Most important chart
-async function loadProgressiveOverload() {
+// ------------------------- Data Fetch & Cache ---------------------------
+async function fetchDashboard(){
+  const key = JSON.stringify({start:state.start,end:state.end,metric:state.metric,ex:state.exercises.slice().sort()});
+  if(state.cache.has(key)) return state.cache.get(key);
+  const params = new URLSearchParams();
+  if(state.start) params.set('start', state.start);
+  if(state.end) params.set('end', state.end);
+  if(state.exercises.length) params.set('exercises', state.exercises.join(','));
+  if(state.metric!== 'weight') params.set('metric', state.metric);
+  const data = await fetchJSON('/api/dashboard?'+params.toString());
+  state.cache.set(key,data); return data;
+}
+
+async function refreshData(){
   try {
-    const data = await fetchJSON('/api/progressive-overload');
-    
-    if (!data || Object.keys(data).length === 0) {
-      Plotly.newPlot('progressiveOverloadChart', [], {
-        title: 'No strength progression data available',
-        font: { size: 14 }
-      });
+  console.log('[dashboard] refreshData start', {start:state.start,end:state.end,metric:state.metric,exercises:state.exercises});
+    const loadingTargets=['sparklineContainer','progressiveOverloadChart','volumeTrendChart','weeklyPPLChart','muscleBalanceChart','repDistributionChart','recoveryChart'];
+    loadingTargets.forEach(id=>{ const el=document.getElementById(id); if(el) el.innerHTML='<div class="flex items-center justify-center h-full text-sm text-zinc-500 animate-pulse">Loading...</div>'; });
+    const data = await fetchDashboard();
+  window.__dashboardDebug = { phase:'afterFetch', fetchedAt: Date.now(), filters: data?.filters, params:{start:state.start,end:state.end,metric:state.metric,exercises:[...state.exercises]}, keys: data? Object.keys(data):[] };
+  console.log('[dashboard] data fetched', window.__dashboardDebug);
+    // If first load or date range pending apply range
+    if(state.data==null){
+      const firstStart=data.filters.start; const firstEnd=data.filters.end;
+      if(state._pendingRange){ applyRangeOnDates(state._pendingRange, firstStart, firstEnd); }
+    } else if(state._pendingRange){
+      applyRangeOnDates(state._pendingRange, data.filters.start, data.filters.end);
+      state._pendingRange=null; // re-fetch with new range
+      return refreshData();
+    }
+  state.data=data;
+    document.getElementById('lastIngested').textContent = data.filters.end || '-';
+    // Build exercise list for multi if first time
+    if(!state.exercises.length){ state.exercises = data.filters.exercises || []; initExerciseMulti(unique(state.data.exercises_daily_max.map(d=>d.exercise))); }
+  renderAll();
+  window.__dashboardDebug.phase='renderComplete';
+  console.log('[dashboard] render complete');
+  } catch(e){
+    console.error(e);
+    const msg='<div class="flex items-center justify-center h-full text-sm text-rose-400">Error loading data</div>';
+    ['sparklineContainer','progressiveOverloadChart','volumeTrendChart','weeklyPPLChart','muscleBalanceChart','repDistributionChart','recoveryChart'].forEach(id=>{ const el=document.getElementById(id); if(el) el.innerHTML=msg; });
+  window.__dashboardDebug = { phase:'error', error: e?.message || String(e) };
+  }
+}
+
+function applyRangeOnDates(rangeObj, defaultStart, defaultEnd){
+  const endDate = parseISO(defaultEnd).toISOString().slice(0,10);
+  if(rangeObj.all){ state.start=null; state.end=null; return; }
+  if(rangeObj.ytd){ const d=new Date(defaultEnd); state.start = new Date(d.getFullYear(),0,1).toISOString().slice(0,10); state.end=endDate; return; }
+  if(rangeObj.days){ const d=parseISO(endDate); const start=new Date(d.getTime() - (rangeObj.days-1)*86400000); state.start=start.toISOString().slice(0,10); state.end=endDate; return; }
+}
+
+function unique(arr){ return [...new Set(arr)]; }
+
+// ------------------------------ Charts ----------------------------------
+let charts = {};
+function _clearLoading(el){ if(!el) return; const pulse=el.querySelector('.animate-pulse'); if(pulse) pulse.remove(); }
+function getChart(id){
+  const el=document.getElementById(id);
+  if(!el) return null;
+  _clearLoading(el);
+  if(!el.dataset.fixedHeight){
+    if((!el.style.height || el.clientHeight<120)){
+      el.style.height = (id==='progressiveOverloadChart'?'300px':'230px');
+    }
+  }
+  if(!charts[id]) charts[id]=echarts.init(el);
+  setTimeout(()=>{ try { charts[id].resize(); } catch(_){} }, 40);
+  return charts[id];
+}
+
+function baseTimeAxis(){ return { type:'time', axisLine:{lineStyle:{color:'#3f3f46'}}, axisLabel:{color:'#a1a1aa', formatter: v=> new Date(v).toISOString().slice(5,10)}, splitLine:{show:false} }; }
+function baseValueAxis(name){ return { type:'value', name, nameTextStyle:{color:'#a1a1aa'}, axisLine:{lineStyle:{color:'#3f3f46'}}, axisLabel:{color:'#a1a1aa'}, splitLine:{lineStyle:{color:'#27272a'}}, scale:true }; }
+
+function renderSparklines(){
+  const container=document.getElementById('sparklineContainer');
+    if(!state.data || !state.data.exercises_daily_max || !state.data.exercises_daily_max.length){
+      container.innerHTML='<div class="text-sm text-zinc-500 italic">No exercise data in range</div>';
       return;
     }
-
-    const traces = [];
-    let colorIndex = 0;
-
-    // Create traces for each exercise - focus on estimated 1RM
-    Object.entries(data).forEach(([exercise, sessions]) => {
-      if (sessions.length > 0) {
-        traces.push({
-          x: sessions.map(s => s.date),
-          y: sessions.map(s => s.estimated_1rm),
-          type: 'scatter',
-          mode: 'lines+markers',
-          name: exercise,
-          line: { width: 3 },
-          marker: { size: 8 },
-          hovertemplate: `<b>${exercise}</b><br>` +
-                        `Date: %{x}<br>` +
-                        `Est. 1RM: %{y} kg<br>` +
-                        `<extra></extra>`
-        });
-      }
-      colorIndex++;
+  console.log('[dashboard] renderSparklines count', state.data.exercises_daily_max.length);
+    container.innerHTML='';
+    const metricKey= state.metric==='e1rm'? 'e1rm':'max_weight';
+    const byEx={};
+    state.data.exercises_daily_max.forEach(r=>{ (byEx[r.exercise] ||= []).push(r); });
+    Object.entries(byEx).forEach(([ex, arr], idx)=>{
+      const card=document.createElement('div');
+      card.className='bg-zinc-900 rounded-2xl ring-1 ring-zinc-800 shadow-sm p-4 flex flex-col';
+      const last = arr[arr.length-1];
+      card.innerHTML=`<div class='flex items-center justify-between mb-2'><span class='text-sm font-medium text-zinc-300 truncate'>${ex}</span><span class='text-xs text-zinc-500'>${fmt1(last[metricKey])}</span></div><div class='flex-1' id='spark_${idx}' style='height:60px;'></div>`;
+      container.appendChild(card);
+      const chart=echarts.init(card.querySelector('#spark_'+idx));
+      const prPoints = arr.filter(a=>a.is_pr).map(a=> [a.date, a[metricKey]]);
+      chart.setOption({ animation:false, grid:{left:2,right:2,top:0,bottom:0}, xAxis:{type:'time',show:false}, yAxis:{type:'value',show:false}, tooltip:{trigger:'axis', formatter: params=>{
+        const p=params[0]; return `${ex}<br>${p.axisValueLabel}: ${fmt1(p.data[1])}`;}}, series:[{type:'line',data:arr.map(a=>[a.date,a[metricKey]]), showSymbol:false, smooth:true, lineStyle:{width:1.2,color:SERIES_COLORS[idx%SERIES_COLORS.length]}, areaStyle:{color:SERIES_COLORS[idx%SERIES_COLORS.length]+'33'}},{type:'scatter', data: prPoints.slice(-8), symbolSize:6, itemStyle:{color:'#fde047'}}] });
     });
+}
 
-    const layout = {
-      title: {
-        text: 'Estimated 1-Rep Max Progression',
-        font: { size: 18 }
-      },
-      xaxis: { 
-        title: 'Date',
-        tickangle: -45,
-        type: 'date'
-      },
-      yaxis: { 
-        title: 'Estimated 1RM (kg)',
-        zeroline: false
-      },
-      hovermode: 'x unified',
-      legend: { 
-        orientation: 'h',
-        y: -0.2
-      },
-      margin: { t: 60, b: 100 }
-    };
+function renderProgressiveOverload(){
+  if(!state.data || !state.data.exercises_daily_max || !state.data.exercises_daily_max.length){ const el=document.getElementById('progressiveOverloadChart'); if(el) el.innerHTML='<div class="flex items-center justify-center h-full text-sm text-zinc-500 italic">No data</div>'; return; } const metricKey= state.metric==='e1rm'? 'e1rm':'max_weight';
+  console.log('[dashboard] renderProgressiveOverload');
+  const byEx={}; state.data.exercises_daily_max.forEach(r=>{ (byEx[r.exercise] ||= []).push(r); });
+  const series=[]; let colorIdx=0;
+  Object.entries(byEx).forEach(([ex, arr])=>{
+    arr.sort((a,b)=> a.date.localeCompare(b.date));
+    series.push({ name: ex, type:'line', showSymbol:false, smooth:true, data: arr.map(a=> [a.date, a[metricKey]]), lineStyle:{width:2, color: SERIES_COLORS[colorIdx]}, areaStyle:{color:SERIES_COLORS[colorIdx]+'22'} });
+    // 7-session moving average
+    const ma=[]; const vals=[]; arr.forEach(a=>{ vals.push(a[metricKey]); if(vals.length>7) vals.shift(); ma.push([a.date, vals.reduce((s,v)=>s+v,0)/vals.length]); });
+    series.push({ name: ex+' 7MA', type:'line', showSymbol:false, smooth:true, data: ma, lineStyle:{width:1, type:'dashed', color: SERIES_COLORS[colorIdx]}, emphasis:{disabled:true}, tooltip:{show:false} });
+    colorIdx=(colorIdx+1)%SERIES_COLORS.length;
+  });
+  const chart=getChart('progressiveOverloadChart');
+  chart.setOption({ darkMode:true, animationDuration:300, animationEasing:'cubicOut', grid:{left:50,right:16,top:30,bottom:55}, legend:{top:0, textStyle:{color:'#d4d4d8'}}, dataZoom:[{type:'inside'},{type:'slider',height:18,bottom:20}], xAxis: baseTimeAxis(), yAxis: baseValueAxis(state.metric==='e1rm'?'e1RM (kg)':'Max Weight (kg)'), tooltip:{trigger:'axis', valueFormatter:v=>fmt1(v)}, series: series.map(s=> ({...s, emphasis:{focus:'none', scale:false}})) });
+  chart.off('dataZoom'); chart.on('dataZoom', ()=> updateSlopes(chart, byEx, metricKey));
+  updateSlopes(chart, byEx, metricKey);
+  document.getElementById('resetOverloadZoom').onclick=()=>{ chart.dispatchAction({type:'dataZoom', start:0, end:100}); };
+}
 
-    Plotly.newPlot('progressiveOverloadChart', traces, layout, { 
-      responsive: true,
-      displayModeBar: false 
-    });
+function updateSlopes(chart, byEx, metricKey){
+  const opt=chart.getOption(); const [min,max]= opt.xAxis[0].range || [opt.xAxis[0].min, opt.xAxis[0].max];
+  const start = min? new Date(min): null; const end = max? new Date(max): null;
+  const container=document.getElementById('overloadSlopes'); container.innerHTML='';
+  Object.entries(byEx).forEach(([ex, arr], idx)=>{
+    const pts= arr.filter(a=> (!start || parseISO(a.date)>=start) && (!end || parseISO(a.date)<=end));
+    if(pts.length<2) return;
+    // Linear regression
+    const t0 = parseISO(pts[0].date).getTime();
+    const xs = pts.map(p=> (parseISO(p.date).getTime()-t0)/ (86400000*7));
+    const ys = pts.map(p=> p[metricKey]);
+    const mean = xs.reduce((s,v)=>s+v,0)/xs.length; const meanY= ys.reduce((s,v)=>s+v,0)/ys.length;
+    let num=0, den=0; for(let i=0;i<xs.length;i++){ const dx=xs[i]-mean; num+= dx*(ys[i]-meanY); den+= dx*dx; }
+    const slope = den? num/den:0; // units per week
+    const pill=document.createElement('span'); pill.className='px-2 py-1 rounded bg-zinc-800 text-zinc-300'; pill.textContent=`${ex}: ${slope>=0?'+':''}${fmt1(slope)} /wk`; container.appendChild(pill);
+  });
+}
 
-  } catch (error) {
-    console.error('Error loading progressive overload:', error);
+function renderVolumeTrend(){
+  if(!state.data || !state.data.sessions || !state.data.sessions.length){ const el=document.getElementById('volumeTrendChart'); if(el) el.innerHTML='<div class="flex items-center justify-center h-full text-sm text-zinc-500 italic">No sessions</div>'; return; } // compute 4-week rolling avg client side
+  console.log('[dashboard] renderVolumeTrend sessions', state.data.sessions.length);
+  const sessions = state.data.sessions.slice(); sessions.sort((a,b)=> a.date.localeCompare(b.date));
+  const seriesBar = sessions.map(s=> [s.date, s.total_volume]);
+  const rolling=[]; for(let i=0;i<sessions.length;i++){ const di=parseISO(sessions[i].date); const since = di.getTime()-27*86400000; const subset=sessions.filter(s=> parseISO(s.date).getTime()>=since && parseISO(s.date)<=di); const avg=subset.reduce((s,v)=>s+v.total_volume,0)/subset.length; rolling.push([sessions[i].date, avg]); }
+  const mondays = sessions.map(s=> s.date).filter(d=> parseISO(d).getUTCDay()===1);
+  const chart=getChart('volumeTrendChart');
+  chart.setOption({ grid:{left:50,right:16,top:20,bottom:55}, xAxis: baseTimeAxis(), yAxis: baseValueAxis('Volume (kg)'), dataZoom:[{type:'inside'},{type:'slider',height:18,bottom:20}], tooltip:{trigger:'axis'}, series:[{type:'bar', name:'Session Volume', data:seriesBar, itemStyle:{color:COLORS.primary}, emphasis:{focus:'none'}},{type:'line', name:'4W Avg', data:rolling, smooth:true, showSymbol:false, lineStyle:{width:2,color:COLORS.secondary}, emphasis:{focus:'none'}}], markLine:{symbol:'none', silent:true, lineStyle:{color:'#3f3f46', width:1}, data: mondays.map(m=> ({xAxis:m}))} });
+}
+
+function renderWeeklyPPL(){
+  if(!state.data || !state.data.weekly_ppl || !state.data.weekly_ppl.length){ const el=document.getElementById('weeklyPPLChart'); if(el) el.innerHTML='<div class="flex items-center justify-center h-full text-sm text-zinc-500 italic">No weekly data</div>'; return; } const mode = document.getElementById('pplModeToggle').dataset.mode; // absolute|percent
+  console.log('[dashboard] renderWeeklyPPL weeks', state.data.weekly_ppl.length);
+  const weeks = state.data.weekly_ppl.map(w=> w.iso_week);
+  const push = state.data.weekly_ppl.map(w=> w.push);
+  const pull = state.data.weekly_ppl.map(w=> w.pull);
+  const legs = state.data.weekly_ppl.map(w=> w.legs);
+  let pushD=push, pullD=pull, legsD=legs; let yAxis={type:'value', name: mode==='absolute'? 'Weekly Volume (kg)':'% Volume', nameTextStyle:{color:'#a1a1aa'}, axisLine:{lineStyle:{color:'#3f3f46'}}, axisLabel:{color:'#a1a1aa'}};
+  if(mode!=='absolute'){
+    pushD=[]; pullD=[]; legsD=[];
+    for(let i=0;i<weeks.length;i++){ const tot=push[i]+pull[i]+legs[i]; if(tot===0){ pushD.push(0); pullD.push(0); legsD.push(0);} else { pushD.push(push[i]/tot*100); pullD.push(pull[i]/tot*100); legsD.push(legs[i]/tot*100);} }
+    yAxis.max=100;
+  }
+  const chart=getChart('weeklyPPLChart');
+  chart.setOption({ grid:{left:50,right:16,top:28,bottom:40}, legend:{top:0,textStyle:{color:'#d4d4d8'}}, tooltip:{trigger:'axis', axisPointer:{type:'shadow'}}, xAxis:{type:'category', data:weeks, axisLine:{lineStyle:{color:'#3f3f46'}}, axisLabel:{color:'#a1a1aa'}}, yAxis, series:[{name:'Push', type:'bar', stack:'ppl', data:pushD, itemStyle:{color:COLORS.primary}, emphasis:{focus:'none'}},{name:'Pull', type:'bar', stack:'ppl', data:pullD, itemStyle:{color:COLORS.tertiary}, emphasis:{focus:'none'}},{name:'Legs', type:'bar', stack:'ppl', data:legsD, itemStyle:{color:COLORS.quaternary}, emphasis:{focus:'none'}}] });
+}
+
+function renderMuscleBalance(){
+  if(!state.data || !state.data.muscle_28d){ const el=document.getElementById('muscleBalanceChart'); if(el) el.innerHTML='<div class="flex items-center justify-center h-full text-sm text-zinc-500 italic">No data</div>'; return; } const data = state.data.muscle_28d;
+  console.log('[dashboard] renderMuscleBalance entries', data.length);
+  const names=data.map(d=> d.group); const vals=data.map(d=> d.volume);
+  getChart('muscleBalanceChart').setOption({ grid:{left:110,right:30,top:10,bottom:25}, xAxis:{type:'value', axisLine:{lineStyle:{color:'#3f3f46'}}, axisLabel:{color:'#a1a1aa'}, splitLine:{lineStyle:{color:'#27272a'}}}, yAxis:{type:'category', data:names, axisLine:{show:false}, axisLabel:{color:'#d4d4d8'}}, tooltip:{trigger:'item', formatter: p=> `${p.name}: ${fmtInt(p.value)} kg`}, series:[{type:'bar', data:vals, barWidth:'40%', itemStyle:{color:(p)=> SERIES_COLORS[p.dataIndex]}, emphasis:{focus:'none'}, label:{show:true, position:'right', color:'#a1a1aa', formatter: p=> fmtInt(p.value)}}] });
+}
+
+function renderRepDistribution(){
+  const mode = document.getElementById('repModeToggle').dataset.mode; // weekly|summary if(!state.data){ return; }
+  console.log('[dashboard] renderRepDistribution mode', mode);
+  if(mode==='weekly'){
+    const weeks = state.data.rep_bins_weekly.map(r=> r.iso_week);
+    const b1 = state.data.rep_bins_weekly.map(r=> r.bin_1_5);
+    const b2 = state.data.rep_bins_weekly.map(r=> r.bin_6_12);
+    const b3 = state.data.rep_bins_weekly.map(r=> r.bin_13_20);
+  getChart('repDistributionChart').setOption({ grid:{left:55,right:16,top:28,bottom:40}, legend:{top:0,textStyle:{color:'#d4d4d8'}}, tooltip:{trigger:'axis', axisPointer:{type:'shadow'}}, xAxis:{type:'category', data:weeks, axisLabel:{color:'#a1a1aa'}, axisLine:{lineStyle:{color:'#3f3f46'}}}, yAxis:{type:'value', name:'Volume (kg)', nameTextStyle:{color:'#a1a1aa'}, axisLabel:{color:'#a1a1aa'}, splitLine:{lineStyle:{color:'#27272a'}}}, series:[{name:'1–5', type:'bar', stack:'reps', data:b1, itemStyle:{color:COLORS.secondary}, emphasis:{focus:'none'}},{name:'6–12', type:'bar', stack:'reps', data:b2, itemStyle:{color:COLORS.primary}, emphasis:{focus:'none'}},{name:'13–20', type:'bar', stack:'reps', data:b3, itemStyle:{color:COLORS.tertiary}, emphasis:{focus:'none'}}] });
+  } else {
+    const t = state.data.rep_bins_total; const total=t.total||1; const bars=[{name:'1–5', val:t.bin_1_5},{name:'6–12', val:t.bin_6_12},{name:'13–20', val:t.bin_13_20}];
+  getChart('repDistributionChart').setOption({ grid:{left:110,right:30,top:10,bottom:25}, xAxis:{type:'value', axisLabel:{color:'#a1a1aa'}, axisLine:{lineStyle:{color:'#3f3f46'}}, splitLine:{lineStyle:{color:'#27272a'}}}, yAxis:{type:'category', data:bars.map(b=> b.name), axisLabel:{color:'#d4d4d8'}}, tooltip:{trigger:'item', formatter: p=>{ const v=bars[p.dataIndex].val; return `${p.name}: ${fmtInt(v)} kg (${(v/total*100).toFixed(1)}%)`; }}, series:[{type:'bar', data:bars.map(b=> b.val), itemStyle:{color:(p)=> [COLORS.secondary,COLORS.primary,COLORS.tertiary][p.dataIndex]}, emphasis:{focus:'none'}, barWidth:'45%', label:{show:true, position:'right', formatter: p=> (bars[p.dataIndex].val/total*100).toFixed(1)+'%', color:'#a1a1aa'}}] });
   }
 }
 
-// Volume Progression Chart
-async function loadVolumeProgression() {
-  try {
-    const data = await fetchJSON('/api/volume-progression');
-    
-    if (!data || data.length === 0) return;
-
-    const traces = [
-      {
-        x: data.map(d => d.date),
-        y: data.map(d => d.volume),
-        type: 'bar',
-        name: 'Session Volume',
-        marker: { color: colors.secondary, opacity: 0.7 },
-        hovertemplate: 'Date: %{x}<br>Volume: %{y} kg<extra></extra>'
-      },
-      {
-        x: data.map(d => d.date),
-        y: data.map(d => d.volume_7day_avg),
-        type: 'scatter',
-        mode: 'lines',
-        name: '7-Day Average',
-        line: { width: 3, color: colors.danger },
-        hovertemplate: 'Date: %{x}<br>7-Day Avg: %{y:.1f} kg<extra></extra>'
-      }
-    ];
-
-    const layout = {
-      title: 'Training Volume Over Time',
-      xaxis: { 
-        title: 'Date',
-        tickangle: -45,
-        type: 'date'
-      },
-      yaxis: { title: 'Volume (kg)' },
-      hovermode: 'x unified',
-      legend: { orientation: 'h', y: -0.15 }
-    };
-
-    Plotly.newPlot('volumeProgressionChart', traces, layout, { 
-      responsive: true,
-      displayModeBar: false 
-    });
-
-  } catch (error) {
-    console.error('Error loading volume progression:', error);
-  }
+function renderRecovery(){
+  if(!state.data || !state.data.muscle_recovery || !state.data.muscle_recovery.length){ const el=document.getElementById('recoveryChart'); if(el) el.innerHTML='<div class="flex items-center justify-center h-full text-sm text-zinc-500 italic">No recovery data</div>'; return; } const data = state.data.muscle_recovery;
+  console.log('[dashboard] renderRecovery entries', data.length);
+  const names=data.map(d=> d.muscle); const means=data.map(d=> d.mean_days);
+  const minmax=data.map(d=> [d.min_days, d.max_days]);
+  const option={ grid:{left:150,right:30,top:20,bottom:20}, xAxis:{type:'value', name:'Days', nameTextStyle:{color:'#a1a1aa'}, axisLabel:{color:'#a1a1aa'}, axisLine:{lineStyle:{color:'#3f3f46'}}, splitLine:{lineStyle:{color:'#27272a'}}}, yAxis:{type:'category', data:names, axisLabel:{color:'#d4d4d8'}}, tooltip:{trigger:'item', formatter: p=>{ const d=data[p.dataIndex]; return `${d.muscle}<br>Mean: ${d.mean_days}d<br>Min: ${d.min_days}  Max: ${d.max_days}<br>N: ${d.n_intervals}`;}}, series:[{type:'bar', data:means, barWidth:'50%', itemStyle:{color:COLORS.primary}, emphasis:{focus:'none'}, label:{show:true, position:'right', color:'#a1a1aa'}},{type:'custom', data:minmax, renderItem:(params, api)=>{const y=api.coord([0, params.dataIndex])[1]; const minv=minmax[params.dataIndex][0]; const maxv=minmax[params.dataIndex][1]; const p1=api.coord([minv, params.dataIndex]); const p2=api.coord([maxv, params.dataIndex]); return { type:'group', children:[ {type:'line', shape:{x1:p1[0],y1:p1[1], x2:p2[0], y2:p2[1]}, style:{stroke:'#71717a', lineWidth:2}}, {type:'line', shape:{x1:p1[0],y1:p1[1]-4, x2:p1[0], y2:p1[1]+4}, style:{stroke:'#71717a', lineWidth:2}}, {type:'line', shape:{x1:p2[0],y1:p2[1]-4, x2:p2[0], y2:p2[1]+4}, style:{stroke:'#71717a', lineWidth:2}} ]}; }, tooltip:{trigger:'item'}}] };
+  getChart('recoveryChart').setOption(option);
 }
 
-// Personal Records Timeline
+function renderAll(){
+  renderSparklines();
+  renderProgressiveOverload();
+  renderVolumeTrend();
+  renderWeeklyPPL();
+  renderMuscleBalance();
+  renderRepDistribution();
+  renderRecovery();
+}
+
+// Toggle handlers
+document.getElementById('pplModeToggle').addEventListener('click', function(){ this.dataset.mode = this.dataset.mode==='absolute' ? 'percent':'absolute'; this.textContent= this.dataset.mode==='absolute'?'Absolute':'Percent'; renderWeeklyPPL(); });
+document.getElementById('repModeToggle').addEventListener('click', function(){ this.dataset.mode = this.dataset.mode==='weekly' ? 'summary':'weekly'; this.textContent= this.dataset.mode==='weekly'?'Weekly':'Summary'; renderRepDistribution(); });
+
+// Init
+function bootstrapDashboard(){
+  console.log('[dashboard] bootstrap');
+  initFilters();
+  updateMetricButtons();
+  // setActiveRange triggers a refreshData call; we avoid double-calling refresh
+  setActiveRange({label:'12w', days:84});
+}
+if(document.readyState === 'loading'){
+  document.addEventListener('DOMContentLoaded', bootstrapDashboard);
+} else {
+  // DOM already parsed
+  bootstrapDashboard();
+}
+
+window.addEventListener('resize', ()=>{ Object.values(charts).forEach(c=> c.resize()); });
+
 async function loadPersonalRecords() {
   try {
     const data = await fetchJSON('/api/personal-records');

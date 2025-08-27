@@ -1,273 +1,88 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
   <meta charset="UTF-8" />
-  <title>Lifting Progress Dashboard</title>
-  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Lifting Progression Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <!-- tailwind -->
+  <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    body { 
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-      margin: 0; 
-      padding: 1rem; 
-      background-color: #f5f5f5;
-    }
-    h1 { 
-      font-size: 2rem; 
-      color: #333; 
-      text-align: center;
-      margin-bottom: 0.5rem;
-    }
-    .subtitle {
-      text-align: center;
-      color: #666;
-      margin-bottom: 2rem;
-      font-size: 1.1rem;
-    }
-    .dashboard { 
-      display: grid; 
-      grid-template-columns: repeat(auto-fit, minmax(600px, 1fr)); 
-      gap: 1.5rem;
-      max-width: 1400px;
-      margin: 0 auto;
-    }
-    .chart-container {
-      background: white;
-      border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-      overflow: hidden;
-    }
-    .chart-title {
-      background: #2c3e50;
-      color: white;
-      padding: 1rem;
-      margin: 0;
-      font-size: 1.1rem;
-      font-weight: 600;
-    }
-    .chart-content {
-      padding: 1rem;
-    }
-    .full-width { 
-      grid-column: 1 / -1; 
-    }
-    .half-width {
-      grid-column: span 1;
-    }
-    #top-bar { 
-      display: flex; 
-      gap: 1rem; 
-      align-items: center; 
-      justify-content: center;
-      flex-wrap: wrap; 
-      margin-bottom: 2rem;
-      background: white;
-      padding: 1rem;
-      border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    }
-    select { 
-      padding: 0.5rem; 
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      font-size: 1rem;
-    }
-    #lastIngested {
-      color: #666;
-      font-size: 0.9rem;
-    }
-    footer { 
-      margin-top: 3rem; 
-      font-size: 0.9rem; 
-      color: #666; 
-      text-align: center;
-    }
-    @media (max-width: 1200px) { 
-      .dashboard { 
-        grid-template-columns: 1fr; 
-      }
-      .full-width, .half-width {
-        grid-column: 1;
-      }
-    }
+    body { background: #09090b; }
+    .card { transition: background-color .2s ease, box-shadow .2s ease; }
+    .card:hover { box-shadow: 0 4px 18px -2px rgba(0,0,0,0.55); }
+    .chart { width: 100%; }
   </style>
 </head>
-<body>
-  <h1>🏋️ Lifting Progress Dashboard</h1>
-  <div class="subtitle">Track your strength gains and training consistency</div>
-  
-  <div id="top-bar">
-    <label>Detailed Exercise Analysis: <select id="exerciseSelect"></select></label>
-    <span id="lastIngested"></span>
-  </div>
+<body class="text-zinc-200 antialiased">
+  <main class="mx-auto max-w-[1700px] px-6 py-6 space-y-8">
+    <header class="flex flex-col gap-2">
+      <h1 class="text-3xl font-bold tracking-tight">Progression • Overload • Recovery • Balance</h1>
+      <p class="text-sm text-zinc-500">Focused dashboard – no fluff. Data last updated: <span id="lastIngested" class="text-zinc-300">...</span></p>
+    </header>
 
-  <div class="dashboard">
-    <!-- Progressive Overload - Most important chart -->
-    <div class="chart-container full-width">
-      <h2 class="chart-title">💪 Progressive Overload - Strength Gains Over Time</h2>
-      <div class="chart-content">
-        <div id="progressiveOverloadChart" style="height:400px;"></div>
-      </div>
+    <!-- Filters -->
+    <div id="filterBar" class="flex flex-wrap gap-3 items-center bg-zinc-900/60 backdrop-blur rounded-2xl p-4 ring-1 ring-zinc-800">
+      <div class="flex gap-1" id="dateRangeButtons"></div>
+      <div class="relative" id="exerciseMulti"></div>
+      <div class="flex gap-1" id="metricToggle"></div>
     </div>
 
-    <!-- Volume Progression -->
-    <div class="chart-container half-width">
-      <h2 class="chart-title">📈 Training Volume Progression</h2>
-      <div class="chart-content">
-        <div id="volumeProgressionChart" style="height:350px;"></div>
-      </div>
-    </div>
+    <!-- PR Sparklines -->
+    <section>
+      <h2 class="text-xl font-semibold mb-3">Personal Record Sparklines</h2>
+      <div id="sparklineContainer" class="grid gap-4 md:grid-cols-3 lg:grid-cols-5 auto-rows-fr"></div>
+    </section>
 
-    <!-- Personal Records Timeline -->
-    <div class="chart-container half-width">
-      <h2 class="chart-title">🏆 Personal Records Timeline</h2>
-      <div class="chart-content">
-        <div id="personalRecordsChart" style="height:350px;"></div>
-      </div>
-    </div>
-
-    <!-- Training Consistency -->
-    <div class="chart-container half-width">
-      <h2 class="chart-title">📅 Training Consistency</h2>
-      <div class="chart-content">
-        <div id="trainingConsistencyChart" style="height:300px;"></div>
-      </div>
-    </div>
-
-    <!-- Strength Balance -->
-    <div class="chart-container half-width">
-      <h2 class="chart-title">⚖️ Strength Balance</h2>
-      <div class="chart-content">
-        <div id="strengthBalanceChart" style="height:300px;"></div>
-      </div>
-    </div>
-
-    <!-- Exercise Analysis (selected exercise) -->
-    <div class="chart-container full-width">
-      <h2 class="chart-title">🔍 Exercise Deep Dive</h2>
-      <div class="chart-content">
-        <div id="exerciseAnalysisChart" style="height:400px;"></div>
-      </div>
-    </div>
-
-    <!-- Strong-inspired Analytics -->
-    <div class="chart-container full-width">
-      <h2 class="chart-title">🏅 Personal Records Summary</h2>
-      <div class="chart-content">
-        <div id="recordsTable" style="height:300px; overflow-y:auto;"></div>
-      </div>
-    </div>
-
-    <div class="chart-container half-width">
-      <h2 class="chart-title">📅 Training Calendar</h2>
-      <div class="chart-content">
-        <div id="calendarChart" style="height:300px;"></div>
-      </div>
-    </div>
-
-    <div class="chart-container half-width">
-      <h2 class="chart-title">💪 Muscle Group Balance</h2>
-      <div class="chart-content">
-        <div id="muscleBalanceChart" style="height:300px;"></div>
-      </div>
-    </div>
-
-    <div class="chart-container half-width">
-      <h2 class="chart-title">📊 Body Measurements</h2>
-      <div class="chart-content">
-        <div id="measurementsChart" style="height:300px;"></div>
-      </div>
-    </div>
-
-    <div class="chart-container half-width">
-      <h2 class="chart-title">🔥 Training Streak</h2>
-      <div class="chart-content">
-        <div id="streakStats" style="height:300px; display:flex; flex-direction:column; justify-content:space-around; align-items:center; text-align:center;">
-          <div class="streak-item">
-            <div id="currentStreak" style="font-size:3rem; font-weight:bold; color:#007bff;">-</div>
-            <div>Current Streak (weeks)</div>
-          </div>
-          <div class="streak-item">
-            <div id="longestStreak" style="font-size:2rem; font-weight:bold; color:#28a745;">-</div>
-            <div>Longest Streak (weeks)</div>
-          </div>
-          <div class="streak-item">
-            <div id="totalWorkouts" style="font-size:2rem; font-weight:bold; color:#17a2b8;">-</div>
-            <div>Total Workout Days</div>
-          </div>
+  <section class="grid gap-6 grid-cols-1 md:grid-cols-12">
+      <!-- Progressive Overload -->
+      <div class="card col-span-12 bg-zinc-900 rounded-2xl ring-1 ring-zinc-800 shadow-sm p-5 flex flex-col">
+        <div class="flex items-center justify-between mb-2">
+          <h2 class="text-xl font-semibold">Progressive Overload</h2>
+          <button id="resetOverloadZoom" class="text-xs px-2 py-1 rounded bg-zinc-800 hover:bg-zinc-700">Reset Zoom</button>
         </div>
+  <div id="progressiveOverloadChart" class="chart" style="height:300px" data-fixed-height="true"></div>
+        <div id="overloadSlopes" class="mt-3 flex flex-wrap gap-2 text-xs"></div>
       </div>
-    </div>
 
-    <!-- Advanced Analytics - The Full Arsenal -->
-    <div class="chart-container full-width">
-      <h2 class="chart-title">🔥 Weekly Volume Heatmap</h2>
-      <div class="chart-content">
-        <div id="volumeHeatmapChart" style="height:300px;"></div>
+      <!-- Volume Trend -->
+      <div class="card col-span-12 md:col-span-8 bg-zinc-900 rounded-2xl ring-1 ring-zinc-800 shadow-sm p-5 flex flex-col">
+        <h2 class="text-xl font-semibold mb-2">Session Volume Trend</h2>
+  <div id="volumeTrendChart" class="chart" style="height:240px" data-fixed-height="true"></div>
       </div>
-    </div>
 
-    <div class="chart-container half-width">
-      <h2 class="chart-title">📊 Rep Range Distribution</h2>
-      <div class="chart-content">
-        <div id="repDistributionChart" style="height:300px;"></div>
+      <!-- Rep Distribution -->
+      <div class="card col-span-12 md:col-span-4 bg-zinc-900 rounded-2xl ring-1 ring-zinc-800 shadow-sm p-5 flex flex-col">
+        <div class="flex items-center justify-between mb-2">
+          <h2 class="text-xl font-semibold">Rep Range Distribution</h2>
+          <button id="repModeToggle" class="text-xs px-2 py-1 rounded bg-zinc-800 hover:bg-zinc-700" data-mode="weekly">Weekly</button>
+        </div>
+  <div id="repDistributionChart" class="chart" style="height:240px" data-fixed-height="true"></div>
       </div>
-    </div>
 
-    <div class="chart-container half-width">
-      <h2 class="chart-title">🎯 Exercise Frequency</h2>
-      <div class="chart-content">
-        <div id="exerciseFrequencyChart" style="height:300px;"></div>
+      <!-- Weekly PPL -->
+      <div class="card col-span-12 md:col-span-7 bg-zinc-900 rounded-2xl ring-1 ring-zinc-800 shadow-sm p-5 flex flex-col">
+        <div class="flex items-center justify-between mb-2">
+          <h2 class="text-xl font-semibold">Push / Pull / Legs Weekly</h2>
+          <button id="pplModeToggle" class="text-xs px-2 py-1 rounded bg-zinc-800 hover:bg-zinc-700" data-mode="absolute">Absolute</button>
+        </div>
+  <div id="weeklyPPLChart" class="chart" style="height:240px" data-fixed-height="true"></div>
       </div>
-    </div>
 
-    <div class="chart-container half-width">
-      <h2 class="chart-title">⚡ Strength Ratios</h2>
-      <div class="chart-content">
-        <div id="strengthRatiosChart" style="height:300px;"></div>
+      <!-- Muscle Balance 28d -->
+      <div class="card col-span-12 md:col-span-5 bg-zinc-900 rounded-2xl ring-1 ring-zinc-800 shadow-sm p-5 flex flex-col">
+        <h2 class="text-xl font-semibold mb-2">Muscle Group Balance (28d)</h2>
+  <div id="muscleBalanceChart" class="chart" style="height:240px" data-fixed-height="true"></div>
       </div>
-    </div>
 
-    <div class="chart-container half-width">
-      <h2 class="chart-title">🔄 Recovery Tracking</h2>
-      <div class="chart-content">
-        <div id="recoveryChart" style="height:300px;"></div>
+      <!-- Recovery -->
+      <div class="card col-span-12 bg-zinc-900 rounded-2xl ring-1 ring-zinc-800 shadow-sm p-5 flex flex-col">
+        <h2 class="text-xl font-semibold mb-2">Average Recovery Time</h2>
+  <div id="recoveryChart" class="chart" style="height:280px" data-fixed-height="true"></div>
       </div>
-    </div>
+    </section>
+  </main>
 
-    <div class="chart-container half-width">
-      <h2 class="chart-title">📈 Progression Rate</h2>
-      <div class="chart-content">
-        <div id="progressionRateChart" style="height:300px;"></div>
-      </div>
-    </div>
-
-    <div class="chart-container half-width">
-      <h2 class="chart-title">⏱️ Workout Duration & Efficiency</h2>
-      <div class="chart-content">
-        <div id="durationTrendsChart" style="height:300px;"></div>
-      </div>
-    </div>
-
-    <div class="chart-container full-width">
-      <h2 class="chart-title">🏆 Best Set Performance</h2>
-      <div class="chart-content">
-        <div id="bestSetsChart" style="height:300px;"></div>
-      </div>
-    </div>
-
-    <div class="chart-container full-width">
-      <h2 class="chart-title">🚨 Plateau Detection</h2>
-      <div class="chart-content">
-        <div id="plateauDetectionChart" style="height:300px;"></div>
-      </div>
-    </div>
-  </div>
-
-  <footer>
-    <p>Self-hosted lifting analytics. Your data stays private and secure.</p>
-  </footer>
-  
   <script src="/static/main.js"></script>
 </body>
 </html>
