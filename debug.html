@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>API Debug Test</title>
+    <script src="https://cdn.plot.ly/plotly-2.24.1.min.js"></script>
+</head>
+<body>
+    <h1>API Debug Test</h1>
+    <div id="status"></div>
+    <div id="results"></div>
+    
+    <script>
+        const statusDiv = document.getElementById('status');
+        const resultsDiv = document.getElementById('results');
+        
+        async function testAPI(endpoint, name) {
+            try {
+                statusDiv.innerHTML += `<p>Testing ${name}...</p>`;
+                const response = await fetch(`/api/${endpoint}`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                statusDiv.innerHTML += `<p>✅ ${name} - Success (${JSON.stringify(data).length} chars)</p>`;
+                
+                resultsDiv.innerHTML += `<h3>${name}</h3><pre>${JSON.stringify(data, null, 2)}</pre>`;
+                return data;
+            } catch (error) {
+                statusDiv.innerHTML += `<p>❌ ${name} - Error: ${error.message}</p>`;
+                console.error(`Error testing ${name}:`, error);
+                return null;
+            }
+        }
+        
+        async function runTests() {
+            statusDiv.innerHTML = '<h2>Running API Tests...</h2>';
+            
+            await testAPI('progressive-overload', 'Progressive Overload');
+            await testAPI('volume-progression', 'Volume Progression');
+            await testAPI('personal-records', 'Personal Records');
+            await testAPI('training-consistency', 'Training Consistency');
+            await testAPI('strength-balance', 'Strength Balance');
+            await testAPI('exercises', 'Exercises List');
+            
+            // Strong-inspired endpoints
+            await testAPI('records', 'Personal Records Table');
+            await testAPI('calendar', 'Training Calendar');
+            await testAPI('muscle-balance', 'Muscle Balance');
+            await testAPI('measurements', 'Body Measurements');
+            await testAPI('training-streak', 'Training Streak');
+            
+            statusDiv.innerHTML += '<h2>Tests Complete!</h2>';
+        }
+        
+        // Run tests when page loads
+        document.addEventListener('DOMContentLoaded', runTests);
+    </script>
+</body>
+</html>

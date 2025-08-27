@@ -1,3 +1,5 @@
+// Strong-inspired Analytics Dashboard
+
 // Utility functions
 async function fetchJSON(url) {
   const r = await fetch(url);
@@ -27,6 +29,34 @@ const colors = {
 const exerciseColors = [
   '#3498db', '#e74c3c', '#27ae60', '#f39c12', '#8e44ad', '#16a085'
 ];
+
+// Initialize all charts when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Initializing improved lifting dashboard...');
+    
+    // Load original charts
+    console.log('Loading original charts...');
+    loadProgressiveOverload();
+    loadVolumeProgression(); 
+    loadPersonalRecords();
+    loadTrainingConsistency();
+    loadStrengthBalance();
+    loadExerciseOptions();
+    
+    // Load Strong-inspired analytics
+    console.log('Loading Strong-inspired analytics...');
+    loadPersonalRecordsTable();
+    loadTrainingCalendar();
+    loadMuscleGroupBalance();
+    loadBodyMeasurements();
+    loadTrainingStreak();
+    
+    // Load metadata
+    console.log('Loading metadata...');
+    loadLastIngested();
+    
+    console.log('Dashboard loaded successfully!');
+});
 
 // Progressive Overload Chart - Most important chart
 async function loadProgressiveOverload() {
@@ -406,7 +436,7 @@ async function loadExerciseAnalysis(exercise) {
 }
 
 // Load exercises list for dropdown
-async function loadExercisesList() {
+async function loadExerciseOptions() {
   try {
     const exercises = await fetchJSON('/api/exercises');
     const select = document.getElementById('exerciseSelect');
@@ -427,40 +457,233 @@ async function loadExercisesList() {
   }
 }
 
-// Load metadata
-async function refreshMeta() {
+// Strong-inspired analytics functions
+
+async function loadPersonalRecordsTable() {
   try {
-    const health = await fetchJSON('/health');
-    if (health.last_ingested_at) {
-      const lastIngested = new Date(health.last_ingested_at).toLocaleString();
-      document.getElementById('lastIngested').textContent = `Last update: ${lastIngested}`;
+    const data = await fetchJSON('/api/records');
+    
+    const container = document.getElementById('recordsTable');
+    
+    if (!data || data.length === 0) {
+      container.innerHTML = '<p style="text-align: center; padding: 20px;">No records found</p>';
+      return;
     }
+    
+    let html = `
+      <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+        <thead>
+          <tr style="background-color: #f8f9fa; border-bottom: 2px solid #dee2e6;">
+            <th style="padding: 12px 8px; text-align: left; font-weight: bold;">Exercise</th>
+            <th style="padding: 12px 8px; text-align: center; font-weight: bold;">Max Weight</th>
+            <th style="padding: 12px 8px; text-align: center; font-weight: bold;">Max Reps</th>
+            <th style="padding: 12px 8px; text-align: center; font-weight: bold;">Est. 1RM</th>
+            <th style="padding: 12px 8px; text-align: center; font-weight: bold;">Total Sets</th>
+          </tr>
+        </thead>
+        <tbody>
+    `;
+    
+    data.slice(0, 15).forEach((record, index) => {
+      html += `
+        <tr style="border-bottom: 1px solid #dee2e6; ${index % 2 === 0 ? 'background-color: #f8f9fa;' : ''} transition: background-color 0.2s;">
+          <td style="padding: 10px 8px; font-weight: 600; color: #2c3e50;">${record.exercise}</td>
+          <td style="padding: 10px 8px; text-align: center; color: #27ae60; font-weight: 500;">${record.max_weight} kg</td>
+          <td style="padding: 10px 8px; text-align: center; color: #8e44ad; font-weight: 500;">${record.max_reps}</td>
+          <td style="padding: 10px 8px; text-align: center; font-weight: bold; color: #e74c3c; font-size: 1.1rem;">${record.estimated_1rm} kg</td>
+          <td style="padding: 10px 8px; text-align: center; color: #7f8c8d;">${record.total_sets}</td>
+        </tr>
+      `;
+    });
+    
+    html += '</tbody></table>';
+    container.innerHTML = html;
+
   } catch (error) {
-    console.error('Error loading metadata:', error);
+    console.error('Error loading personal records table:', error);
   }
 }
 
-// Initialize dashboard
-(async function init() {
-  console.log('Initializing improved lifting dashboard...');
-  
+async function loadTrainingCalendar() {
   try {
-    // Load all charts in parallel for better performance
-    await Promise.all([
-      loadProgressiveOverload(),
-      loadVolumeProgression(),
-      loadPersonalRecords(),
-      loadTrainingConsistency(),
-      loadStrengthBalance(),
-      loadExercisesList(),
-      refreshMeta()
-    ]);
+    const data = await fetchJSON('/api/calendar');
     
-    // Initialize exercise analysis with empty state
-    loadExerciseAnalysis(null);
-    
-    console.log('Dashboard loaded successfully!');
+    if (!data || data.length === 0) {
+      Plotly.newPlot('calendarChart', [], {
+        title: 'No training calendar data available'
+      });
+      return;
+    }
+
+    const trace = {
+      x: data.map(d => d.date),
+      y: data.map(d => d.exercises_performed),
+      name: 'Exercises per Day',
+      type: 'bar',
+      marker: { 
+        color: data.map(d => d.exercises_performed),
+        colorscale: 'Viridis',
+        showscale: true
+      },
+      hovertemplate: 'Date: %{x}<br>Exercises: %{y}<br>Volume: %{customdata.volume} kg<br>Sets: %{customdata.sets}<extra></extra>',
+      customdata: data.map(d => ({ volume: d.total_volume, sets: d.total_sets }))
+    };
+
+    const layout = {
+      title: '📅 Training Calendar - Workout Intensity',
+      xaxis: { title: 'Date', type: 'date' },
+      yaxis: { title: 'Exercises Performed' },
+      showlegend: false
+    };
+
+    Plotly.newPlot('calendarChart', [trace], layout, { responsive: true, displayModeBar: false });
+
   } catch (error) {
-    console.error('Error initializing dashboard:', error);
+    console.error('Error loading training calendar:', error);
   }
-})();
+}
+
+async function loadMuscleGroupBalance() {
+  try {
+    const data = await fetchJSON('/api/muscle-balance');
+    
+    if (!data || Object.keys(data).length === 0) {
+      Plotly.newPlot('muscleBalanceChart', [], {
+        title: 'No muscle balance data available'
+      });
+      return;
+    }
+
+    const muscleGroups = Object.keys(data);
+    const values = muscleGroups.map(group => data[group].max_estimated_1rm);
+    
+    const trace = {
+      labels: muscleGroups,
+      values: values,
+      type: 'pie',
+      hovertemplate: '<b>%{label}</b><br>Max Est. 1RM: %{value} kg<br>%{percent}<extra></extra>',
+      textinfo: 'label+percent',
+      marker: {
+        colors: exerciseColors,
+        line: { color: '#FFFFFF', width: 2 }
+      }
+    };
+
+    const layout = {
+      title: '💪 Muscle Group Strength Distribution',
+      showlegend: false,
+      margin: { l: 20, r: 20, t: 50, b: 20 }
+    };
+
+    Plotly.newPlot('muscleBalanceChart', [trace], layout, { responsive: true, displayModeBar: false });
+
+  } catch (error) {
+    console.error('Error loading muscle balance:', error);
+  }
+}
+
+async function loadBodyMeasurements() {
+  try {
+    const data = await fetchJSON('/api/measurements');
+    
+    if (!data || data.length === 0) {
+      Plotly.newPlot('measurementsChart', [], {
+        title: 'No body measurements data available'
+      });
+      return;
+    }
+
+    const trace = {
+      x: data.map(m => m.date),
+      y: data.map(m => m.weight),
+      name: 'Body Weight',
+      type: 'scatter',
+      mode: 'lines+markers',
+      fill: 'tonexty',
+      fillcolor: 'rgba(52, 152, 219, 0.2)',
+      line: { color: colors.secondary, width: 3 },
+      marker: { size: 6 },
+      hovertemplate: 'Date: %{x}<br>Weight: %{y} kg<extra></extra>'
+    };
+
+    const layout = {
+      title: '📊 Body Weight Progression',
+      xaxis: { title: 'Date', type: 'date' },
+      yaxis: { title: 'Weight (kg)' },
+      showlegend: false
+    };
+
+    Plotly.newPlot('measurementsChart', [trace], layout, { responsive: true, displayModeBar: false });
+
+  } catch (error) {
+    console.error('Error loading body measurements:', error);
+  }
+}
+
+async function loadTrainingStreak() {
+  try {
+    const data = await fetchJSON('/api/training-streak');
+    
+    document.getElementById('currentStreak').textContent = data.current_streak || '0';
+    document.getElementById('longestStreak').textContent = data.longest_streak || '0';
+    document.getElementById('totalWorkouts').textContent = data.total_workout_days || '0';
+    
+    // Add some animation
+    const elements = ['currentStreak', 'longestStreak', 'totalWorkouts'];
+    elements.forEach((id, index) => {
+      const element = document.getElementById(id);
+      setTimeout(() => {
+        element.style.transform = 'scale(1.1)';
+        setTimeout(() => {
+          element.style.transform = 'scale(1)';
+        }, 200);
+      }, index * 100);
+    });
+
+  } catch (error) {
+    console.error('Error loading training streak:', error);
+  }
+}
+
+// Load metadata
+async function loadLastIngested() {
+  try {
+    const health = await fetchJSON('/health');
+    const lastIngested = health.last_ingested_at;
+    const element = document.getElementById('lastIngested');
+    
+    if (lastIngested) {
+      const date = new Date(lastIngested);
+      element.textContent = `Last data update: ${date.toLocaleString()}`;
+      element.style.color = '#27ae60';
+    } else {
+      element.textContent = 'No data ingested yet';
+      element.style.color = '#e74c3c';
+    }
+
+  } catch (error) {
+    console.error('Error loading last ingested:', error);
+    document.getElementById('lastIngested').textContent = 'Status unknown';
+  }
+}
+
+// Add some global styles for better UX
+const style = document.createElement('style');
+style.textContent = `
+  .streak-item {
+    transition: all 0.3s ease;
+  }
+  .streak-item:hover {
+    transform: translateY(-5px);
+  }
+  table tbody tr {
+    transition: background-color 0.2s ease;
+  }
+  .chart-container {
+    transition: box-shadow 0.3s ease;
+  }
+  .chart-container:hover {
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+  }
+`;
+document.head.appendChild(style);

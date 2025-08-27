@@ -23,6 +23,12 @@ from .processing import (
     strength_balance,
     exercise_analysis,
     list_exercises,
+    get_exercise_records,
+    get_body_measurements,
+    get_workout_calendar,
+    get_exercise_detail,
+    get_muscle_group_balance,
+    get_training_streak,
 )
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -62,6 +68,79 @@ init_db()
 @app.get("/", response_class=HTMLResponse)
 async def dashboard(request: Request):
     return templates.TemplateResponse("dashboard.html", {"request": request})
+
+
+@app.get("/debug", response_class=HTMLResponse)
+async def debug_page(request: Request):
+    """Debug page to test API endpoints"""
+    debug_html = """<!DOCTYPE html>
+<html>
+<head>
+    <title>API Debug Test</title>
+    <script src="https://cdn.plot.ly/plotly-2.24.1.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .success { color: green; }
+        .error { color: red; }
+        pre { background: #f5f5f5; padding: 10px; border-radius: 4px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>API Debug Test</h1>
+    <div id="status"></div>
+    <div id="results"></div>
+    
+    <script>
+        const statusDiv = document.getElementById('status');
+        const resultsDiv = document.getElementById('results');
+        
+        async function testAPI(endpoint, name) {
+            try {
+                statusDiv.innerHTML += `<p>Testing ${name}...</p>`;
+                const response = await fetch(`/api/${endpoint}`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                statusDiv.innerHTML += `<p class="success">✅ ${name} - Success (${JSON.stringify(data).length} chars)</p>`;
+                
+                resultsDiv.innerHTML += `<h3>${name}</h3><pre>${JSON.stringify(data, null, 2).substring(0, 500)}${JSON.stringify(data).length > 500 ? '...' : ''}</pre>`;
+                return data;
+            } catch (error) {
+                statusDiv.innerHTML += `<p class="error">❌ ${name} - Error: ${error.message}</p>`;
+                console.error(`Error testing ${name}:`, error);
+                return null;
+            }
+        }
+        
+        async function runTests() {
+            statusDiv.innerHTML = '<h2>Running API Tests...</h2>';
+            
+            await testAPI('progressive-overload', 'Progressive Overload');
+            await testAPI('volume-progression', 'Volume Progression');
+            await testAPI('personal-records', 'Personal Records');
+            await testAPI('training-consistency', 'Training Consistency');
+            await testAPI('strength-balance', 'Strength Balance');
+            await testAPI('exercises', 'Exercises List');
+            
+            // Strong-inspired endpoints
+            await testAPI('records', 'Personal Records Table');
+            await testAPI('calendar', 'Training Calendar');
+            await testAPI('muscle-balance', 'Muscle Balance');
+            await testAPI('measurements', 'Body Measurements');
+            await testAPI('training-streak', 'Training Streak');
+            
+            statusDiv.innerHTML += '<h2>Tests Complete!</h2>';
+        }
+        
+        // Run tests when page loads
+        document.addEventListener('DOMContentLoaded', runTests);
+    </script>
+</body>
+</html>"""
+    return HTMLResponse(content=debug_html)
 
 
 @app.post("/ingest")
@@ -160,6 +239,42 @@ async def api_exercise_analysis(exercise: str):
 @app.get("/api/exercises")
 async def api_exercises():
     return list_exercises()
+
+
+# Strong App inspired endpoints
+
+@app.get("/api/records")
+async def get_records():
+    """Get personal records for all exercises - like Strong's Records screen"""
+    return get_exercise_records()
+
+@app.get("/api/measurements")
+async def get_measurements():
+    """Get body measurements data - like Strong's measurements feature"""
+    return get_body_measurements()
+
+@app.get("/api/calendar")
+async def get_calendar():
+    """Get workout calendar data - like Strong's workout frequency tracking"""
+    return get_workout_calendar()
+
+@app.get("/api/exercise-detail/{exercise}")
+async def get_exercise_detail_endpoint(exercise: str):
+    """Get detailed statistics for a specific exercise - like Strong's Exercise Detail Screen"""
+    result = get_exercise_detail(exercise)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Exercise not found or no data available")
+    return result
+
+@app.get("/api/muscle-balance")
+async def get_muscle_balance():
+    """Get muscle group balance analysis - like Strong's muscle balance feature"""
+    return get_muscle_group_balance()
+
+@app.get("/api/training-streak")
+async def get_training_streak_endpoint():
+    """Get training streak data - like Strong's consistency tracking"""
+    return get_training_streak()
 
 
 @app.get("/health")
