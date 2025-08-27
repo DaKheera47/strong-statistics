@@ -51,6 +51,18 @@ document.addEventListener('DOMContentLoaded', function() {
     loadBodyMeasurements();
     loadTrainingStreak();
     
+    // Load advanced analytics - THE FULL ARSENAL
+    console.log('Loading advanced analytics...');
+    loadVolumeHeatmap();
+    loadRepDistribution();
+    loadExerciseFrequency();
+    loadStrengthRatios();
+    loadRecoveryTracking();
+    loadProgressionRate();
+    loadDurationTrends();
+    loadBestSets();
+    loadPlateauDetection();
+    
     // Load metadata
     console.log('Loading metadata...');
     loadLastIngested();
@@ -687,3 +699,381 @@ style.textContent = `
   }
 `;
 document.head.appendChild(style);
+
+// ADVANCED ANALYTICS FUNCTIONS - THE FULL ARSENAL 🔥
+
+async function loadVolumeHeatmap() {
+  try {
+    const data = await fetchJSON('/api/volume-heatmap');
+    
+    if (!data || data.length === 0) {
+      Plotly.newPlot('volumeHeatmapChart', [], {
+        title: 'No volume heatmap data available'
+      });
+      return;
+    }
+
+    // Create calendar heatmap similar to GitHub contributions
+    const trace = {
+      x: data.map(d => d.date),
+      y: data.map(d => ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.day_of_week]),
+      z: data.map(d => d.intensity),
+      type: 'scatter',
+      mode: 'markers',
+      marker: {
+        size: 15,
+        color: data.map(d => d.intensity),
+        colorscale: 'Viridis',
+        showscale: true,
+        colorbar: { title: 'Training Intensity' }
+      },
+      hovertemplate: 'Date: %{x}<br>Day: %{y}<br>Volume: %{customdata} kg<extra></extra>',
+      customdata: data.map(d => d.volume)
+    };
+
+    const layout = {
+      title: '🔥 Training Volume Heatmap (GitHub Style)',
+      xaxis: { title: 'Date', type: 'date' },
+      yaxis: { title: 'Day of Week' },
+      showlegend: false
+    };
+
+    Plotly.newPlot('volumeHeatmapChart', [trace], layout, { responsive: true, displayModeBar: false });
+
+  } catch (error) {
+    console.error('Error loading volume heatmap:', error);
+  }
+}
+
+async function loadRepDistribution() {
+  try {
+    const data = await fetchJSON('/api/rep-distribution');
+    
+    if (!data || data.length === 0) return;
+
+    // Calculate percentages
+    const totalSets = data.reduce((sum, item) => sum + item.set_count, 0);
+    data.forEach(item => {
+      item.percentage = ((item.set_count / totalSets) * 100).toFixed(1);
+    });
+
+    const trace = {
+      labels: data.map(d => d.rep_range),
+      values: data.map(d => d.set_count),
+      type: 'pie',
+      hovertemplate: '<b>%{label}</b><br>Sets: %{value}<br>%{percent}<br>Volume: %{customdata} kg<extra></extra>',
+      customdata: data.map(d => d.total_volume),
+      marker: {
+        colors: ['#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#ffeaa7'],
+        line: { color: '#FFFFFF', width: 2 }
+      }
+    };
+
+    const layout = {
+      title: '📊 Rep Range Distribution - Training Focus',
+      showlegend: true,
+      legend: { orientation: 'h', y: -0.1 }
+    };
+
+    Plotly.newPlot('repDistributionChart', [trace], layout, { responsive: true, displayModeBar: false });
+
+  } catch (error) {
+    console.error('Error loading rep distribution:', error);
+  }
+}
+
+async function loadExerciseFrequency() {
+  try {
+    const data = await fetchJSON('/api/exercise-frequency');
+    
+    if (!data || data.length === 0) return;
+
+    const trace = {
+      x: data.slice(0, 10).map(d => d.exercise),
+      y: data.slice(0, 10).map(d => d.workout_days),
+      type: 'bar',
+      marker: {
+        color: data.slice(0, 10).map(d => d.workout_days),
+        colorscale: 'Viridis',
+        showscale: true
+      },
+      hovertemplate: '<b>%{x}</b><br>Workout Days: %{y}<br>Total Sets: %{customdata.sets}<br>Avg Weight: %{customdata.weight} kg<extra></extra>',
+      customdata: data.slice(0, 10).map(d => ({
+        sets: d.total_sets,
+        weight: d.avg_weight
+      }))
+    };
+
+    const layout = {
+      title: '🎯 Exercise Frequency - Top 10 Most Trained',
+      xaxis: { title: 'Exercise', tickangle: -45 },
+      yaxis: { title: 'Workout Days' },
+      showlegend: false
+    };
+
+    Plotly.newPlot('exerciseFrequencyChart', [trace], layout, { responsive: true, displayModeBar: false });
+
+  } catch (error) {
+    console.error('Error loading exercise frequency:', error);
+  }
+}
+
+async function loadStrengthRatios() {
+  try {
+    const data = await fetchJSON('/api/strength-ratios');
+    
+    if (!data || !data.ratios || Object.keys(data.ratios).length === 0) {
+      Plotly.newPlot('strengthRatiosChart', [], {
+        title: 'No strength ratio data available'
+      });
+      return;
+    }
+
+    const ratioNames = Object.keys(data.ratios);
+    const actualRatios = Object.values(data.ratios);
+    const idealRatios = ratioNames.map(name => data.ideal_ratios[name] || 1);
+
+    const traces = [
+      {
+        x: ratioNames,
+        y: actualRatios,
+        name: 'Your Ratios',
+        type: 'bar',
+        marker: { color: '#3498db' }
+      },
+      {
+        x: ratioNames,
+        y: idealRatios,
+        name: 'Ideal Ratios',
+        type: 'scatter',
+        mode: 'markers',
+        marker: { size: 12, color: '#e74c3c', symbol: 'diamond' }
+      }
+    ];
+
+    const layout = {
+      title: '⚡ Strength Ratios vs Ideal Standards',
+      xaxis: { title: 'Lift Ratios' },
+      yaxis: { title: 'Ratio Value' },
+      showlegend: true
+    };
+
+    Plotly.newPlot('strengthRatiosChart', traces, layout, { responsive: true, displayModeBar: false });
+
+  } catch (error) {
+    console.error('Error loading strength ratios:', error);
+  }
+}
+
+async function loadRecoveryTracking() {
+  try {
+    const data = await fetchJSON('/api/recovery-tracking');
+    
+    if (!data || Object.keys(data).length === 0) return;
+
+    const muscleGroups = Object.keys(data);
+    const avgRecovery = muscleGroups.map(group => data[group].avg_recovery);
+    const colors = ['#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#ffeaa7'];
+
+    const trace = {
+      x: muscleGroups,
+      y: avgRecovery,
+      type: 'bar',
+      marker: {
+        color: colors.slice(0, muscleGroups.length)
+      },
+      hovertemplate: '<b>%{x}</b><br>Avg Recovery: %{y} days<br>Sessions: %{customdata.sessions}<br>Range: %{customdata.min}-%{customdata.max} days<extra></extra>',
+      customdata: muscleGroups.map(group => ({
+        sessions: data[group].total_sessions,
+        min: data[group].min_recovery,
+        max: data[group].max_recovery
+      }))
+    };
+
+    const layout = {
+      title: '🔄 Recovery Time Between Sessions',
+      xaxis: { title: 'Muscle Group' },
+      yaxis: { title: 'Average Days Between Sessions' },
+      showlegend: false
+    };
+
+    Plotly.newPlot('recoveryChart', [trace], layout, { responsive: true, displayModeBar: false });
+
+  } catch (error) {
+    console.error('Error loading recovery tracking:', error);
+  }
+}
+
+async function loadProgressionRate() {
+  try {
+    const data = await fetchJSON('/api/progression-rate');
+    
+    if (!data || data.length === 0) return;
+
+    const topProgressors = data.slice(0, 8);
+
+    const trace = {
+      x: topProgressors.map(d => d.exercise),
+      y: topProgressors.map(d => d.percentage_gain),
+      type: 'bar',
+      marker: {
+        color: topProgressors.map(d => d.percentage_gain),
+        colorscale: 'RdYlGn',
+        showscale: true,
+        colorbar: { title: '% Gain' }
+      },
+      hovertemplate: '<b>%{x}</b><br>Total Gain: %{y}%<br>Weekly Rate: %{customdata.weekly} kg/week<br>Days Tracked: %{customdata.days}<extra></extra>',
+      customdata: topProgressors.map(d => ({
+        weekly: d.weekly_rate,
+        days: d.days_tracked
+      }))
+    };
+
+    const layout = {
+      title: '📈 Progressive Overload Rate - Top Performers',
+      xaxis: { title: 'Exercise', tickangle: -45 },
+      yaxis: { title: 'Percentage Gain (%)' },
+      showlegend: false
+    };
+
+    Plotly.newPlot('progressionRateChart', [trace], layout, { responsive: true, displayModeBar: false });
+
+  } catch (error) {
+    console.error('Error loading progression rate:', error);
+  }
+}
+
+async function loadDurationTrends() {
+  try {
+    const data = await fetchJSON('/api/workout-duration');
+    
+    if (!data || data.length === 0) return;
+
+    const traces = [
+      {
+        x: data.map(d => d.date),
+        y: data.map(d => d.duration),
+        name: 'Duration (min)',
+        type: 'scatter',
+        mode: 'lines+markers',
+        line: { color: '#3498db' },
+        yaxis: 'y'
+      },
+      {
+        x: data.map(d => d.date),
+        y: data.map(d => d.efficiency_score),
+        name: 'Efficiency Score',
+        type: 'scatter',
+        mode: 'lines+markers',
+        line: { color: '#e74c3c', dash: 'dash' },
+        yaxis: 'y2'
+      }
+    ];
+
+    const layout = {
+      title: '⏱️ Workout Duration & Efficiency Trends',
+      xaxis: { title: 'Date', type: 'date' },
+      yaxis: { title: 'Duration (minutes)', side: 'left' },
+      yaxis2: { title: 'Efficiency Score', side: 'right', overlaying: 'y' },
+      hovermode: 'x unified',
+      showlegend: true
+    };
+
+    Plotly.newPlot('durationTrendsChart', traces, layout, { responsive: true, displayModeBar: false });
+
+  } catch (error) {
+    console.error('Error loading duration trends:', error);
+  }
+}
+
+async function loadBestSets() {
+  try {
+    const data = await fetchJSON('/api/best-sets');
+    
+    if (!data || data.length === 0) return;
+
+    const topSets = data.slice(0, 12);
+
+    const trace = {
+      x: topSets.map(d => d.exercise),
+      y: topSets.map(d => d.estimated_1rm),
+      type: 'bar',
+      marker: {
+        color: topSets.map(d => d.estimated_1rm),
+        colorscale: 'Viridis',
+        showscale: true,
+        colorbar: { title: 'Est. 1RM (kg)' }
+      },
+      hovertemplate: '<b>%{x}</b><br>Est. 1RM: %{y} kg<br>Weight: %{customdata.weight} kg<br>Reps: %{customdata.reps}<br>Date: %{customdata.date}<extra></extra>',
+      customdata: topSets.map(d => ({
+        weight: d.weight,
+        reps: d.reps,
+        date: d.date
+      }))
+    };
+
+    const layout = {
+      title: '🏆 Best Set Performance - Personal Records',
+      xaxis: { title: 'Exercise', tickangle: -45 },
+      yaxis: { title: 'Estimated 1RM (kg)' },
+      showlegend: false
+    };
+
+    Plotly.newPlot('bestSetsChart', [trace], layout, { responsive: true, displayModeBar: false });
+
+  } catch (error) {
+    console.error('Error loading best sets:', error);
+  }
+}
+
+async function loadPlateauDetection() {
+  try {
+    const data = await fetchJSON('/api/plateau-detection');
+    
+    if (!data || data.length === 0) return;
+
+    // Group by status for better visualization
+    const statusColors = {
+      'Progressing': '#27ae60',
+      'Plateau': '#f39c12', 
+      'Declining': '#e74c3c',
+      'Variable': '#8e44ad'
+    };
+
+    const traces = [];
+    const statuses = ['Progressing', 'Plateau', 'Declining', 'Variable'];
+    
+    statuses.forEach(status => {
+      const statusData = data.filter(d => d.status === status);
+      if (statusData.length > 0) {
+        traces.push({
+          x: statusData.map(d => d.exercise),
+          y: statusData.map(d => d.current_1rm),
+          name: status,
+          type: 'scatter',
+          mode: 'markers',
+          marker: {
+            size: 12,
+            color: statusColors[status]
+          },
+          hovertemplate: '<b>%{x}</b><br>Status: ' + status + '<br>Current 1RM: %{y} kg<br>Best Recent: %{customdata} kg<extra></extra>',
+          customdata: statusData.map(d => d.best_recent_1rm)
+        });
+      }
+    });
+
+    const layout = {
+      title: '🚨 Plateau Detection - Exercise Performance Status',
+      xaxis: { title: 'Exercise', tickangle: -45 },
+      yaxis: { title: 'Current Est. 1RM (kg)' },
+      hovermode: 'closest',
+      showlegend: true,
+      legend: { orientation: 'h', y: -0.2 }
+    };
+
+    Plotly.newPlot('plateauDetectionChart', traces, layout, { responsive: true, displayModeBar: false });
+
+  } catch (error) {
+    console.error('Error loading plateau detection:', error);
+  }
+}

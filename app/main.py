@@ -29,6 +29,15 @@ from .processing import (
     get_exercise_detail,
     get_muscle_group_balance,
     get_training_streak,
+    get_weekly_volume_heatmap,
+    get_rep_range_distribution,
+    get_exercise_frequency,
+    get_strength_ratios,
+    get_recovery_tracking,
+    get_progressive_overload_rate,
+    get_workout_duration_trends,
+    get_best_sets_analysis,
+    get_plateau_detection,
 )
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -275,6 +284,54 @@ async def get_muscle_balance():
 async def get_training_streak_endpoint():
     """Get training streak data - like Strong's consistency tracking"""
     return get_training_streak()
+
+
+# Additional hardcore analytics endpoints
+
+@app.get("/api/volume-heatmap")
+async def get_volume_heatmap():
+    """Get weekly volume heatmap data - like GitHub contributions"""
+    return get_weekly_volume_heatmap()
+
+@app.get("/api/rep-distribution")
+async def get_rep_distribution():
+    """Get rep range distribution analysis"""
+    return get_rep_range_distribution()
+
+@app.get("/api/exercise-frequency")
+async def get_exercise_frequency_endpoint():
+    """Get exercise frequency analysis"""
+    return get_exercise_frequency()
+
+@app.get("/api/strength-ratios")
+async def get_strength_ratios_endpoint():
+    """Get strength ratios between major lifts"""
+    return get_strength_ratios()
+
+@app.get("/api/recovery-tracking")
+async def get_recovery_tracking_endpoint():
+    """Get recovery time analysis between muscle group sessions"""
+    return get_recovery_tracking()
+
+@app.get("/api/progression-rate")
+async def get_progression_rate():
+    """Get progressive overload rate analysis"""
+    return get_progressive_overload_rate()
+
+@app.get("/api/workout-duration")
+async def get_workout_duration():
+    """Get workout duration trends and efficiency metrics"""
+    return get_workout_duration_trends()
+
+@app.get("/api/best-sets")
+async def get_best_sets():
+    """Get best single set performance for each exercise"""
+    return get_best_sets_analysis()
+
+@app.get("/api/plateau-detection")
+async def get_plateau_detection_endpoint():
+    """Detect potential plateaus in strength progression"""
+    return get_plateau_detection()
 
 
 @app.get("/health")

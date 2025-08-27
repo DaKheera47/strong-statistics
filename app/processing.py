@@ -666,3 +666,377 @@ def get_training_streak():
             'last_workout': workout_dates[0],
             'total_workout_days': len(workout_dates)
         }
+
+
+# Additional Strong-inspired analytics for maximum data visualization
+
+def get_weekly_volume_heatmap():
+    """Generate heatmap data for weekly training volume - like GitHub contribution graph"""
+    with get_conn() as conn:
+        cur = conn.execute("""
+            SELECT 
+                date(substr(date,1,10)) as workout_date,
+                strftime('%w', date(substr(date,1,10))) as day_of_week,
+                strftime('%W', date(substr(date,1,10))) as week_number,
+                SUM(COALESCE(weight,0) * COALESCE(reps,0)) as daily_volume
+            FROM sets
+            WHERE weight IS NOT NULL AND reps > 0
+            GROUP BY workout_date
+            ORDER BY workout_date
+        """)
+        
+        heatmap_data = []
+        for row in cur.fetchall():
+            heatmap_data.append({
+                'date': row[0],
+                'day_of_week': int(row[1]),  # 0=Sunday, 1=Monday, etc.
+                'week_number': row[2],
+                'volume': round(row[3], 1),
+                'intensity': min(5, max(1, int(row[3] / 500)))  # Scale 1-5 for color intensity
+            })
+        
+        return heatmap_data
+
+
+def get_rep_range_distribution():
+    """Analyze rep range distribution to see training focus"""
+    with get_conn() as conn:
+        cur = conn.execute("""
+            SELECT 
+                CASE 
+                    WHEN reps BETWEEN 1 AND 3 THEN '1-3 (Strength)'
+                    WHEN reps BETWEEN 4 AND 6 THEN '4-6 (Power)'
+                    WHEN reps BETWEEN 7 AND 12 THEN '7-12 (Hypertrophy)'
+                    WHEN reps BETWEEN 13 AND 20 THEN '13-20 (Endurance)'
+                    ELSE '20+ (High Endurance)'
+                END as rep_range,
+                COUNT(*) as set_count,
+                SUM(COALESCE(weight,0) * COALESCE(reps,0)) as total_volume
+            FROM sets
+            WHERE reps > 0 AND weight IS NOT NULL
+            GROUP BY rep_range
+            ORDER BY 
+                CASE 
+                    WHEN reps BETWEEN 1 AND 3 THEN 1
+                    WHEN reps BETWEEN 4 AND 6 THEN 2
+                    WHEN reps BETWEEN 7 AND 12 THEN 3
+                    WHEN reps BETWEEN 13 AND 20 THEN 4
+                    ELSE 5
+                END
+        """)
+        
+        return [
+            {
+                'rep_range': row[0],
+                'set_count': row[1],
+                'total_volume': round(row[2], 1),
+                'percentage': 0  # Will calculate in frontend
+            }
+            for row in cur.fetchall()
+        ]
+
+
+def get_exercise_frequency():
+    """Track how frequently each exercise is performed"""
+    with get_conn() as conn:
+        cur = conn.execute("""
+            SELECT 
+                exercise,
+                COUNT(DISTINCT date(substr(date,1,10))) as workout_days,
+                COUNT(*) as total_sets,
+                AVG(COALESCE(weight,0)) as avg_weight,
+                MAX(date(substr(date,1,10))) as last_performed,
+                MIN(date(substr(date,1,10))) as first_performed
+            FROM sets
+            WHERE weight IS NOT NULL
+            GROUP BY exercise
+            ORDER BY workout_days DESC, total_sets DESC
+        """)
+        
+        return [
+            {
+                'exercise': row[0],
+                'workout_days': row[1],
+                'total_sets': row[2],
+                'avg_weight': round(row[3], 1),
+                'last_performed': row[4],
+                'first_performed': row[5],
+                'frequency_score': row[1] * row[2]  # Days * Sets for ranking
+            }
+            for row in cur.fetchall()
+        ]
+
+
+def get_strength_ratios():
+    """Calculate strength ratios between major lifts"""
+    with get_conn() as conn:
+        # Define major lift patterns
+        lift_patterns = {
+            'Squat': ['Squat', 'Leg Press'],
+            'Bench': ['Chest Press', 'Bench Press'],
+            'Deadlift': ['Deadlift'],
+            'Row': ['Seated Row', 'Bent Over Row'],
+            'Press': ['Shoulder Press', 'Overhead Press']
+        }
+        
+        ratios = {}
+        max_weights = {}
+        
+        for lift_name, patterns in lift_patterns.items():
+            like_conditions = ' OR '.join([f"exercise LIKE '%{pattern}%'" for pattern in patterns])
+            
+            cur = conn.execute(f"""
+                SELECT MAX(COALESCE(weight,0) * (1 + COALESCE(reps,0)/30.0)) as max_1rm
+                FROM sets
+                WHERE ({like_conditions}) AND weight IS NOT NULL
+            """)
+            
+            result = cur.fetchone()
+            if result and result[0]:
+                max_weights[lift_name] = round(result[0], 1)
+        
+        # Calculate ratios (using typical strength standards)
+        if 'Squat' in max_weights and 'Bench' in max_weights:
+            ratios['Squat_to_Bench'] = round(max_weights['Squat'] / max_weights['Bench'], 2)
+        
+        if 'Deadlift' in max_weights and 'Squat' in max_weights:
+            ratios['Deadlift_to_Squat'] = round(max_weights['Deadlift'] / max_weights['Squat'], 2)
+        
+        if 'Bench' in max_weights and 'Row' in max_weights:
+            ratios['Bench_to_Row'] = round(max_weights['Bench'] / max_weights['Row'], 2)
+        
+        return {
+            'max_lifts': max_weights,
+            'ratios': ratios,
+            'ideal_ratios': {
+                'Squat_to_Bench': 1.3,  # Squat should be ~30% higher than bench
+                'Deadlift_to_Squat': 1.2,  # Deadlift should be ~20% higher than squat
+                'Bench_to_Row': 1.0  # Bench and row should be roughly equal
+            }
+        }
+
+
+def get_recovery_tracking():
+    """Track recovery time between sessions for each muscle group"""
+    with get_conn() as conn:
+        # Group exercises by muscle groups
+        muscle_groups = {
+            'Chest': ['Chest Press', 'Bench Press', 'Pec Deck'],
+            'Back': ['Seated Row', 'Lat Pulldown', 'Bent Over Row', 'Pull'],
+            'Shoulders': ['Shoulder Press', 'Military Press', 'Lateral Raise'],
+            'Legs': ['Squat', 'Leg Press', 'Leg Extension', 'Leg Curl'],
+            'Arms': ['Bicep Curl', 'Tricep', 'Hammer Curl']
+        }
+        
+        recovery_data = {}
+        
+        for muscle_group, exercises in muscle_groups.items():
+            like_conditions = ' OR '.join([f"exercise LIKE '%{ex}%'" for ex in exercises])
+            
+            cur = conn.execute(f"""
+                SELECT 
+                    date(substr(date,1,10)) as workout_date,
+                    LAG(date(substr(date,1,10))) OVER (ORDER BY date) as prev_date
+                FROM sets
+                WHERE ({like_conditions}) AND weight IS NOT NULL
+                GROUP BY workout_date
+                ORDER BY workout_date
+            """)
+            
+            recovery_times = []
+            for row in cur.fetchall():
+                if row[1]:  # If there's a previous date
+                    current = datetime.strptime(row[0], '%Y-%m-%d')
+                    previous = datetime.strptime(row[1], '%Y-%m-%d')
+                    days_between = (current - previous).days
+                    recovery_times.append(days_between)
+            
+            if recovery_times:
+                recovery_data[muscle_group] = {
+                    'avg_recovery': round(sum(recovery_times) / len(recovery_times), 1),
+                    'min_recovery': min(recovery_times),
+                    'max_recovery': max(recovery_times),
+                    'total_sessions': len(recovery_times) + 1
+                }
+        
+        return recovery_data
+
+
+def get_progressive_overload_rate():
+    """Calculate the rate of strength progression per exercise"""
+    with get_conn() as conn:
+        cur = conn.execute("""
+            SELECT DISTINCT exercise FROM sets WHERE weight IS NOT NULL
+            ORDER BY exercise
+        """)
+        
+        exercises = [row[0] for row in cur.fetchall()]
+        progression_rates = []
+        
+        for exercise in exercises:
+            cur = conn.execute("""
+                SELECT 
+                    date(substr(date,1,10)) as workout_date,
+                    MAX(COALESCE(weight,0) * (1 + COALESCE(reps,0)/30.0)) as estimated_1rm
+                FROM sets
+                WHERE exercise = ? AND weight IS NOT NULL
+                GROUP BY workout_date
+                ORDER BY workout_date
+            """, (exercise,))
+            
+            sessions = cur.fetchall()
+            
+            if len(sessions) >= 2:
+                first_1rm = sessions[0][1]
+                last_1rm = sessions[-1][1]
+                first_date = datetime.strptime(sessions[0][0], '%Y-%m-%d')
+                last_date = datetime.strptime(sessions[-1][0], '%Y-%m-%d')
+                
+                days_elapsed = (last_date - first_date).days
+                if days_elapsed > 0 and first_1rm > 0:
+                    # Calculate weekly progression rate
+                    total_gain = last_1rm - first_1rm
+                    weekly_rate = (total_gain / days_elapsed) * 7
+                    percentage_gain = (total_gain / first_1rm) * 100
+                    
+                    progression_rates.append({
+                        'exercise': exercise,
+                        'first_1rm': round(first_1rm, 1),
+                        'last_1rm': round(last_1rm, 1),
+                        'total_gain': round(total_gain, 1),
+                        'weekly_rate': round(weekly_rate, 2),
+                        'percentage_gain': round(percentage_gain, 1),
+                        'days_tracked': days_elapsed,
+                        'sessions': len(sessions)
+                    })
+        
+        # Sort by percentage gain
+        return sorted(progression_rates, key=lambda x: x['percentage_gain'], reverse=True)
+
+
+def get_workout_duration_trends():
+    """Analyze workout duration patterns over time"""
+    with get_conn() as conn:
+        cur = conn.execute("""
+            SELECT 
+                date(substr(date,1,10)) as workout_date,
+                AVG(duration_min) as avg_duration,
+                COUNT(DISTINCT exercise) as exercises_performed,
+                COUNT(*) as total_sets,
+                SUM(COALESCE(weight,0) * COALESCE(reps,0)) as total_volume
+            FROM sets
+            WHERE duration_min IS NOT NULL
+            GROUP BY workout_date
+            ORDER BY workout_date
+        """)
+        
+        duration_data = []
+        for row in cur.fetchall():
+            # Calculate efficiency metrics
+            volume_per_minute = row[4] / row[1] if row[1] > 0 else 0
+            sets_per_minute = row[3] / row[1] if row[1] > 0 else 0
+            
+            duration_data.append({
+                'date': row[0],
+                'duration': round(row[1], 1),
+                'exercises': row[2],
+                'total_sets': row[3],
+                'volume': round(row[4], 1),
+                'volume_per_minute': round(volume_per_minute, 1),
+                'sets_per_minute': round(sets_per_minute, 2),
+                'efficiency_score': round(volume_per_minute / 10, 1)  # Arbitrary scale
+            })
+        
+        return duration_data
+
+
+def get_best_sets_analysis():
+    """Find the single best set for each exercise"""
+    with get_conn() as conn:
+        cur = conn.execute("""
+            WITH ranked_sets AS (
+                SELECT 
+                    exercise,
+                    date(substr(date,1,10)) as workout_date,
+                    weight,
+                    reps,
+                    COALESCE(weight,0) * COALESCE(reps,0) as volume,
+                    COALESCE(weight,0) * (1 + COALESCE(reps,0)/30.0) as estimated_1rm,
+                    ROW_NUMBER() OVER (PARTITION BY exercise ORDER BY COALESCE(weight,0) * (1 + COALESCE(reps,0)/30.0) DESC) as rn
+                FROM sets
+                WHERE weight IS NOT NULL AND reps > 0
+            )
+            SELECT 
+                exercise,
+                workout_date,
+                weight,
+                reps,
+                volume,
+                estimated_1rm
+            FROM ranked_sets
+            WHERE rn = 1
+            ORDER BY estimated_1rm DESC
+        """)
+        
+        return [
+            {
+                'exercise': row[0],
+                'date': row[1],
+                'weight': row[2],
+                'reps': row[3],
+                'volume': row[4],
+                'estimated_1rm': round(row[5], 1)
+            }
+            for row in cur.fetchall()
+        ]
+
+
+def get_plateau_detection():
+    """Detect potential plateaus in strength progression"""
+    with get_conn() as conn:
+        cur = conn.execute("""
+            SELECT DISTINCT exercise FROM sets 
+            WHERE weight IS NOT NULL 
+            ORDER BY exercise
+        """)
+        
+        exercises = [row[0] for row in cur.fetchall()]
+        plateau_analysis = []
+        
+        for exercise in exercises:
+            cur = conn.execute("""
+                SELECT 
+                    date(substr(date,1,10)) as workout_date,
+                    MAX(COALESCE(weight,0) * (1 + COALESCE(reps,0)/30.0)) as estimated_1rm
+                FROM sets
+                WHERE exercise = ? AND weight IS NOT NULL
+                GROUP BY workout_date
+                ORDER BY workout_date DESC
+                LIMIT 5
+            """, (exercise,))
+            
+            recent_sessions = cur.fetchall()
+            
+            if len(recent_sessions) >= 3:
+                # Check if last 3 sessions show no improvement
+                last_3_1rms = [session[1] for session in recent_sessions[:3]]
+                
+                if len(set(last_3_1rms)) == 1:  # All the same
+                    status = 'Plateau'
+                elif max(last_3_1rms) == last_3_1rms[0]:  # Best is most recent
+                    status = 'Progressing'
+                elif last_3_1rms[0] < max(last_3_1rms):  # Recent performance declined
+                    status = 'Declining'
+                else:
+                    status = 'Variable'
+                
+                plateau_analysis.append({
+                    'exercise': exercise,
+                    'status': status,
+                    'current_1rm': round(last_3_1rms[0], 1),
+                    'best_recent_1rm': round(max(last_3_1rms), 1),
+                    'sessions_analyzed': len(recent_sessions),
+                    'last_session': recent_sessions[0][0] if recent_sessions else None
+                })
+        
+        return sorted(plateau_analysis, key=lambda x: x['current_1rm'], reverse=True)
