@@ -356,11 +356,10 @@ async def get_plateau_detection_endpoint():
 async def get_dashboard_endpoint(
     start: str | None = Query(None),
     end: str | None = Query(None),
-    exercises: str | None = Query(None, description="Comma separated exercise names to include"),
-    metric: str = Query("weight", pattern="^(weight|e1rm)$")
+    exercises: str | None = Query(None, description="(deprecated – ignored)")
 ):
-    ex_list = [e.strip() for e in exercises.split(',')] if exercises else None
-    return build_dashboard_data(start, end, ex_list, metric)
+    # exercises param kept for backward compat but ignored (frontend handles filtering)
+    return build_dashboard_data(start, end, None)
 
 
 @app.get("/health")

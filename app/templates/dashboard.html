@@ -17,13 +17,12 @@
 <body class="text-zinc-200 antialiased">
   <main class="mx-auto max-w-[1700px] px-6 py-6 space-y-8">
     <header class="flex flex-col gap-2">
-      <h1 class="text-3xl font-bold tracking-tight">Progression • Overload • Recovery • Balance</h1>
+  <h1 class="text-3xl font-bold tracking-tight">Progression • Overload • Balance</h1>
       <p class="text-sm text-zinc-500">Focused dashboard – no fluff. Data last updated: <span id="lastIngested" class="text-zinc-300">...</span></p>
     </header>
 
     <!-- Filters -->
     <div id="filterBar" class="flex flex-wrap gap-3 items-center bg-zinc-900/60 backdrop-blur rounded-2xl p-4 ring-1 ring-zinc-800">
-      <div class="flex gap-1" id="dateRangeButtons"></div>
       <div class="relative" id="exerciseMulti"></div>
       <div class="flex gap-1" id="metricToggle"></div>
     </div>
@@ -42,13 +41,25 @@
           <button id="resetOverloadZoom" class="text-xs px-2 py-1 rounded bg-zinc-800 hover:bg-zinc-700">Reset Zoom</button>
         </div>
   <div id="progressiveOverloadChart" class="chart" style="height:300px" data-fixed-height="true"></div>
-        <div id="overloadSlopes" class="mt-3 flex flex-wrap gap-2 text-xs"></div>
+        <div class="mt-3 flex flex-col gap-2">
+          <div id="poLegend" class="flex flex-wrap gap-2 text-xs"></div>
+          <div id="overloadSlopes" class="flex flex-wrap gap-2 text-xs"></div>
+        </div>
       </div>
 
       <!-- Volume Trend -->
       <div class="card col-span-12 md:col-span-8 bg-zinc-900 rounded-2xl ring-1 ring-zinc-800 shadow-sm p-5 flex flex-col">
         <h2 class="text-xl font-semibold mb-2">Session Volume Trend</h2>
   <div id="volumeTrendChart" class="chart" style="height:240px" data-fixed-height="true"></div>
+      </div>
+
+      <!-- Volume Per Exercise (Daily) -->
+      <div class="card col-span-12 md:col-span-4 bg-zinc-900 rounded-2xl ring-1 ring-zinc-800 shadow-sm p-5 flex flex-col">
+        <div class="flex items-center justify-between mb-2">
+          <h2 class="text-xl font-semibold">Volume / Exercise</h2>
+          <button id="volumeModeToggle" class="text-xs px-2 py-1 rounded bg-zinc-800 hover:bg-zinc-700" data-mode="stacked">Stacked</button>
+        </div>
+        <div id="exerciseVolumeChart" class="chart" style="height:240px" data-fixed-height="true"></div>
       </div>
 
       <!-- Rep Distribution -->
@@ -75,11 +86,7 @@
   <div id="muscleBalanceChart" class="chart" style="height:240px" data-fixed-height="true"></div>
       </div>
 
-      <!-- Recovery -->
-      <div class="card col-span-12 bg-zinc-900 rounded-2xl ring-1 ring-zinc-800 shadow-sm p-5 flex flex-col">
-        <h2 class="text-xl font-semibold mb-2">Average Recovery Time</h2>
-  <div id="recoveryChart" class="chart" style="height:280px" data-fixed-height="true"></div>
-      </div>
+  <!-- Recovery removed -->
     </section>
   </main>
 

@@ -3,10 +3,9 @@
 
 // ------------------------------ State ----------------------------------
 const state = {
-  start: null,
+  start: null, // date filters removed (backend auto range) but keep keys for cache key stability
   end: null,
-  metric: 'weight',
-  exercises: [],
+  exercises: [], // applies ONLY to sparklines
   data: null,
   cache: new Map()
 };
@@ -20,6 +19,15 @@ const COLORS = {
 };
 const SERIES_COLORS = [COLORS.primary, COLORS.secondary, COLORS.tertiary, COLORS.quaternary, COLORS.quinary];
 
+function limitLegendSelection(series, maxVisible){
+  const sel={};
+  let count=0;
+  series.forEach(s=>{
+    if(!s.name.endsWith(' 7MA') && count<maxVisible){ sel[s.name]=true; count++; } else { sel[s.name]=false; }
+  });
+  return sel;
+}
+
 function fetchJSON(url) { return fetch(url).then(r => { if(!r.ok) throw new Error(r.statusText); return r.json(); }); }
 function fmtInt(x){ return x == null ? '-' : x.toLocaleString(); }
 function fmt1(x){ return x==null?'-': (Math.round(x*10)/10).toString(); }
@@ -27,43 +35,14 @@ function parseISO(d){ return new Date(d+ (d.length===10?'T00:00:00Z':'')); }
 
 // --------------------------- Filters UI --------------------------------
 function initFilters(){
-  const ranges = [
-    {label:'8w', days:56},
-    {label:'12w', days:84},
-    {label:'YTD', ytd:true},
-    {label:'All', all:true}
-  ];
-  const container = document.getElementById('dateRangeButtons');
-  ranges.forEach(r=>{
-    const btn=document.createElement('button');
-    btn.textContent=r.label;btn.dataset.range=r.label;
-    btn.className='px-3 py-1.5 rounded-md text-sm font-medium bg-zinc-800 hover:bg-zinc-700 data-[active=true]:bg-indigo-600 data-[active=true]:text-white';
-    btn.addEventListener('click',()=>{ setActiveRange(r); });
-    container.appendChild(btn);
-  });
-
-  // Metric toggle
+  // Only metric placeholder remains (weight-only)
   const metricWrap=document.getElementById('metricToggle');
-  ['weight','e1rm'].forEach(m=>{
-    const b=document.createElement('button');
-    b.textContent=m==='weight'? 'Weight':'e1RM';
-    b.dataset.metric=m;
-    b.className='px-3 py-1.5 rounded-md text-sm font-medium bg-zinc-800 hover:bg-zinc-700 data-[active=true]:bg-indigo-600 data-[active=true]:text-white';
-    b.addEventListener('click',()=>{ state.metric=m; updateMetricButtons(); refreshData(); });
-    metricWrap.appendChild(b);
-  });
+  metricWrap.innerHTML='<span class="text-xs text-zinc-500">Weight mode</span>';
 }
 
-function updateMetricButtons(){
-  document.querySelectorAll('#metricToggle button').forEach(b=>{ b.dataset.active = (b.dataset.metric===state.metric); });
-}
+function updateMetricButtons(){}
 
-function setActiveRange(r){
-  document.querySelectorAll('#dateRangeButtons button').forEach(b=> b.dataset.active = (b.dataset.range===r.label));
-  // We'll set start/end after we have initial dataset metadata (done in refreshData if null)
-  state._pendingRange=r; // store selection
-  refreshData();
-}
+// Date range presets removed
 
 // Exercise multi-select (simple dropdown)
 function initExerciseMulti(exNames){
@@ -92,38 +71,34 @@ function initExerciseMulti(exNames){
 
 // ------------------------- Data Fetch & Cache ---------------------------
 async function fetchDashboard(){
-  const key = JSON.stringify({start:state.start,end:state.end,metric:state.metric,ex:state.exercises.slice().sort()});
+  const key = JSON.stringify({start:state.start,end:state.end});
   if(state.cache.has(key)) return state.cache.get(key);
   const params = new URLSearchParams();
   if(state.start) params.set('start', state.start);
   if(state.end) params.set('end', state.end);
-  if(state.exercises.length) params.set('exercises', state.exercises.join(','));
-  if(state.metric!== 'weight') params.set('metric', state.metric);
+  // exercises & metric no longer passed to backend
   const data = await fetchJSON('/api/dashboard?'+params.toString());
   state.cache.set(key,data); return data;
 }
 
 async function refreshData(){
   try {
-  console.log('[dashboard] refreshData start', {start:state.start,end:state.end,metric:state.metric,exercises:state.exercises});
+  console.log('[dashboard] refreshData start', {exercises:state.exercises});
     const loadingTargets=['sparklineContainer','progressiveOverloadChart','volumeTrendChart','weeklyPPLChart','muscleBalanceChart','repDistributionChart','recoveryChart'];
     loadingTargets.forEach(id=>{ const el=document.getElementById(id); if(el) el.innerHTML='<div class="flex items-center justify-center h-full text-sm text-zinc-500 animate-pulse">Loading...</div>'; });
     const data = await fetchDashboard();
-  window.__dashboardDebug = { phase:'afterFetch', fetchedAt: Date.now(), filters: data?.filters, params:{start:state.start,end:state.end,metric:state.metric,exercises:[...state.exercises]}, keys: data? Object.keys(data):[] };
+  window.__dashboardDebug = { phase:'afterFetch', fetchedAt: Date.now(), filters: data?.filters, params:{start:state.start,end:state.end,exercises:[...state.exercises]}, keys: data? Object.keys(data):[] };
   console.log('[dashboard] data fetched', window.__dashboardDebug);
-    // If first load or date range pending apply range
-    if(state.data==null){
-      const firstStart=data.filters.start; const firstEnd=data.filters.end;
-      if(state._pendingRange){ applyRangeOnDates(state._pendingRange, firstStart, firstEnd); }
-    } else if(state._pendingRange){
-      applyRangeOnDates(state._pendingRange, data.filters.start, data.filters.end);
-      state._pendingRange=null; // re-fetch with new range
-      return refreshData();
-    }
+  // No date preset logic
   state.data=data;
     document.getElementById('lastIngested').textContent = data.filters.end || '-';
-    // Build exercise list for multi if first time
-    if(!state.exercises.length){ state.exercises = data.filters.exercises || []; initExerciseMulti(unique(state.data.exercises_daily_max.map(d=>d.exercise))); }
+    if(!state.exercises.length){
+      // Preselect by most improvement (delta)
+      const prog = (data.exercise_progression || []).map(p=> p.exercise);
+      state.exercises = prog.slice(0,12);
+      if(state.exercises.length===0) state.exercises = data.filters.exercises || (data.top_exercises || []);
+      initExerciseMulti(unique(state.data.exercises_daily_max.map(d=>d.exercise)));
+    }
   renderAll();
   window.__dashboardDebug.phase='renderComplete';
   console.log('[dashboard] render complete');
@@ -135,12 +110,7 @@ async function refreshData(){
   }
 }
 
-function applyRangeOnDates(rangeObj, defaultStart, defaultEnd){
-  const endDate = parseISO(defaultEnd).toISOString().slice(0,10);
-  if(rangeObj.all){ state.start=null; state.end=null; return; }
-  if(rangeObj.ytd){ const d=new Date(defaultEnd); state.start = new Date(d.getFullYear(),0,1).toISOString().slice(0,10); state.end=endDate; return; }
-  if(rangeObj.days){ const d=parseISO(endDate); const start=new Date(d.getTime() - (rangeObj.days-1)*86400000); state.start=start.toISOString().slice(0,10); state.end=endDate; return; }
-}
+// Range helper removed
 
 function unique(arr){ return [...new Set(arr)]; }
 
@@ -172,7 +142,7 @@ function renderSparklines(){
     }
   console.log('[dashboard] renderSparklines count', state.data.exercises_daily_max.length);
     container.innerHTML='';
-    const metricKey= state.metric==='e1rm'? 'e1rm':'max_weight';
+  const metricKey= 'max_weight';
     const byEx={};
     state.data.exercises_daily_max.forEach(r=>{ (byEx[r.exercise] ||= []).push(r); });
     Object.entries(byEx).forEach(([ex, arr], idx)=>{
@@ -189,23 +159,53 @@ function renderSparklines(){
 }
 
 function renderProgressiveOverload(){
-  if(!state.data || !state.data.exercises_daily_max || !state.data.exercises_daily_max.length){ const el=document.getElementById('progressiveOverloadChart'); if(el) el.innerHTML='<div class="flex items-center justify-center h-full text-sm text-zinc-500 italic">No data</div>'; return; } const metricKey= state.metric==='e1rm'? 'e1rm':'max_weight';
-  console.log('[dashboard] renderProgressiveOverload');
+  if(!state.data || !state.data.exercises_daily_max || !state.data.exercises_daily_max.length){ const el=document.getElementById('progressiveOverloadChart'); if(el) el.innerHTML='<div class="flex items-center justify-center h-full text-sm text-zinc-500 italic">No data</div>'; return; }
+  const metricKey= 'max_weight';
   const byEx={}; state.data.exercises_daily_max.forEach(r=>{ (byEx[r.exercise] ||= []).push(r); });
-  const series=[]; let colorIdx=0;
-  Object.entries(byEx).forEach(([ex, arr])=>{
-    arr.sort((a,b)=> a.date.localeCompare(b.date));
-    series.push({ name: ex, type:'line', showSymbol:false, smooth:true, data: arr.map(a=> [a.date, a[metricKey]]), lineStyle:{width:2, color: SERIES_COLORS[colorIdx]}, areaStyle:{color:SERIES_COLORS[colorIdx]+'22'} });
-    // 7-session moving average
-    const ma=[]; const vals=[]; arr.forEach(a=>{ vals.push(a[metricKey]); if(vals.length>7) vals.shift(); ma.push([a.date, vals.reduce((s,v)=>s+v,0)/vals.length]); });
-    series.push({ name: ex+' 7MA', type:'line', showSymbol:false, smooth:true, data: ma, lineStyle:{width:1, type:'dashed', color: SERIES_COLORS[colorIdx]}, emphasis:{disabled:true}, tooltip:{show:false} });
-    colorIdx=(colorIdx+1)%SERIES_COLORS.length;
+  const names = Object.keys(byEx).sort();
+  // Determine palette (repeat but shift for variety)
+  const colorMap={}; names.forEach((n,i)=> colorMap[n]= SERIES_COLORS[i%SERIES_COLORS.length]);
+  const activeSet = new Set(names.slice(0,5)); // default first 5 visible
+  // Build legend pills
+  const legendRoot=document.getElementById('poLegend'); legendRoot.innerHTML='';
+  names.forEach(name=>{
+    const pill=document.createElement('button');
+    pill.className='px-2 py-0.5 rounded-full border text-xs flex items-center gap-1 transition-colors';
+    pill.dataset.fullName = name;
+    pill.textContent = name.split('(')[0].trim();
+    const applyStyles = ()=>{
+      const on = activeSet.has(name);
+      pill.style.borderColor = on? colorMap[name]: '#3f3f46';
+      pill.style.background = on? colorMap[name]+'22':'#18181b';
+      pill.style.color = on? '#e4e4e7':'#a1a1aa';
+      pill.title = (on? 'Hide ':'Show ')+ name;
+    };
+    applyStyles();
+    pill.onclick = ()=>{ if(activeSet.has(name)) activeSet.delete(name); else activeSet.add(name); applyStyles(); renderChart(); };
+    legendRoot.appendChild(pill);
   });
-  const chart=getChart('progressiveOverloadChart');
-  chart.setOption({ darkMode:true, animationDuration:300, animationEasing:'cubicOut', grid:{left:50,right:16,top:30,bottom:55}, legend:{top:0, textStyle:{color:'#d4d4d8'}}, dataZoom:[{type:'inside'},{type:'slider',height:18,bottom:20}], xAxis: baseTimeAxis(), yAxis: baseValueAxis(state.metric==='e1rm'?'e1RM (kg)':'Max Weight (kg)'), tooltip:{trigger:'axis', valueFormatter:v=>fmt1(v)}, series: series.map(s=> ({...s, emphasis:{focus:'none', scale:false}})) });
-  chart.off('dataZoom'); chart.on('dataZoom', ()=> updateSlopes(chart, byEx, metricKey));
-  updateSlopes(chart, byEx, metricKey);
-  document.getElementById('resetOverloadZoom').onclick=()=>{ chart.dispatchAction({type:'dataZoom', start:0, end:100}); };
+  function buildSeries(){
+    const series=[];
+    names.forEach(name=>{
+      if(!activeSet.has(name)) return;
+      const arr = byEx[name].slice().sort((a,b)=> a.date.localeCompare(b.date));
+  const lname = name.toLowerCase();
+  const isCable = lname.includes('cable');
+  const isMachine = lname.includes('machine');
+  series.push({ name, type:'line', showSymbol:false, smooth:true, data: arr.map(a=> [a.date, a[metricKey]]), lineStyle:{width:2, color: colorMap[name], type: isCable? 'dashed':'solid'}, areaStyle:{color: colorMap[name] + (isMachine? '35':'25')}, symbol: isCable? 'circle':'none', symbolSize: isCable? 5:4 });
+      const ma=[]; const vals=[]; arr.forEach(a=>{ vals.push(a[metricKey]); if(vals.length>7) vals.shift(); ma.push([a.date, vals.reduce((s,v)=>s+v,0)/vals.length]); });
+      series.push({ name: name+' 7MA', type:'line', showSymbol:false, smooth:true, data: ma, lineStyle:{width:1, type:'dashed', color: colorMap[name]}, emphasis:{disabled:true}, tooltip:{show:false} });
+    });
+    return series;
+  }
+  function renderChart(){
+    const chart=getChart('progressiveOverloadChart');
+    chart.setOption({animationDuration:250, grid:{left:42,right:12,top:10,bottom:55}, legend:{show:false}, dataZoom:[{type:'inside'},{type:'slider',height:16,bottom:18}], xAxis: baseTimeAxis(), yAxis: baseValueAxis('Max Weight (kg)'), tooltip:{trigger:'axis', valueFormatter:v=>fmt1(v)}, series: buildSeries().map(s=> ({...s, emphasis:{focus:'none'}})) }, true);
+    chart.off('dataZoom'); chart.on('dataZoom', ()=> updateSlopes(chart, byEx, metricKey));
+    updateSlopes(chart, byEx, metricKey);
+  }
+  document.getElementById('resetOverloadZoom').onclick=()=>{ const chart=getChart('progressiveOverloadChart'); chart.dispatchAction({type:'dataZoom', start:0, end:100}); };
+  renderChart();
 }
 
 function updateSlopes(chart, byEx, metricKey){
@@ -240,7 +240,7 @@ function renderVolumeTrend(){
 function renderWeeklyPPL(){
   if(!state.data || !state.data.weekly_ppl || !state.data.weekly_ppl.length){ const el=document.getElementById('weeklyPPLChart'); if(el) el.innerHTML='<div class="flex items-center justify-center h-full text-sm text-zinc-500 italic">No weekly data</div>'; return; } const mode = document.getElementById('pplModeToggle').dataset.mode; // absolute|percent
   console.log('[dashboard] renderWeeklyPPL weeks', state.data.weekly_ppl.length);
-  const weeks = state.data.weekly_ppl.map(w=> w.iso_week);
+  const weeks = state.data.weekly_ppl.map(w=> w.week_start); // show ISO week start date (YYYY-MM-DD)
   const push = state.data.weekly_ppl.map(w=> w.push);
   const pull = state.data.weekly_ppl.map(w=> w.pull);
   const legs = state.data.weekly_ppl.map(w=> w.legs);
@@ -265,7 +265,7 @@ function renderRepDistribution(){
   const mode = document.getElementById('repModeToggle').dataset.mode; // weekly|summary if(!state.data){ return; }
   console.log('[dashboard] renderRepDistribution mode', mode);
   if(mode==='weekly'){
-    const weeks = state.data.rep_bins_weekly.map(r=> r.iso_week);
+  const weeks = state.data.rep_bins_weekly.map(r=> r.week_start);
     const b1 = state.data.rep_bins_weekly.map(r=> r.bin_1_5);
     const b2 = state.data.rep_bins_weekly.map(r=> r.bin_6_12);
     const b3 = state.data.rep_bins_weekly.map(r=> r.bin_13_20);
@@ -276,14 +276,7 @@ function renderRepDistribution(){
   }
 }
 
-function renderRecovery(){
-  if(!state.data || !state.data.muscle_recovery || !state.data.muscle_recovery.length){ const el=document.getElementById('recoveryChart'); if(el) el.innerHTML='<div class="flex items-center justify-center h-full text-sm text-zinc-500 italic">No recovery data</div>'; return; } const data = state.data.muscle_recovery;
-  console.log('[dashboard] renderRecovery entries', data.length);
-  const names=data.map(d=> d.muscle); const means=data.map(d=> d.mean_days);
-  const minmax=data.map(d=> [d.min_days, d.max_days]);
-  const option={ grid:{left:150,right:30,top:20,bottom:20}, xAxis:{type:'value', name:'Days', nameTextStyle:{color:'#a1a1aa'}, axisLabel:{color:'#a1a1aa'}, axisLine:{lineStyle:{color:'#3f3f46'}}, splitLine:{lineStyle:{color:'#27272a'}}}, yAxis:{type:'category', data:names, axisLabel:{color:'#d4d4d8'}}, tooltip:{trigger:'item', formatter: p=>{ const d=data[p.dataIndex]; return `${d.muscle}<br>Mean: ${d.mean_days}d<br>Min: ${d.min_days}  Max: ${d.max_days}<br>N: ${d.n_intervals}`;}}, series:[{type:'bar', data:means, barWidth:'50%', itemStyle:{color:COLORS.primary}, emphasis:{focus:'none'}, label:{show:true, position:'right', color:'#a1a1aa'}},{type:'custom', data:minmax, renderItem:(params, api)=>{const y=api.coord([0, params.dataIndex])[1]; const minv=minmax[params.dataIndex][0]; const maxv=minmax[params.dataIndex][1]; const p1=api.coord([minv, params.dataIndex]); const p2=api.coord([maxv, params.dataIndex]); return { type:'group', children:[ {type:'line', shape:{x1:p1[0],y1:p1[1], x2:p2[0], y2:p2[1]}, style:{stroke:'#71717a', lineWidth:2}}, {type:'line', shape:{x1:p1[0],y1:p1[1]-4, x2:p1[0], y2:p1[1]+4}, style:{stroke:'#71717a', lineWidth:2}}, {type:'line', shape:{x1:p2[0],y1:p2[1]-4, x2:p2[0], y2:p2[1]+4}, style:{stroke:'#71717a', lineWidth:2}} ]}; }, tooltip:{trigger:'item'}}] };
-  getChart('recoveryChart').setOption(option);
-}
+// Recovery chart removed
 
 function renderAll(){
   renderSparklines();
@@ -292,7 +285,7 @@ function renderAll(){
   renderWeeklyPPL();
   renderMuscleBalance();
   renderRepDistribution();
-  renderRecovery();
+  // recovery removed
 }
 
 // Toggle handlers
@@ -304,8 +297,7 @@ function bootstrapDashboard(){
   console.log('[dashboard] bootstrap');
   initFilters();
   updateMetricButtons();
-  // setActiveRange triggers a refreshData call; we avoid double-calling refresh
-  setActiveRange({label:'12w', days:84});
+  refreshData();
 }
 if(document.readyState === 'loading'){
   document.addEventListener('DOMContentLoaded', bootstrapDashboard);
@@ -315,6 +307,21 @@ if(document.readyState === 'loading'){
 }
 
 window.addEventListener('resize', ()=>{ Object.values(charts).forEach(c=> c.resize()); });
+function renderExerciseVolume(){
+  if(!state.data || !state.data.exercises_daily_volume) return;
+  const mode = document.getElementById('volumeModeToggle').dataset.mode; // stacked|grouped
+  const volsByEx={};
+  state.data.exercises_daily_volume.forEach(r=> { volsByEx[r.exercise] = (volsByEx[r.exercise]||0)+ r.volume; });
+  const top = Object.entries(volsByEx).sort((a,b)=> b[1]-a[1]).slice(0,6).map(e=> e[0]);
+  const filtered = state.data.exercises_daily_volume.filter(r=> top.includes(r.exercise));
+  const dates = Array.from(new Set(filtered.map(r=> r.date))).sort();
+  const series = top.map((ex,i)=>{
+    const data = dates.map(d=> { const rec = filtered.find(r=> r.exercise===ex && r.date===d); return rec? rec.volume:0; });
+    return { name: ex.split('(')[0].trim(), type:'bar', stack: mode==='stacked'? 'vol': undefined, data, itemStyle:{color: SERIES_COLORS[i%SERIES_COLORS.length]}, emphasis:{focus:'none'} };
+  });
+  const chart=getChart('exerciseVolumeChart');
+  chart.setOption({ grid:{left:50,right:12,top:30,bottom:55}, legend:{top:0,textStyle:{color:'#d4d4d8'}}, tooltip:{trigger:'axis', axisPointer:{type:'shadow'}}, xAxis:{type:'category', data:dates, axisLabel:{color:'#a1a1aa', formatter:v=> v.slice(5)}, axisLine:{lineStyle:{color:'#3f3f46'}}}, yAxis:{type:'value', name:'Volume (kg)', nameTextStyle:{color:'#a1a1aa'}, axisLabel:{color:'#a1a1aa'}, splitLine:{lineStyle:{color:'#27272a'}}}, series });
+}
 
 async function loadPersonalRecords() {
   try {

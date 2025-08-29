@@ -1078,14 +1078,15 @@ def _classify_group(ex_name: str) -> str:
         return 'Legs'
     return 'Other'
 
-def build_dashboard_data(start: str | None, end: str | None, exercises: list[str] | None, metric: str = 'weight'):
-    """Aggregate and return data required for the new single-page dashboard.
+def build_dashboard_data(start: str | None, end: str | None, exercises: list[str] | None):
+    """Aggregate and return data required for the dashboard (weight only).
 
-    Parameters
-    ----------
-    start, end : ISO date (YYYY-MM-DD) bounds (inclusive). If None, derive from data.
-    exercises : Optional list of exercise names to restrict; if None choose top 5 by volume in range.
-    metric : 'weight' | 'e1rm' (used only for PR flag convenience)
+    Changes (Aug 2025):
+    - Removed e1RM mode (weight only baseline)
+    - Always compute daily max for ALL exercises in range (sparklines choose subset client-side)
+    - Progressive overload defaults to top 5 exercises by volume (returned as top_exercises)
+    - Removed recovery time aggregation (muscle_recovery)
+    - Added ISO week start date (Monday) as 'week_start' to weekly structures for clearer labels
     """
     with get_conn() as conn:
         # Determine overall date range if not supplied
@@ -1093,13 +1094,13 @@ def build_dashboard_data(start: str | None, end: str | None, exercises: list[str
         row = cur.fetchone()
         if not row or row[0] is None:
             return {
-                'filters': {'start': start, 'end': end, 'exercises': exercises or [], 'metric': metric},
+                'filters': {'start': start, 'end': end, 'exercises': [], 'data_start': None, 'data_end': None},
                 'exercises_daily_max': [],
+                'top_exercises': [],
                 'sessions': [],
                 'weekly_ppl': [],
                 'rep_bins_weekly': [],
                 'rep_bins_total': {},
-                'muscle_recovery': [],
                 'muscle_28d': []
             }
         data_min, data_max = row
@@ -1126,13 +1127,13 @@ def build_dashboard_data(start: str | None, end: str | None, exercises: list[str
         rows = cur.fetchall()
         if not rows:
             return {
-                'filters': {'start': start, 'end': end, 'exercises': exercises or [], 'metric': metric},
+                'filters': {'start': start, 'end': end, 'exercises': [], 'data_start': data_min, 'data_end': data_max},
                 'exercises_daily_max': [],
+                'top_exercises': [],
                 'sessions': [],
                 'weekly_ppl': [],
                 'rep_bins_weekly': [],
                 'rep_bins_total': {},
-                'muscle_recovery': [],
                 'muscle_28d': []
             }
 
@@ -1141,17 +1142,14 @@ def build_dashboard_data(start: str | None, end: str | None, exercises: list[str
         for d, ex, w, r in rows:
             exercise_total_volume[ex] += w * r
 
-        if not exercises:
-            # Top 5 by volume
-            exercises = [ex for ex, _ in sorted(exercise_total_volume.items(), key=lambda x: x[1], reverse=True)[:5]]
+        # Determine top 5 exercises for progressive overload chart (weight volume)
+        top_exercises = [ex for ex, _ in sorted(exercise_total_volume.items(), key=lambda x: x[1], reverse=True)[:5]]
+        selected_set = set(top_exercises)  # used only for sessions & weekly splits volume classification
 
-        selected_set = set(exercises)
-
-        # Daily maxima per exercise
+        # Daily maxima per exercise (for all exercises, not just top)
         per_day_ex: dict[tuple[str,str], dict] = {}
+        per_day_volume: dict[tuple[str,str], float] = {}
         for d, ex, w, r in rows:
-            if ex not in selected_set:
-                continue
             key = (ex, d)
             rec = per_day_ex.setdefault(key, {'exercise': ex, 'date': d, 'max_weight': 0.0, 'e1rm': 0.0})
             if w > rec['max_weight']:
@@ -1159,8 +1157,10 @@ def build_dashboard_data(start: str | None, end: str | None, exercises: list[str
             e1rm_val = w * (1 + r/30.0)
             if e1rm_val > rec['e1rm']:
                 rec['e1rm'] = e1rm_val
+            if w and r:
+                per_day_volume[key] = per_day_volume.get(key, 0.0) + w * r
 
-        # Convert to list & compute PR flags per exercise based on chosen metric
+        # Convert to list & compute PR flags per exercise (weight only)
         exercises_daily_max: list[dict] = []
         by_ex: dict[str, list[dict]] = defaultdict(list)
         for rec in per_day_ex.values():
@@ -1169,7 +1169,7 @@ def build_dashboard_data(start: str | None, end: str | None, exercises: list[str
         for ex, lst in by_ex.items():
             lst.sort(key=lambda x: x['date'])
             best = -1.0
-            metric_key = 'e1rm' if metric == 'e1rm' else 'max_weight'
+            metric_key = 'max_weight'
             for item in lst:
                 val = item[metric_key]
                 if val > best:
@@ -1178,6 +1178,38 @@ def build_dashboard_data(start: str | None, end: str | None, exercises: list[str
                 else:
                     item['is_pr'] = False
             exercises_daily_max.extend(lst)
+
+        # Build per-exercise progression metrics (delta weight)
+        progression_list: list[dict] = []
+        for ex, lst in by_ex.items():
+            if len(lst) < 2:
+                continue
+            first = lst[0]['max_weight']
+            last = lst[-1]['max_weight']
+            delta = last - first
+            days = (
+                _date.fromisoformat(lst[-1]['date']) - _date.fromisoformat(lst[0]['date'])
+            ).days or 1
+            slope_per_day = delta / days
+            progression_list.append({
+                'exercise': ex,
+                'first': first,
+                'last': last,
+                'delta': round(delta, 2),
+                'slope_per_day': round(slope_per_day, 4)
+            })
+        progression_list.sort(key=lambda x: x['delta'], reverse=True)
+
+        # Daily volume list
+        exercises_daily_volume = [
+            {
+                'exercise': ex,
+                'date': d,
+                'volume': round(vol, 1)
+            }
+            for (ex, d), vol in per_day_volume.items()
+        ]
+        exercises_daily_volume.sort(key=lambda x: (x['exercise'], x['date']))
 
         # Session (day) total volume & PPL split
         sessions_map: dict[str, dict] = {}
@@ -1224,9 +1256,19 @@ def build_dashboard_data(start: str | None, end: str | None, exercises: list[str
         # Rolling 4-week avg added client side (lighter)
 
         weekly_ppl = []
+        def week_start_date(iso_week: str) -> str:
+            # iso_week format YYYY-Www; compute Monday date
+            y, w = iso_week.split('-W')
+            y = int(y); w = int(w)
+            # ISO week 1 may start in previous year; use datetime ISO helpers
+            from datetime import date as _d
+            # Find the Monday of the ISO week
+            # From Python 3.8+, date.fromisocalendar exists
+            return _d.fromisocalendar(y, w, 1).isoformat()
         for wk, vals in sorted(weekly_ppl_acc.items()):
             weekly_ppl.append({
                 'iso_week': wk,
+                'week_start': week_start_date(wk),
                 'push': round(vals['push'],1),
                 'pull': round(vals['pull'],1),
                 'legs': round(vals['legs'],1)
@@ -1237,6 +1279,7 @@ def build_dashboard_data(start: str | None, end: str | None, exercises: list[str
         for wk, vals in sorted(rep_weekly_acc.items()):
             rep_bins_weekly.append({
                 'iso_week': wk,
+                'week_start': week_start_date(wk),
                 'bin_1_5': round(vals['bin_1_5'],1),
                 'bin_6_12': round(vals['bin_6_12'],1),
                 'bin_13_20': round(vals['bin_13_20'],1),
@@ -1266,11 +1309,7 @@ def build_dashboard_data(start: str | None, end: str | None, exercises: list[str
                 'max_days': max(intervals),
                 'n_intervals': len(intervals)
             }
-        muscle_recovery_list = []
-        for g in ('Push','Pull','Legs'):
-            rec = recovery(g)
-            if rec:
-                muscle_recovery_list.append(rec)
+    # (Recovery removed from payload)
 
         # Muscle 28d volume (P/P/L proxy)
         end_dt = _date.fromisoformat(end)
@@ -1287,12 +1326,14 @@ def build_dashboard_data(start: str | None, end: str | None, exercises: list[str
         muscle_28d = [{'group': g, 'volume': round(v,1)} for g,v in volume_28.items()]
 
         return {
-            'filters': {'start': start, 'end': end, 'exercises': exercises, 'metric': metric},
+            'filters': {'start': start, 'end': end, 'exercises': top_exercises, 'data_start': data_min, 'data_end': data_max},
             'exercises_daily_max': exercises_daily_max,
+            'exercises_daily_volume': exercises_daily_volume,
+            'exercise_progression': progression_list,
+            'top_exercises': top_exercises,
             'sessions': sessions,
             'weekly_ppl': weekly_ppl,
             'rep_bins_weekly': rep_bins_weekly,
             'rep_bins_total': rep_bins_total,
-            'muscle_recovery': muscle_recovery_list,
             'muscle_28d': muscle_28d
         }
