@@ -8,6 +8,8 @@ import sqlite3
 from contextlib import contextmanager
 from pathlib import Path
 import threading
+import time
+import logging
 
 DB_PATH = Path(__file__).resolve().parent.parent / "data" / "lifting.db"
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -15,6 +17,8 @@ DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 # SQLite connections are NOT thread-safe by default when shared;
 # we create short-lived connections via contextmanager.
 _lock = threading.Lock()
+_LOCK_MAX_WAIT_SEC = 5  # fail fast if something holds the lock too long
+logger = logging.getLogger("lifting.db")
 
 SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS sets (
@@ -60,11 +64,27 @@ def get_meta(key: str) -> str | None:
 
 @contextmanager
 def get_conn():
-    """Yield a SQLite connection with row factory as dict-like tuples."""
-    with _lock:
-        conn = sqlite3.connect(DB_PATH)
-        try:
-            conn.row_factory = sqlite3.Row
-            yield conn
-        finally:
-            conn.close()
+  """Yield a SQLite connection with row factory as dict-like tuples.
+
+  Adds defensive diagnostics so if the global lock is ever held
+  unexpectedly long (e.g. a crashed thread), we surface an error
+  instead of silently hanging the request.
+  """
+  start_wait = time.time()
+  acquired = _lock.acquire(timeout=_LOCK_MAX_WAIT_SEC)
+  if not acquired:  # pragma: no cover - only triggers on pathological hang
+    waited = time.time() - start_wait
+    logger.error("DB lock acquisition failed after %.2fs (possible deadlock)", waited)
+    raise RuntimeError("database busy: internal lock timeout")
+  try:
+    waited = time.time() - start_wait
+    if waited > 0.25:
+      logger.warning("DB lock waited %.3fs (unexpected contention)", waited)
+    conn = sqlite3.connect(DB_PATH, timeout=2)
+    try:
+      conn.row_factory = sqlite3.Row
+      yield conn
+    finally:
+      conn.close()
+  finally:
+    _lock.release()

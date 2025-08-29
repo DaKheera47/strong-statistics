@@ -75,6 +75,18 @@ app.mount("/static", StaticFiles(directory=str(Path(__file__).parent / "static")
 
 init_db()
 
+# Simple request/response timing middleware for diagnostics when requests hang
+@app.middleware("http")
+async def timing_middleware(request: Request, call_next):  # type: ignore[override]
+    start = datetime.utcnow()
+    path = request.url.path
+    try:
+        response = await call_next(request)
+        return response
+    finally:
+        dur_ms = (datetime.utcnow() - start).total_seconds() * 1000
+        logger.info("request path=%s method=%s dur_ms=%.1f", path, request.method, dur_ms)
+
 @app.get("/", response_class=HTMLResponse)
 async def dashboard(request: Request):
     return templates.TemplateResponse("dashboard.html", {"request": request})
