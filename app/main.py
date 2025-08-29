@@ -12,6 +12,9 @@ from starlette.templating import Jinja2Templates
 from dotenv import load_dotenv
 import logging
 from logging.handlers import RotatingFileHandler
+import faulthandler
+import sys
+import threading, traceback, time
 
 from .db import init_db, get_meta
 from .processing import (
@@ -60,6 +63,7 @@ handler = RotatingFileHandler(LOG_DIR / "app.log", maxBytes=2_000_000, backupCou
 formatter = logging.Formatter("%(asctime)s %(levelname)s %(message)s")
 handler.setFormatter(formatter)
 logger.addHandler(handler)
+faulthandler.enable(file=sys.stderr)
 
 app = FastAPI(title="Lifting Pipeline")
 app.add_middleware(
@@ -418,3 +422,26 @@ async def debug_inspect(request: Request, token: str = Query("")):
         info["form_error"] = str(e)
 
     return JSONResponse(info)
+
+
+@app.get("/debug/threads")
+async def debug_threads(token: str = Query("")):
+    """Return a snapshot of all thread stack traces (diagnostic).
+
+    Protect with ingest token to avoid exposing internals.
+    Useful if requests start hanging: call /debug/threads to see where code is stuck.
+    """
+    if INGEST_TOKEN and token != INGEST_TOKEN:
+        raise HTTPException(status_code=401, detail="invalid token")
+    frames = sys._current_frames()  # type: ignore[attr-defined]
+    out = []
+    for thread in threading.enumerate():
+        fid = getattr(thread, 'ident', None)
+        frame = frames.get(fid)
+        out.append({
+            'thread_name': thread.name,
+            'ident': fid,
+            'daemon': thread.daemon,
+            'stack': traceback.format_stack(frame) if frame else []
+        })
+    return {'threads': out, 'count': len(out), 'time': datetime.utcnow().isoformat()+ 'Z'}
