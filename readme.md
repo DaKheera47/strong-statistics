@@ -248,14 +248,14 @@ Run app:
 uvicorn app.main:app --host 127.0.0.1 --port 8069 --reload
 
 
-Visit http://localhost:8000.
+Visit http://localhost:8069.
 
 Keep it running (pick one):
 
 Task Scheduler: Create task “LiftingPipeline”, trigger At logon & At startup, action:
 
 Program: powershell.exe
-Args: -NoProfile -ExecutionPolicy Bypass -Command "cd C:\lifting-pipeline; .\.venv\Scripts\activate.ps1; uvicorn app.main:app --host 127.0.0.1 --port 8000"
+Args: -NoProfile -ExecutionPolicy Bypass -Command "cd C:\lifting-pipeline; .\.venv\Scripts\activate.ps1; uvicorn app.main:app --host 127.0.0.1 --port 8069"
 
 
 Settings: “Run whether user is logged on or not”, “Run with highest privileges”, “Restart task every 1 minute if fails”.
@@ -392,11 +392,11 @@ Insert same CSV twice → row count doesn’t increase (dedup works).
 
 HTTP tests:
 
-curl -F "file=@strong.csv" "http://127.0.0.1:8000/ingest?token=TOKEN"
+curl -F "file=@strong.csv" "http://127.0.0.1:8069/ingest?token=TOKEN"
 
-curl http://127.0.0.1:8000/api/sessions
+curl http://127.0.0.1:8069/api/sessions
 
-Load http://127.0.0.1:8000/ — charts render.
+Load http://127.0.0.1:8069/ — charts render.
 
 
 11) Observability & Ops
@@ -440,7 +440,7 @@ Filters: quick filter to exclude November (like we did), or pick date range.
 
 13) Acceptance Criteria (what “done” means)
 
-I can visit http://localhost:8000/ and see charts populated after the first ingest.
+I can visit http://localhost:8069/ and see charts populated after the first ingest.
 
 From iOS, I can export Strong CSV via Share Sheet → Shortcut and receive HTTP 200 and a JSON body.
 
@@ -488,7 +488,7 @@ python -m venv .venv
 source .venv/Scripts/activate  # (On PowerShell: .venv\Scripts\Activate.ps1)
 pip install -r requirements.txt
 copy .env.example .env  # then edit INGEST_TOKEN
-uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
+uvicorn app.main:app --host 127.0.0.1 --port 8069 --reload
 ```
 
 Test Ingest
@@ -498,7 +498,7 @@ curl -F "file=@tests_sample.csv" "http://127.0.0.1:8069/ingest?token=$INGEST_TOK
 curl http://127.0.0.1:8069/api/sessions
 ```
 
-Open http://127.0.0.1:8000 in a browser to view charts.
+Open http://127.0.0.1:8069 in a browser to view charts.
 
 Next Steps
 

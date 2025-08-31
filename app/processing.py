@@ -1,4 +1,5 @@
 """CSV processing and aggregation logic."""
+
 from __future__ import annotations
 from pathlib import Path
 import pandas as pd
@@ -11,11 +12,28 @@ from .db import get_conn, set_meta
 
 DATE_COL = "Date"
 EXPECTED_COLUMNS = [
-    "Date","Workout Name","Duration","Exercise Name","Set Order","Weight","Reps","Distance","Seconds","RPE"
+    "Date",
+    "Workout Name",
+    "Duration",
+    "Exercise Name",
+    "Set Order",
+    "Weight",
+    "Reps",
+    "Distance",
+    "Seconds",
+    "RPE",
 ]
 
 NORMALIZED_COLUMNS = [
-    "date","workout_name","duration_min","exercise","set_order","weight","reps","distance","seconds"
+    "date",
+    "workout_name",
+    "duration_min",
+    "exercise",
+    "set_order",
+    "weight",
+    "reps",
+    "distance",
+    "seconds",
 ]
 
 DURATION_RE = re.compile(r"^(?P<mins>\d+)(m)?$")
@@ -59,7 +77,9 @@ def normalize_df(df: pd.DataFrame) -> pd.DataFrame:
 
     df["duration_min"] = df["Duration"].map(parse_duration)
 
-    df["workout_name"] = df["Workout Name"].astype(str).where(~df["Workout Name"].isna(), None)
+    df["workout_name"] = (
+        df["Workout Name"].astype(str).where(~df["Workout Name"].isna(), None)
+    )
     df["exercise"] = df["Exercise Name"].astype(str)
 
     numeric_map = {
@@ -67,7 +87,7 @@ def normalize_df(df: pd.DataFrame) -> pd.DataFrame:
         "Weight": "weight",
         "Reps": "reps",
         "Distance": "distance",
-        "Seconds": "seconds"
+        "Seconds": "seconds",
     }
     for src, dst in numeric_map.items():
         df[dst] = pd.to_numeric(df[src], errors="coerce")
@@ -109,7 +129,9 @@ def upsert_sets(normalized: pd.DataFrame) -> int:
             rows,
         )
         conn.commit()
-        return cur.rowcount  # number attempted; not exact inserted (SQLite sets to # of executions). We'll compute inserted via changes().
+        return (
+            cur.rowcount
+        )  # number attempted; not exact inserted (SQLite sets to # of executions). We'll compute inserted via changes().
 
 
 def count_sets() -> int:
@@ -144,7 +166,7 @@ def progressive_overload_data():
             """
         )
         top_exercises = [row[0] for row in top_exercises_cur.fetchall()]
-        
+
         result = {}
         for exercise in top_exercises:
             cur = conn.execute(
@@ -159,19 +181,21 @@ def progressive_overload_data():
                 GROUP BY workout_date
                 ORDER BY workout_date
                 """,
-                (exercise,)
+                (exercise,),
             )
-            
+
             data = []
             for row in cur.fetchall():
-                data.append({
-                    "date": row[0],
-                    "max_weight": row[1],
-                    "best_set_volume": row[2],
-                    "estimated_1rm": round(row[3], 1)
-                })
+                data.append(
+                    {
+                        "date": row[0],
+                        "max_weight": row[1],
+                        "best_set_volume": row[2],
+                        "estimated_1rm": round(row[3], 1),
+                    }
+                )
             result[exercise] = data
-        
+
         return result
 
 
@@ -189,24 +213,26 @@ def volume_progression():
             ORDER BY workout_date
             """
         )
-        
+
         data = []
         volumes = []
         for row in cur.fetchall():
             volume = row[1]
             volumes.append(volume)
-            
+
             # Calculate 7-day rolling average
             rolling_avg = sum(volumes[-7:]) / min(len(volumes), 7)
-            
-            data.append({
-                "date": row[0],
-                "volume": volume,
-                "volume_7day_avg": round(rolling_avg, 1),
-                "exercises_count": row[2],
-                "duration": row[3]
-            })
-        
+
+            data.append(
+                {
+                    "date": row[0],
+                    "volume": volume,
+                    "volume_7day_avg": round(rolling_avg, 1),
+                    "exercises_count": row[2],
+                    "duration": row[3],
+                }
+            )
+
         return data
 
 
@@ -232,14 +258,17 @@ def personal_records_timeline():
             ORDER BY date DESC
             """
         )
-        
-        return [{
-            "exercise": row[0],
-            "date": row[1], 
-            "weight": row[2],
-            "reps": row[3],
-            "estimated_1rm": round(row[4], 1)
-        } for row in cur.fetchall()]
+
+        return [
+            {
+                "exercise": row[0],
+                "date": row[1],
+                "weight": row[2],
+                "reps": row[3],
+                "estimated_1rm": round(row[4], 1),
+            }
+            for row in cur.fetchall()
+        ]
 
 
 def training_consistency():
@@ -257,16 +286,18 @@ def training_consistency():
             ORDER BY week
             """
         )
-        
+
         weekly_data = []
         for row in cur.fetchall():
-            weekly_data.append({
-                "week": row[0],
-                "workouts": row[1],
-                "volume": row[2],
-                "avg_duration": row[3]
-            })
-        
+            weekly_data.append(
+                {
+                    "week": row[0],
+                    "workouts": row[1],
+                    "volume": row[2],
+                    "avg_duration": row[3],
+                }
+            )
+
         # Get monthly summary
         cur = conn.execute(
             """
@@ -279,20 +310,19 @@ def training_consistency():
             ORDER BY month
             """
         )
-        
+
         monthly_data = []
         for row in cur.fetchall():
-            monthly_data.append({
-                "month": row[0],
-                "workouts": row[1],
-                "volume": row[2], 
-                "unique_exercises": row[3]
-            })
-        
-        return {
-            "weekly": weekly_data,
-            "monthly": monthly_data
-        }
+            monthly_data.append(
+                {
+                    "month": row[0],
+                    "workouts": row[1],
+                    "volume": row[2],
+                    "unique_exercises": row[3],
+                }
+            )
+
+        return {"weekly": weekly_data, "monthly": monthly_data}
 
 
 def strength_balance():
@@ -300,18 +330,21 @@ def strength_balance():
     with get_conn() as conn:
         # Categorize exercises by movement pattern
         movement_patterns = {
-            'Push': ['Chest Press', 'Shoulder Press', 'Push'],
-            'Pull': ['Seated Row', 'Lat Pulldown', 'Bent Over Row', 'Pull'],
-            'Squat': ['Squat', 'Leg Press'],
-            'Deadlift': ['Deadlift', 'Romanian Deadlift'],
-            'Accessory': ['Bicep Curl', 'Pec Deck', 'Leg Extension', 'Glute Kickback']
+            "Push": ["Chest Press", "Shoulder Press", "Push"],
+            "Pull": ["Seated Row", "Lat Pulldown", "Bent Over Row", "Pull"],
+            "Squat": ["Squat", "Leg Press"],
+            "Deadlift": ["Deadlift", "Romanian Deadlift"],
+            "Accessory": ["Bicep Curl", "Pec Deck", "Leg Extension", "Glute Kickback"],
         }
-        
+
         result = {}
         for pattern, keywords in movement_patterns.items():
-            like_conditions = ' OR '.join([f"exercise LIKE '%{keyword}%'" for keyword in keywords])
-            
-            cur = conn.execute(f"""
+            like_conditions = " OR ".join(
+                [f"exercise LIKE '%{keyword}%'" for keyword in keywords]
+            )
+
+            cur = conn.execute(
+                f"""
                 SELECT date(substr(date,1,10)) as workout_date,
                        MAX(weight) as max_weight,
                        SUM(COALESCE(weight,0) * COALESCE(reps,0)) as total_volume,
@@ -321,20 +354,23 @@ def strength_balance():
                 GROUP BY workout_date
                 HAVING COUNT(*) > 0
                 ORDER BY workout_date
-            """)
-            
+            """
+            )
+
             pattern_data = []
             for row in cur.fetchall():
-                pattern_data.append({
-                    "date": row[0],
-                    "max_weight": row[1],
-                    "volume": row[2],
-                    "estimated_1rm": round(row[3], 1)
-                })
-            
+                pattern_data.append(
+                    {
+                        "date": row[0],
+                        "max_weight": row[1],
+                        "volume": row[2],
+                        "estimated_1rm": round(row[3], 1),
+                    }
+                )
+
             if pattern_data:  # Only include if we have data
                 result[pattern] = pattern_data
-        
+
         return result
 
 
@@ -352,19 +388,21 @@ def exercise_analysis(exercise: str):
             WHERE exercise = ? AND weight IS NOT NULL
             ORDER BY date, set_order
             """,
-            (exercise,)
+            (exercise,),
         )
-        
+
         all_sets = []
         for row in cur.fetchall():
-            all_sets.append({
-                "date": row[0],
-                "weight": row[1],
-                "reps": row[2], 
-                "volume": row[3],
-                "estimated_1rm": round(row[4], 1)
-            })
-        
+            all_sets.append(
+                {
+                    "date": row[0],
+                    "weight": row[1],
+                    "reps": row[2],
+                    "volume": row[3],
+                    "estimated_1rm": round(row[4], 1),
+                }
+            )
+
         # Get session-level summary
         cur = conn.execute(
             """
@@ -379,24 +417,23 @@ def exercise_analysis(exercise: str):
             GROUP BY workout_date
             ORDER BY workout_date
             """,
-            (exercise,)
+            (exercise,),
         )
-        
+
         session_summary = []
         for row in cur.fetchall():
-            session_summary.append({
-                "date": row[0],
-                "max_weight": row[1],
-                "session_volume": row[2],
-                "sets_count": row[3],
-                "avg_reps": round(row[4], 1),
-                "estimated_1rm": round(row[5], 1)
-            })
-        
-        return {
-            "all_sets": all_sets,
-            "session_summary": session_summary
-        }
+            session_summary.append(
+                {
+                    "date": row[0],
+                    "max_weight": row[1],
+                    "session_volume": row[2],
+                    "sets_count": row[3],
+                    "avg_reps": round(row[4], 1),
+                    "estimated_1rm": round(row[5], 1),
+                }
+            )
+
+        return {"all_sets": all_sets, "session_summary": session_summary}
 
 
 def list_exercises():
@@ -407,10 +444,12 @@ def list_exercises():
 
 # Strong App inspired analytics functions
 
+
 def get_exercise_records():
     """Get personal records for all exercises - like Strong's Records screen"""
     with get_conn() as conn:
-        cur = conn.execute("""
+        cur = conn.execute(
+            """
             SELECT 
                 exercise,
                 MAX(weight) as max_weight,
@@ -424,21 +463,24 @@ def get_exercise_records():
             WHERE weight IS NOT NULL AND reps > 0
             GROUP BY exercise
             ORDER BY max_weight DESC
-        """)
-        
+        """
+        )
+
         records = []
         for row in cur.fetchall():
-            records.append({
-                'exercise': row[0],
-                'max_weight': row[1],
-                'max_reps': row[2],
-                'max_volume_set': row[3],
-                'estimated_1rm': round(row[7], 1),
-                'total_sets': row[4],
-                'first_performed': row[5],
-                'last_performed': row[6]
-            })
-        
+            records.append(
+                {
+                    "exercise": row[0],
+                    "max_weight": row[1],
+                    "max_reps": row[2],
+                    "max_volume_set": row[3],
+                    "estimated_1rm": round(row[7], 1),
+                    "total_sets": row[4],
+                    "first_performed": row[5],
+                    "last_performed": row[6],
+                }
+            )
+
         return records
 
 
@@ -448,35 +490,40 @@ def get_body_measurements():
     # In a real app, you'd have a separate measurements table
     with get_conn() as conn:
         # Get workout dates to simulate body weight tracking
-        cur = conn.execute("""
+        cur = conn.execute(
+            """
             SELECT date(substr(date,1,10)) as workout_date, COUNT(*) as workout_count
             FROM sets
             GROUP BY workout_date
             ORDER BY workout_date
-        """)
-        
+        """
+        )
+
         result = cur.fetchall()
-        
+
         # Simulate body weight data (in a real app, this would come from a measurements table)
         measurements = []
         base_weight = 80  # kg
-        
+
         for i, row in enumerate(result):
             # Simulate gradual weight changes over time
             weight_change = (i * 0.1) - 2  # Slight weight loss trend
-            measurements.append({
-                'date': row[0],
-                'weight': round(base_weight + weight_change, 1),
-                'type': 'weight'
-            })
-        
+            measurements.append(
+                {
+                    "date": row[0],
+                    "weight": round(base_weight + weight_change, 1),
+                    "type": "weight",
+                }
+            )
+
         return measurements
 
 
 def get_workout_calendar():
     """Get workout calendar data - like Strong's workout frequency tracking"""
     with get_conn() as conn:
-        cur = conn.execute("""
+        cur = conn.execute(
+            """
             SELECT 
                 date(substr(date,1,10)) as workout_date,
                 COUNT(DISTINCT exercise) as exercises_performed,
@@ -487,26 +534,153 @@ def get_workout_calendar():
             WHERE weight IS NOT NULL AND reps > 0
             GROUP BY workout_date
             ORDER BY workout_date
-        """)
-        
+        """
+        )
+
         calendar_data = []
         for row in cur.fetchall():
-            calendar_data.append({
-                'date': row[0],
-                'exercises_performed': row[1],
-                'total_volume': round(row[2], 1),
-                'total_sets': row[3],
-                'duration_minutes': round(row[4], 1) if row[4] else 0
-            })
-        
+            calendar_data.append(
+                {
+                    "date": row[0],
+                    "exercises_performed": row[1],
+                    "total_volume": round(row[2], 1),
+                    "total_sets": row[3],
+                    "duration_minutes": round(row[4], 1) if row[4] else 0,
+                }
+            )
+
         return calendar_data
+
+
+def get_workout_detail(workout_date):
+    """Get detailed workout information for a specific date - like Strong's workout view"""
+    with get_conn() as conn:
+        # First, get basic workout info
+        workout_info_cur = conn.execute(
+            """
+            SELECT 
+                date(substr(date,1,10)) as workout_date,
+                workout_name,
+                AVG(duration_min) as duration_minutes,
+                MIN(substr(date,12,8)) as start_time,
+                MAX(substr(date,12,8)) as end_time,
+                COUNT(DISTINCT exercise) as total_exercises,
+                COUNT(*) as total_sets,
+                SUM(COALESCE(weight,0) * COALESCE(reps,0)) as total_volume
+            FROM sets
+            WHERE date(substr(date,1,10)) = ?
+            GROUP BY workout_date, workout_name
+        """,
+            (workout_date,),
+        )
+
+        workout_info = workout_info_cur.fetchone()
+        if not workout_info:
+            return None
+
+        # Get all exercises and their sets for this workout
+        exercises_cur = conn.execute(
+            """
+            SELECT 
+                exercise,
+                set_order,
+                weight,
+                reps,
+                COALESCE(weight,0) * COALESCE(reps,0) as volume,
+                -- Estimate 1RM using Epley formula
+                COALESCE(weight,0) * (1 + COALESCE(reps,0)/30.0) as estimated_1rm,
+                substr(date,12,8) as set_time
+            FROM sets
+            WHERE date(substr(date,1,10)) = ?
+            ORDER BY exercise, set_order
+        """,
+            (workout_date,),
+        )
+
+        exercises_data = {}
+        total_prs = 0
+
+        # Group sets by exercise
+        for row in exercises_cur.fetchall():
+            exercise = row[0]
+            if exercise not in exercises_data:
+                exercises_data[exercise] = {
+                    "exercise_name": exercise,
+                    "sets": [],
+                    "best_set": {"weight": 0, "reps": 0, "volume": 0, "1rm": 0},
+                    "total_volume": 0,
+                    "total_sets": 0,
+                    "personal_records": 0,
+                }
+
+            set_data = {
+                "set_number": row[1],
+                "weight": row[2],
+                "reps": row[3],
+                "volume": round(row[4], 1),
+                "estimated_1rm": round(row[5], 1),
+                "time": row[6],
+            }
+
+            exercises_data[exercise]["sets"].append(set_data)
+            exercises_data[exercise]["total_volume"] += set_data["volume"]
+            exercises_data[exercise]["total_sets"] += 1
+
+            # Track best set for this exercise in this workout
+            best = exercises_data[exercise]["best_set"]
+            if set_data["volume"] > best["volume"]:
+                best.update(
+                    {
+                        "weight": set_data["weight"],
+                        "reps": set_data["reps"],
+                        "volume": set_data["volume"],
+                        "1rm": set_data["estimated_1rm"],
+                    }
+                )
+
+        # Check for personal records by comparing with historical data
+        for exercise in exercises_data.keys():
+            best_set = exercises_data[exercise]["best_set"]
+
+            # Check if this was a weight PR
+            weight_pr_cur = conn.execute(
+                """
+                SELECT MAX(weight) as prev_max_weight
+                FROM sets
+                WHERE exercise = ? AND date(substr(date,1,10)) < ? AND weight IS NOT NULL
+            """,
+                (exercise, workout_date),
+            )
+
+            prev_max = weight_pr_cur.fetchone()[0] or 0
+            if best_set["weight"] > prev_max:
+                exercises_data[exercise]["personal_records"] += 1
+                total_prs += 1
+
+        # Round total volumes
+        for exercise in exercises_data.values():
+            exercise["total_volume"] = round(exercise["total_volume"], 1)
+
+        return {
+            "date": workout_info[0],
+            "workout_name": workout_info[1],
+            "duration_minutes": round(workout_info[2], 1) if workout_info[2] else 0,
+            "start_time": workout_info[3],
+            "end_time": workout_info[4],
+            "total_exercises": workout_info[5],
+            "total_sets": workout_info[6],
+            "total_volume": round(workout_info[7], 1),
+            "total_prs": total_prs,
+            "exercises": list(exercises_data.values()),
+        }
 
 
 def get_exercise_detail(exercise_name):
     """Get detailed statistics for a specific exercise - like Strong's Exercise Detail Screen"""
     with get_conn() as conn:
         # Get all sets for this exercise
-        cur = conn.execute("""
+        cur = conn.execute(
+            """
             SELECT 
                 date(substr(date,1,10)) as workout_date,
                 weight,
@@ -516,59 +690,64 @@ def get_exercise_detail(exercise_name):
             FROM sets
             WHERE exercise = ? AND weight IS NOT NULL AND reps > 0
             ORDER BY date, set_order
-        """, (exercise_name,))
-        
+        """,
+            (exercise_name,),
+        )
+
         result = cur.fetchall()
-        
+
         if not result:
             return None
-        
+
         # Calculate progression over time
         sets_data = []
         max_weight = 0
         max_reps = 0
         max_volume = 0
         max_1rm = 0
-        
+
         for row in result:
             set_data = {
-                'date': row[0],
-                'weight': row[1],
-                'reps': row[2],
-                'volume': row[3],
-                'estimated_1rm': row[4]
+                "date": row[0],
+                "weight": row[1],
+                "reps": row[2],
+                "volume": row[3],
+                "estimated_1rm": row[4],
             }
             sets_data.append(set_data)
-            
+
             max_weight = max(max_weight, row[1])
             max_reps = max(max_reps, row[2])
             max_volume = max(max_volume, row[3])
             max_1rm = max(max_1rm, row[4])
-        
+
         # Get workout frequency
-        frequency_cur = conn.execute("""
+        frequency_cur = conn.execute(
+            """
             SELECT COUNT(DISTINCT date(substr(date,1,10))) as workout_days
             FROM sets
             WHERE exercise = ?
-        """, (exercise_name,))
-        
+        """,
+            (exercise_name,),
+        )
+
         workout_days = frequency_cur.fetchone()[0]
-        
+
         # Calculate days since first and last workout
         first_date = result[0][0]
         last_date = result[-1][0]
-        
+
         return {
-            'exercise_name': exercise_name,
-            'total_sets': len(sets_data),
-            'workout_days': workout_days,
-            'max_weight': max_weight,
-            'max_reps': max_reps,
-            'max_volume': max_volume,
-            'max_1rm': round(max_1rm, 1),
-            'first_workout': first_date,
-            'last_workout': last_date,
-            'sets_history': sets_data
+            "exercise_name": exercise_name,
+            "total_sets": len(sets_data),
+            "workout_days": workout_days,
+            "max_weight": max_weight,
+            "max_reps": max_reps,
+            "max_volume": max_volume,
+            "max_1rm": round(max_1rm, 1),
+            "first_workout": first_date,
+            "last_workout": last_date,
+            "sets_history": sets_data,
         }
 
 
@@ -577,20 +756,28 @@ def get_muscle_group_balance():
     with get_conn() as conn:
         # Categorize exercises by muscle groups (more detailed than movement patterns)
         muscle_groups = {
-            'Chest': ['Chest Press', 'Bench Press', 'Pec Deck', 'Incline'],
-            'Back': ['Seated Row', 'Lat Pulldown', 'Bent Over Row', 'Pull-up', 'Chin'],
-            'Shoulders': ['Shoulder Press', 'Lateral Raise', 'Military Press', 'Overhead Press'],
-            'Legs': ['Squat', 'Leg Press', 'Leg Extension', 'Leg Curl', 'Calf'],
-            'Arms': ['Bicep Curl', 'Tricep', 'Hammer Curl'],
-            'Core': ['Plank', 'Crunch', 'Russian Twist', 'Dead Bug']
+            "Chest": ["Chest Press", "Bench Press", "Pec Deck", "Incline"],
+            "Back": ["Seated Row", "Lat Pulldown", "Bent Over Row", "Pull-up", "Chin"],
+            "Shoulders": [
+                "Shoulder Press",
+                "Lateral Raise",
+                "Military Press",
+                "Overhead Press",
+            ],
+            "Legs": ["Squat", "Leg Press", "Leg Extension", "Leg Curl", "Calf"],
+            "Arms": ["Bicep Curl", "Tricep", "Hammer Curl"],
+            "Core": ["Plank", "Crunch", "Russian Twist", "Dead Bug"],
         }
-        
+
         balance_data = {}
-        
+
         for muscle_group, keywords in muscle_groups.items():
-            like_conditions = ' OR '.join([f"exercise LIKE '%{keyword}%'" for keyword in keywords])
-            
-            cur = conn.execute(f"""
+            like_conditions = " OR ".join(
+                [f"exercise LIKE '%{keyword}%'" for keyword in keywords]
+            )
+
+            cur = conn.execute(
+                f"""
                 SELECT 
                     MAX(COALESCE(weight,0) * (1 + COALESCE(reps,0)/30.0)) as max_estimated_1rm,
                     SUM(COALESCE(weight,0) * COALESCE(reps,0)) as total_volume,
@@ -599,81 +786,86 @@ def get_muscle_group_balance():
                     MAX(weight) as max_weight
                 FROM sets
                 WHERE ({like_conditions}) AND weight IS NOT NULL
-            """)
-            
+            """
+            )
+
             result = cur.fetchone()
-            
+
             if result and result[0]:  # Only include if we have data
                 balance_data[muscle_group] = {
-                    'max_estimated_1rm': round(result[0], 1),
-                    'total_volume': round(result[1], 1),
-                    'total_sets': result[2],
-                    'workout_days': result[3],
-                    'max_weight': result[4]
+                    "max_estimated_1rm": round(result[0], 1),
+                    "total_volume": round(result[1], 1),
+                    "total_sets": result[2],
+                    "workout_days": result[3],
+                    "max_weight": result[4],
                 }
-        
+
         return balance_data
 
 
 def get_training_streak():
     """Calculate current and longest training streaks - like Strong's consistency tracking"""
     with get_conn() as conn:
-        cur = conn.execute("""
+        cur = conn.execute(
+            """
             SELECT DISTINCT date(substr(date,1,10)) as workout_date
             FROM sets
             WHERE weight IS NOT NULL
             ORDER BY workout_date DESC
-        """)
-        
+        """
+        )
+
         workout_dates = [row[0] for row in cur.fetchall()]
-        
+
         if not workout_dates:
-            return {'current_streak': 0, 'longest_streak': 0, 'last_workout': None}
-        
+            return {"current_streak": 0, "longest_streak": 0, "last_workout": None}
+
         # Calculate current streak
         current_streak = 0
         today = datetime.now().date()
-        
+
         for date_str in workout_dates:
-            workout_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+            workout_date = datetime.strptime(date_str, "%Y-%m-%d").date()
             days_ago = (today - workout_date).days
-            
+
             if days_ago <= 7:  # Within a week
                 current_streak += 1
             else:
                 break
-        
+
         # Calculate longest streak (simplified - count consecutive weeks with workouts)
         from datetime import timedelta
-        
+
         longest_streak = 1
         temp_streak = 1
-        
+
         for i in range(1, len(workout_dates)):
-            current_date = datetime.strptime(workout_dates[i-1], '%Y-%m-%d').date()
-            next_date = datetime.strptime(workout_dates[i], '%Y-%m-%d').date()
-            
+            current_date = datetime.strptime(workout_dates[i - 1], "%Y-%m-%d").date()
+            next_date = datetime.strptime(workout_dates[i], "%Y-%m-%d").date()
+
             # If within 7 days, continue streak
             if (current_date - next_date).days <= 7:
                 temp_streak += 1
                 longest_streak = max(longest_streak, temp_streak)
             else:
                 temp_streak = 1
-        
+
         return {
-            'current_streak': current_streak,
-            'longest_streak': longest_streak,
-            'last_workout': workout_dates[0],
-            'total_workout_days': len(workout_dates)
+            "current_streak": current_streak,
+            "longest_streak": longest_streak,
+            "last_workout": workout_dates[0],
+            "total_workout_days": len(workout_dates),
         }
 
 
 # Additional Strong-inspired analytics for maximum data visualization
 
+
 def get_weekly_volume_heatmap():
     """Generate heatmap data for weekly training volume - like GitHub contribution graph"""
     with get_conn() as conn:
-        cur = conn.execute("""
+        cur = conn.execute(
+            """
             SELECT 
                 date(substr(date,1,10)) as workout_date,
                 strftime('%w', date(substr(date,1,10))) as day_of_week,
@@ -683,25 +875,31 @@ def get_weekly_volume_heatmap():
             WHERE weight IS NOT NULL AND reps > 0
             GROUP BY workout_date
             ORDER BY workout_date
-        """)
-        
+        """
+        )
+
         heatmap_data = []
         for row in cur.fetchall():
-            heatmap_data.append({
-                'date': row[0],
-                'day_of_week': int(row[1]),  # 0=Sunday, 1=Monday, etc.
-                'week_number': row[2],
-                'volume': round(row[3], 1),
-                'intensity': min(5, max(1, int(row[3] / 500)))  # Scale 1-5 for color intensity
-            })
-        
+            heatmap_data.append(
+                {
+                    "date": row[0],
+                    "day_of_week": int(row[1]),  # 0=Sunday, 1=Monday, etc.
+                    "week_number": row[2],
+                    "volume": round(row[3], 1),
+                    "intensity": min(
+                        5, max(1, int(row[3] / 500))
+                    ),  # Scale 1-5 for color intensity
+                }
+            )
+
         return heatmap_data
 
 
 def get_rep_range_distribution():
     """Analyze rep range distribution to see training focus"""
     with get_conn() as conn:
-        cur = conn.execute("""
+        cur = conn.execute(
+            """
             SELECT 
                 CASE 
                     WHEN reps BETWEEN 1 AND 3 THEN '1-3 (Strength)'
@@ -723,14 +921,15 @@ def get_rep_range_distribution():
                     WHEN reps BETWEEN 13 AND 20 THEN 4
                     ELSE 5
                 END
-        """)
-        
+        """
+        )
+
         return [
             {
-                'rep_range': row[0],
-                'set_count': row[1],
-                'total_volume': round(row[2], 1),
-                'percentage': 0  # Will calculate in frontend
+                "rep_range": row[0],
+                "set_count": row[1],
+                "total_volume": round(row[2], 1),
+                "percentage": 0,  # Will calculate in frontend
             }
             for row in cur.fetchall()
         ]
@@ -739,7 +938,8 @@ def get_rep_range_distribution():
 def get_exercise_frequency():
     """Track how frequently each exercise is performed"""
     with get_conn() as conn:
-        cur = conn.execute("""
+        cur = conn.execute(
+            """
             SELECT 
                 exercise,
                 COUNT(DISTINCT date(substr(date,1,10))) as workout_days,
@@ -751,17 +951,18 @@ def get_exercise_frequency():
             WHERE weight IS NOT NULL
             GROUP BY exercise
             ORDER BY workout_days DESC, total_sets DESC
-        """)
-        
+        """
+        )
+
         return [
             {
-                'exercise': row[0],
-                'workout_days': row[1],
-                'total_sets': row[2],
-                'avg_weight': round(row[3], 1),
-                'last_performed': row[4],
-                'first_performed': row[5],
-                'frequency_score': row[1] * row[2]  # Days * Sets for ranking
+                "exercise": row[0],
+                "workout_days": row[1],
+                "total_sets": row[2],
+                "avg_weight": round(row[3], 1),
+                "last_performed": row[4],
+                "first_performed": row[5],
+                "frequency_score": row[1] * row[2],  # Days * Sets for ranking
             }
             for row in cur.fetchall()
         ]
@@ -772,47 +973,55 @@ def get_strength_ratios():
     with get_conn() as conn:
         # Define major lift patterns
         lift_patterns = {
-            'Squat': ['Squat', 'Leg Press'],
-            'Bench': ['Chest Press', 'Bench Press'],
-            'Deadlift': ['Deadlift'],
-            'Row': ['Seated Row', 'Bent Over Row'],
-            'Press': ['Shoulder Press', 'Overhead Press']
+            "Squat": ["Squat", "Leg Press"],
+            "Bench": ["Chest Press", "Bench Press"],
+            "Deadlift": ["Deadlift"],
+            "Row": ["Seated Row", "Bent Over Row"],
+            "Press": ["Shoulder Press", "Overhead Press"],
         }
-        
+
         ratios = {}
         max_weights = {}
-        
+
         for lift_name, patterns in lift_patterns.items():
-            like_conditions = ' OR '.join([f"exercise LIKE '%{pattern}%'" for pattern in patterns])
-            
-            cur = conn.execute(f"""
+            like_conditions = " OR ".join(
+                [f"exercise LIKE '%{pattern}%'" for pattern in patterns]
+            )
+
+            cur = conn.execute(
+                f"""
                 SELECT MAX(COALESCE(weight,0) * (1 + COALESCE(reps,0)/30.0)) as max_1rm
                 FROM sets
                 WHERE ({like_conditions}) AND weight IS NOT NULL
-            """)
-            
+            """
+            )
+
             result = cur.fetchone()
             if result and result[0]:
                 max_weights[lift_name] = round(result[0], 1)
-        
+
         # Calculate ratios (using typical strength standards)
-        if 'Squat' in max_weights and 'Bench' in max_weights:
-            ratios['Squat_to_Bench'] = round(max_weights['Squat'] / max_weights['Bench'], 2)
-        
-        if 'Deadlift' in max_weights and 'Squat' in max_weights:
-            ratios['Deadlift_to_Squat'] = round(max_weights['Deadlift'] / max_weights['Squat'], 2)
-        
-        if 'Bench' in max_weights and 'Row' in max_weights:
-            ratios['Bench_to_Row'] = round(max_weights['Bench'] / max_weights['Row'], 2)
-        
+        if "Squat" in max_weights and "Bench" in max_weights:
+            ratios["Squat_to_Bench"] = round(
+                max_weights["Squat"] / max_weights["Bench"], 2
+            )
+
+        if "Deadlift" in max_weights and "Squat" in max_weights:
+            ratios["Deadlift_to_Squat"] = round(
+                max_weights["Deadlift"] / max_weights["Squat"], 2
+            )
+
+        if "Bench" in max_weights and "Row" in max_weights:
+            ratios["Bench_to_Row"] = round(max_weights["Bench"] / max_weights["Row"], 2)
+
         return {
-            'max_lifts': max_weights,
-            'ratios': ratios,
-            'ideal_ratios': {
-                'Squat_to_Bench': 1.3,  # Squat should be ~30% higher than bench
-                'Deadlift_to_Squat': 1.2,  # Deadlift should be ~20% higher than squat
-                'Bench_to_Row': 1.0  # Bench and row should be roughly equal
-            }
+            "max_lifts": max_weights,
+            "ratios": ratios,
+            "ideal_ratios": {
+                "Squat_to_Bench": 1.3,  # Squat should be ~30% higher than bench
+                "Deadlift_to_Squat": 1.2,  # Deadlift should be ~20% higher than squat
+                "Bench_to_Row": 1.0,  # Bench and row should be roughly equal
+            },
         }
 
 
@@ -821,19 +1030,22 @@ def get_recovery_tracking():
     with get_conn() as conn:
         # Group exercises by muscle groups
         muscle_groups = {
-            'Chest': ['Chest Press', 'Bench Press', 'Pec Deck'],
-            'Back': ['Seated Row', 'Lat Pulldown', 'Bent Over Row', 'Pull'],
-            'Shoulders': ['Shoulder Press', 'Military Press', 'Lateral Raise'],
-            'Legs': ['Squat', 'Leg Press', 'Leg Extension', 'Leg Curl'],
-            'Arms': ['Bicep Curl', 'Tricep', 'Hammer Curl']
+            "Chest": ["Chest Press", "Bench Press", "Pec Deck"],
+            "Back": ["Seated Row", "Lat Pulldown", "Bent Over Row", "Pull"],
+            "Shoulders": ["Shoulder Press", "Military Press", "Lateral Raise"],
+            "Legs": ["Squat", "Leg Press", "Leg Extension", "Leg Curl"],
+            "Arms": ["Bicep Curl", "Tricep", "Hammer Curl"],
         }
-        
+
         recovery_data = {}
-        
+
         for muscle_group, exercises in muscle_groups.items():
-            like_conditions = ' OR '.join([f"exercise LIKE '%{ex}%'" for ex in exercises])
-            
-            cur = conn.execute(f"""
+            like_conditions = " OR ".join(
+                [f"exercise LIKE '%{ex}%'" for ex in exercises]
+            )
+
+            cur = conn.execute(
+                f"""
                 SELECT 
                     date(substr(date,1,10)) as workout_date,
                     LAG(date(substr(date,1,10))) OVER (ORDER BY date) as prev_date
@@ -841,40 +1053,44 @@ def get_recovery_tracking():
                 WHERE ({like_conditions}) AND weight IS NOT NULL
                 GROUP BY workout_date
                 ORDER BY workout_date
-            """)
-            
+            """
+            )
+
             recovery_times = []
             for row in cur.fetchall():
                 if row[1]:  # If there's a previous date
-                    current = datetime.strptime(row[0], '%Y-%m-%d')
-                    previous = datetime.strptime(row[1], '%Y-%m-%d')
+                    current = datetime.strptime(row[0], "%Y-%m-%d")
+                    previous = datetime.strptime(row[1], "%Y-%m-%d")
                     days_between = (current - previous).days
                     recovery_times.append(days_between)
-            
+
             if recovery_times:
                 recovery_data[muscle_group] = {
-                    'avg_recovery': round(sum(recovery_times) / len(recovery_times), 1),
-                    'min_recovery': min(recovery_times),
-                    'max_recovery': max(recovery_times),
-                    'total_sessions': len(recovery_times) + 1
+                    "avg_recovery": round(sum(recovery_times) / len(recovery_times), 1),
+                    "min_recovery": min(recovery_times),
+                    "max_recovery": max(recovery_times),
+                    "total_sessions": len(recovery_times) + 1,
                 }
-        
+
         return recovery_data
 
 
 def get_progressive_overload_rate():
     """Calculate the rate of strength progression per exercise"""
     with get_conn() as conn:
-        cur = conn.execute("""
+        cur = conn.execute(
+            """
             SELECT DISTINCT exercise FROM sets WHERE weight IS NOT NULL
             ORDER BY exercise
-        """)
-        
+        """
+        )
+
         exercises = [row[0] for row in cur.fetchall()]
         progression_rates = []
-        
+
         for exercise in exercises:
-            cur = conn.execute("""
+            cur = conn.execute(
+                """
                 SELECT 
                     date(substr(date,1,10)) as workout_date,
                     MAX(COALESCE(weight,0) * (1 + COALESCE(reps,0)/30.0)) as estimated_1rm
@@ -882,42 +1098,49 @@ def get_progressive_overload_rate():
                 WHERE exercise = ? AND weight IS NOT NULL
                 GROUP BY workout_date
                 ORDER BY workout_date
-            """, (exercise,))
-            
+            """,
+                (exercise,),
+            )
+
             sessions = cur.fetchall()
-            
+
             if len(sessions) >= 2:
                 first_1rm = sessions[0][1]
                 last_1rm = sessions[-1][1]
-                first_date = datetime.strptime(sessions[0][0], '%Y-%m-%d')
-                last_date = datetime.strptime(sessions[-1][0], '%Y-%m-%d')
-                
+                first_date = datetime.strptime(sessions[0][0], "%Y-%m-%d")
+                last_date = datetime.strptime(sessions[-1][0], "%Y-%m-%d")
+
                 days_elapsed = (last_date - first_date).days
                 if days_elapsed > 0 and first_1rm > 0:
                     # Calculate weekly progression rate
                     total_gain = last_1rm - first_1rm
                     weekly_rate = (total_gain / days_elapsed) * 7
                     percentage_gain = (total_gain / first_1rm) * 100
-                    
-                    progression_rates.append({
-                        'exercise': exercise,
-                        'first_1rm': round(first_1rm, 1),
-                        'last_1rm': round(last_1rm, 1),
-                        'total_gain': round(total_gain, 1),
-                        'weekly_rate': round(weekly_rate, 2),
-                        'percentage_gain': round(percentage_gain, 1),
-                        'days_tracked': days_elapsed,
-                        'sessions': len(sessions)
-                    })
-        
+
+                    progression_rates.append(
+                        {
+                            "exercise": exercise,
+                            "first_1rm": round(first_1rm, 1),
+                            "last_1rm": round(last_1rm, 1),
+                            "total_gain": round(total_gain, 1),
+                            "weekly_rate": round(weekly_rate, 2),
+                            "percentage_gain": round(percentage_gain, 1),
+                            "days_tracked": days_elapsed,
+                            "sessions": len(sessions),
+                        }
+                    )
+
         # Sort by percentage gain
-        return sorted(progression_rates, key=lambda x: x['percentage_gain'], reverse=True)
+        return sorted(
+            progression_rates, key=lambda x: x["percentage_gain"], reverse=True
+        )
 
 
 def get_workout_duration_trends():
     """Analyze workout duration patterns over time"""
     with get_conn() as conn:
-        cur = conn.execute("""
+        cur = conn.execute(
+            """
             SELECT 
                 date(substr(date,1,10)) as workout_date,
                 AVG(duration_min) as avg_duration,
@@ -928,32 +1151,38 @@ def get_workout_duration_trends():
             WHERE duration_min IS NOT NULL
             GROUP BY workout_date
             ORDER BY workout_date
-        """)
-        
+        """
+        )
+
         duration_data = []
         for row in cur.fetchall():
             # Calculate efficiency metrics
             volume_per_minute = row[4] / row[1] if row[1] > 0 else 0
             sets_per_minute = row[3] / row[1] if row[1] > 0 else 0
-            
-            duration_data.append({
-                'date': row[0],
-                'duration': round(row[1], 1),
-                'exercises': row[2],
-                'total_sets': row[3],
-                'volume': round(row[4], 1),
-                'volume_per_minute': round(volume_per_minute, 1),
-                'sets_per_minute': round(sets_per_minute, 2),
-                'efficiency_score': round(volume_per_minute / 10, 1)  # Arbitrary scale
-            })
-        
+
+            duration_data.append(
+                {
+                    "date": row[0],
+                    "duration": round(row[1], 1),
+                    "exercises": row[2],
+                    "total_sets": row[3],
+                    "volume": round(row[4], 1),
+                    "volume_per_minute": round(volume_per_minute, 1),
+                    "sets_per_minute": round(sets_per_minute, 2),
+                    "efficiency_score": round(
+                        volume_per_minute / 10, 1
+                    ),  # Arbitrary scale
+                }
+            )
+
         return duration_data
 
 
 def get_best_sets_analysis():
     """Find the single best set for each exercise"""
     with get_conn() as conn:
-        cur = conn.execute("""
+        cur = conn.execute(
+            """
             WITH ranked_sets AS (
                 SELECT 
                     exercise,
@@ -976,16 +1205,17 @@ def get_best_sets_analysis():
             FROM ranked_sets
             WHERE rn = 1
             ORDER BY estimated_1rm DESC
-        """)
-        
+        """
+        )
+
         return [
             {
-                'exercise': row[0],
-                'date': row[1],
-                'weight': row[2],
-                'reps': row[3],
-                'volume': row[4],
-                'estimated_1rm': round(row[5], 1)
+                "exercise": row[0],
+                "date": row[1],
+                "weight": row[2],
+                "reps": row[3],
+                "volume": row[4],
+                "estimated_1rm": round(row[5], 1),
             }
             for row in cur.fetchall()
         ]
@@ -994,17 +1224,20 @@ def get_best_sets_analysis():
 def get_plateau_detection():
     """Detect potential plateaus in strength progression"""
     with get_conn() as conn:
-        cur = conn.execute("""
+        cur = conn.execute(
+            """
             SELECT DISTINCT exercise FROM sets 
             WHERE weight IS NOT NULL 
             ORDER BY exercise
-        """)
-        
+        """
+        )
+
         exercises = [row[0] for row in cur.fetchall()]
         plateau_analysis = []
-        
+
         for exercise in exercises:
-            cur = conn.execute("""
+            cur = conn.execute(
+                """
                 SELECT 
                     date(substr(date,1,10)) as workout_date,
                     MAX(COALESCE(weight,0) * (1 + COALESCE(reps,0)/30.0)) as estimated_1rm
@@ -1013,33 +1246,39 @@ def get_plateau_detection():
                 GROUP BY workout_date
                 ORDER BY workout_date DESC
                 LIMIT 5
-            """, (exercise,))
-            
+            """,
+                (exercise,),
+            )
+
             recent_sessions = cur.fetchall()
-            
+
             if len(recent_sessions) >= 3:
                 # Check if last 3 sessions show no improvement
                 last_3_1rms = [session[1] for session in recent_sessions[:3]]
-                
+
                 if len(set(last_3_1rms)) == 1:  # All the same
-                    status = 'Plateau'
+                    status = "Plateau"
                 elif max(last_3_1rms) == last_3_1rms[0]:  # Best is most recent
-                    status = 'Progressing'
+                    status = "Progressing"
                 elif last_3_1rms[0] < max(last_3_1rms):  # Recent performance declined
-                    status = 'Declining'
+                    status = "Declining"
                 else:
-                    status = 'Variable'
-                
-                plateau_analysis.append({
-                    'exercise': exercise,
-                    'status': status,
-                    'current_1rm': round(last_3_1rms[0], 1),
-                    'best_recent_1rm': round(max(last_3_1rms), 1),
-                    'sessions_analyzed': len(recent_sessions),
-                    'last_session': recent_sessions[0][0] if recent_sessions else None
-                })
-        
-        return sorted(plateau_analysis, key=lambda x: x['current_1rm'], reverse=True)
+                    status = "Variable"
+
+                plateau_analysis.append(
+                    {
+                        "exercise": exercise,
+                        "status": status,
+                        "current_1rm": round(last_3_1rms[0], 1),
+                        "best_recent_1rm": round(max(last_3_1rms), 1),
+                        "sessions_analyzed": len(recent_sessions),
+                        "last_session": (
+                            recent_sessions[0][0] if recent_sessions else None
+                        ),
+                    }
+                )
+
+        return sorted(plateau_analysis, key=lambda x: x["current_1rm"], reverse=True)
 
 
 # ---------------------------------------------------------------------------
@@ -1049,36 +1288,61 @@ from datetime import date as _date, timedelta as _timedelta
 from collections import defaultdict
 
 PUSH_KEYWORDS = [
-    'Bench', 'Press', 'Dip', 'Push-Up', 'Push Up', 'Dip', 'Overhead Press', 'Incline'
+    "Bench",
+    "Press",
+    "Dip",
+    "Push-Up",
+    "Push Up",
+    "Dip",
+    "Overhead Press",
+    "Incline",
 ]
 PULL_KEYWORDS = [
-    'Row', 'Pulldown', 'Pull-Down', 'Pullup', 'Pull-Up', 'Chin', 'Deadlift', 'Curl'
+    "Row",
+    "Pulldown",
+    "Pull-Down",
+    "Pullup",
+    "Pull-Up",
+    "Chin",
+    "Deadlift",
+    "Curl",
 ]
 LEGS_KEYWORDS = [
-    'Squat', 'Lunge', 'Leg Press', 'Leg Extension', 'Leg Curl', 'Calf', 'RDL', 'Romanian'
+    "Squat",
+    "Lunge",
+    "Leg Press",
+    "Leg Extension",
+    "Leg Curl",
+    "Calf",
+    "RDL",
+    "Romanian",
 ]
+
 
 def _classify_group(ex_name: str) -> str:
     n = ex_name.lower()
     for k in PUSH_KEYWORDS:
         if k.lower() in n:
-            return 'Push'
+            return "Push"
     for k in PULL_KEYWORDS:
         if k.lower() in n:
-            return 'Pull'
+            return "Pull"
     for k in LEGS_KEYWORDS:
         if k.lower() in n:
-            return 'Legs'
+            return "Legs"
     # Fallback guess by heuristic
-    if any(x in n for x in ('press','push')):
-        return 'Push'
-    if any(x in n for x in ('row','pull','curl','dead')):
-        return 'Pull'
-    if any(x in n for x in ('squat','leg','lunge','rdl','romanian','calf')):
-        return 'Legs'
-    return 'Other'
+    if any(x in n for x in ("press", "push")):
+        return "Push"
+    if any(x in n for x in ("row", "pull", "curl", "dead")):
+        return "Pull"
+    if any(x in n for x in ("squat", "leg", "lunge", "rdl", "romanian", "calf")):
+        return "Legs"
+    return "Other"
 
-def build_dashboard_data(start: str | None, end: str | None, exercises: list[str] | None):
+
+def build_dashboard_data(
+    start: str | None, end: str | None, exercises: list[str] | None
+):
     """Aggregate and return data required for the dashboard (weight only).
 
     Changes (Aug 2025):
@@ -1090,18 +1354,26 @@ def build_dashboard_data(start: str | None, end: str | None, exercises: list[str
     """
     with get_conn() as conn:
         # Determine overall date range if not supplied
-        cur = conn.execute("SELECT MIN(date(substr(date,1,10))), MAX(date(substr(date,1,10))) FROM sets WHERE weight IS NOT NULL AND reps > 0")
+        cur = conn.execute(
+            "SELECT MIN(date(substr(date,1,10))), MAX(date(substr(date,1,10))) FROM sets WHERE weight IS NOT NULL AND reps > 0"
+        )
         row = cur.fetchone()
         if not row or row[0] is None:
             return {
-                'filters': {'start': start, 'end': end, 'exercises': [], 'data_start': None, 'data_end': None},
-                'exercises_daily_max': [],
-                'top_exercises': [],
-                'sessions': [],
-                'weekly_ppl': [],
-                'rep_bins_weekly': [],
-                'rep_bins_total': {},
-                'muscle_28d': []
+                "filters": {
+                    "start": start,
+                    "end": end,
+                    "exercises": [],
+                    "data_start": None,
+                    "data_end": None,
+                },
+                "exercises_daily_max": [],
+                "top_exercises": [],
+                "sessions": [],
+                "weekly_ppl": [],
+                "rep_bins_weekly": [],
+                "rep_bins_total": {},
+                "muscle_28d": [],
             }
         data_min, data_max = row
         if start is None:
@@ -1122,19 +1394,25 @@ def build_dashboard_data(start: str | None, end: str | None, exercises: list[str
               AND date(substr(date,1,10)) BETWEEN ? AND ?
             ORDER BY d
             """,
-            (start, end)
+            (start, end),
         )
         rows = cur.fetchall()
         if not rows:
             return {
-                'filters': {'start': start, 'end': end, 'exercises': [], 'data_start': data_min, 'data_end': data_max},
-                'exercises_daily_max': [],
-                'top_exercises': [],
-                'sessions': [],
-                'weekly_ppl': [],
-                'rep_bins_weekly': [],
-                'rep_bins_total': {},
-                'muscle_28d': []
+                "filters": {
+                    "start": start,
+                    "end": end,
+                    "exercises": [],
+                    "data_start": data_min,
+                    "data_end": data_max,
+                },
+                "exercises_daily_max": [],
+                "top_exercises": [],
+                "sessions": [],
+                "weekly_ppl": [],
+                "rep_bins_weekly": [],
+                "rep_bins_total": {},
+                "muscle_28d": [],
             }
 
         # Pre-aggregate total volume per exercise for selection purposes
@@ -1143,20 +1421,29 @@ def build_dashboard_data(start: str | None, end: str | None, exercises: list[str
             exercise_total_volume[ex] += w * r
 
         # Determine top 5 exercises for progressive overload chart (weight volume)
-        top_exercises = [ex for ex, _ in sorted(exercise_total_volume.items(), key=lambda x: x[1], reverse=True)[:5]]
-        selected_set = set(top_exercises)  # used only for sessions & weekly splits volume classification
+        top_exercises = [
+            ex
+            for ex, _ in sorted(
+                exercise_total_volume.items(), key=lambda x: x[1], reverse=True
+            )[:5]
+        ]
+        selected_set = set(
+            top_exercises
+        )  # used only for sessions & weekly splits volume classification
 
         # Daily maxima per exercise (for all exercises, not just top)
-        per_day_ex: dict[tuple[str,str], dict] = {}
-        per_day_volume: dict[tuple[str,str], float] = {}
+        per_day_ex: dict[tuple[str, str], dict] = {}
+        per_day_volume: dict[tuple[str, str], float] = {}
         for d, ex, w, r in rows:
             key = (ex, d)
-            rec = per_day_ex.setdefault(key, {'exercise': ex, 'date': d, 'max_weight': 0.0, 'e1rm': 0.0})
-            if w > rec['max_weight']:
-                rec['max_weight'] = w
-            e1rm_val = w * (1 + r/30.0)
-            if e1rm_val > rec['e1rm']:
-                rec['e1rm'] = e1rm_val
+            rec = per_day_ex.setdefault(
+                key, {"exercise": ex, "date": d, "max_weight": 0.0, "e1rm": 0.0}
+            )
+            if w > rec["max_weight"]:
+                rec["max_weight"] = w
+            e1rm_val = w * (1 + r / 30.0)
+            if e1rm_val > rec["e1rm"]:
+                rec["e1rm"] = e1rm_val
             if w and r:
                 per_day_volume[key] = per_day_volume.get(key, 0.0) + w * r
 
@@ -1164,19 +1451,19 @@ def build_dashboard_data(start: str | None, end: str | None, exercises: list[str
         exercises_daily_max: list[dict] = []
         by_ex: dict[str, list[dict]] = defaultdict(list)
         for rec in per_day_ex.values():
-            rec['e1rm'] = round(rec['e1rm'], 1)
-            by_ex[rec['exercise']].append(rec)
+            rec["e1rm"] = round(rec["e1rm"], 1)
+            by_ex[rec["exercise"]].append(rec)
         for ex, lst in by_ex.items():
-            lst.sort(key=lambda x: x['date'])
+            lst.sort(key=lambda x: x["date"])
             best = -1.0
-            metric_key = 'max_weight'
+            metric_key = "max_weight"
             for item in lst:
                 val = item[metric_key]
                 if val > best:
-                    item['is_pr'] = True
+                    item["is_pr"] = True
                     best = val
                 else:
-                    item['is_pr'] = False
+                    item["is_pr"] = False
             exercises_daily_max.extend(lst)
 
         # Build per-exercise progression metrics (delta weight)
@@ -1184,38 +1471,39 @@ def build_dashboard_data(start: str | None, end: str | None, exercises: list[str
         for ex, lst in by_ex.items():
             if len(lst) < 2:
                 continue
-            first = lst[0]['max_weight']
-            last = lst[-1]['max_weight']
+            first = lst[0]["max_weight"]
+            last = lst[-1]["max_weight"]
             delta = last - first
             days = (
-                _date.fromisoformat(lst[-1]['date']) - _date.fromisoformat(lst[0]['date'])
+                _date.fromisoformat(lst[-1]["date"])
+                - _date.fromisoformat(lst[0]["date"])
             ).days or 1
             slope_per_day = delta / days
-            progression_list.append({
-                'exercise': ex,
-                'first': first,
-                'last': last,
-                'delta': round(delta, 2),
-                'slope_per_day': round(slope_per_day, 4)
-            })
-        progression_list.sort(key=lambda x: x['delta'], reverse=True)
+            progression_list.append(
+                {
+                    "exercise": ex,
+                    "first": first,
+                    "last": last,
+                    "delta": round(delta, 2),
+                    "slope_per_day": round(slope_per_day, 4),
+                }
+            )
+        progression_list.sort(key=lambda x: x["delta"], reverse=True)
 
         # Daily volume list
         exercises_daily_volume = [
-            {
-                'exercise': ex,
-                'date': d,
-                'volume': round(vol, 1)
-            }
+            {"exercise": ex, "date": d, "volume": round(vol, 1)}
             for (ex, d), vol in per_day_volume.items()
         ]
-        exercises_daily_volume.sort(key=lambda x: (x['exercise'], x['date']))
+        exercises_daily_volume.sort(key=lambda x: (x["exercise"], x["date"]))
 
         # Session (day) total volume & PPL split
         sessions_map: dict[str, dict] = {}
         # rep bin weekly & weekly PPL structures
-        weekly_ppl_acc = defaultdict(lambda: {'push':0.0,'pull':0.0,'legs':0.0})
-        rep_weekly_acc = defaultdict(lambda: {'bin_1_5':0.0,'bin_6_12':0.0,'bin_13_20':0.0, 'total':0.0})
+        weekly_ppl_acc = defaultdict(lambda: {"push": 0.0, "pull": 0.0, "legs": 0.0})
+        rep_weekly_acc = defaultdict(
+            lambda: {"bin_1_5": 0.0, "bin_6_12": 0.0, "bin_13_20": 0.0, "total": 0.0}
+        )
 
         def iso_week(dstr: str) -> str:
             dt = _date.fromisoformat(dstr)
@@ -1225,74 +1513,91 @@ def build_dashboard_data(start: str | None, end: str | None, exercises: list[str
         for d, ex, w, r in rows:
             vol = w * r
             group = _classify_group(ex)
-            sess = sessions_map.setdefault(d, {'date': d, 'total_volume': 0.0, 'push_volume':0.0,'pull_volume':0.0,'legs_volume':0.0})
-            sess['total_volume'] += vol
-            if group == 'Push':
-                sess['push_volume'] += vol
-            elif group == 'Pull':
-                sess['pull_volume'] += vol
-            elif group == 'Legs':
-                sess['legs_volume'] += vol
+            sess = sessions_map.setdefault(
+                d,
+                {
+                    "date": d,
+                    "total_volume": 0.0,
+                    "push_volume": 0.0,
+                    "pull_volume": 0.0,
+                    "legs_volume": 0.0,
+                },
+            )
+            sess["total_volume"] += vol
+            if group == "Push":
+                sess["push_volume"] += vol
+            elif group == "Pull":
+                sess["pull_volume"] += vol
+            elif group == "Legs":
+                sess["legs_volume"] += vol
 
             week = iso_week(d)
-            if group == 'Push':
-                weekly_ppl_acc[week]['push'] += vol
-            elif group == 'Pull':
-                weekly_ppl_acc[week]['pull'] += vol
-            elif group == 'Legs':
-                weekly_ppl_acc[week]['legs'] += vol
+            if group == "Push":
+                weekly_ppl_acc[week]["push"] += vol
+            elif group == "Pull":
+                weekly_ppl_acc[week]["pull"] += vol
+            elif group == "Legs":
+                weekly_ppl_acc[week]["legs"] += vol
 
             # Rep bins
             if 1 <= r <= 5:
-                bin_key = 'bin_1_5'
+                bin_key = "bin_1_5"
             elif 6 <= r <= 12:
-                bin_key = 'bin_6_12'
+                bin_key = "bin_6_12"
             else:
-                bin_key = 'bin_13_20'
+                bin_key = "bin_13_20"
             rep_weekly_acc[week][bin_key] += vol
-            rep_weekly_acc[week]['total'] += vol
+            rep_weekly_acc[week]["total"] += vol
 
-        sessions = sorted(sessions_map.values(), key=lambda x: x['date'])
+        sessions = sorted(sessions_map.values(), key=lambda x: x["date"])
         # Rolling 4-week avg added client side (lighter)
 
         weekly_ppl = []
+
         def week_start_date(iso_week: str) -> str:
             # iso_week format YYYY-Www; compute Monday date
-            y, w = iso_week.split('-W')
-            y = int(y); w = int(w)
+            y, w = iso_week.split("-W")
+            y = int(y)
+            w = int(w)
             # ISO week 1 may start in previous year; use datetime ISO helpers
             from datetime import date as _d
+
             # Find the Monday of the ISO week
             # From Python 3.8+, date.fromisocalendar exists
             return _d.fromisocalendar(y, w, 1).isoformat()
+
         for wk, vals in sorted(weekly_ppl_acc.items()):
-            weekly_ppl.append({
-                'iso_week': wk,
-                'week_start': week_start_date(wk),
-                'push': round(vals['push'],1),
-                'pull': round(vals['pull'],1),
-                'legs': round(vals['legs'],1)
-            })
+            weekly_ppl.append(
+                {
+                    "iso_week": wk,
+                    "week_start": week_start_date(wk),
+                    "push": round(vals["push"], 1),
+                    "pull": round(vals["pull"], 1),
+                    "legs": round(vals["legs"], 1),
+                }
+            )
 
         rep_bins_weekly = []
-        total_bins = {'bin_1_5':0.0,'bin_6_12':0.0,'bin_13_20':0.0,'total':0.0}
+        total_bins = {"bin_1_5": 0.0, "bin_6_12": 0.0, "bin_13_20": 0.0, "total": 0.0}
         for wk, vals in sorted(rep_weekly_acc.items()):
-            rep_bins_weekly.append({
-                'iso_week': wk,
-                'week_start': week_start_date(wk),
-                'bin_1_5': round(vals['bin_1_5'],1),
-                'bin_6_12': round(vals['bin_6_12'],1),
-                'bin_13_20': round(vals['bin_13_20'],1),
-                'total': round(vals['total'],1)
-            })
+            rep_bins_weekly.append(
+                {
+                    "iso_week": wk,
+                    "week_start": week_start_date(wk),
+                    "bin_1_5": round(vals["bin_1_5"], 1),
+                    "bin_6_12": round(vals["bin_6_12"], 1),
+                    "bin_13_20": round(vals["bin_13_20"], 1),
+                    "total": round(vals["total"], 1),
+                }
+            )
             for k in total_bins:
                 total_bins[k] += vals[k]
-        rep_bins_total = {k: round(v,1) for k,v in total_bins.items()}
+        rep_bins_total = {k: round(v, 1) for k, v in total_bins.items()}
 
         # Muscle recovery (P/P/L)
         def recovery(group_key: str):
             # gather days where group volume >0
-            ds = [s['date'] for s in sessions if s[f'{group_key.lower()}_volume'] > 0]
+            ds = [s["date"] for s in sessions if s[f"{group_key.lower()}_volume"] > 0]
             ds_sorted = sorted(set(ds))
             if len(ds_sorted) < 2:
                 return None
@@ -1303,18 +1608,19 @@ def build_dashboard_data(start: str | None, end: str | None, exercises: list[str
                 intervals.append((curd - prev).days)
                 prev = curd
             return {
-                'muscle': group_key,
-                'mean_days': round(sum(intervals)/len(intervals),1),
-                'min_days': min(intervals),
-                'max_days': max(intervals),
-                'n_intervals': len(intervals)
+                "muscle": group_key,
+                "mean_days": round(sum(intervals) / len(intervals), 1),
+                "min_days": min(intervals),
+                "max_days": max(intervals),
+                "n_intervals": len(intervals),
             }
-    # (Recovery removed from payload)
+
+        # (Recovery removed from payload)
 
         # Muscle 28d volume (P/P/L proxy)
         end_dt = _date.fromisoformat(end)
         start_28 = end_dt - _timedelta(days=27)
-        volume_28 = {'Push':0.0,'Pull':0.0,'Legs':0.0}
+        volume_28 = {"Push": 0.0, "Pull": 0.0, "Legs": 0.0}
         for d, ex, w, r in rows:
             dt = _date.fromisoformat(d)
             if dt < start_28 or dt > end_dt:
@@ -1323,17 +1629,23 @@ def build_dashboard_data(start: str | None, end: str | None, exercises: list[str
             group = _classify_group(ex)
             if group in volume_28:
                 volume_28[group] += vol
-        muscle_28d = [{'group': g, 'volume': round(v,1)} for g,v in volume_28.items()]
+        muscle_28d = [{"group": g, "volume": round(v, 1)} for g, v in volume_28.items()]
 
         return {
-            'filters': {'start': start, 'end': end, 'exercises': top_exercises, 'data_start': data_min, 'data_end': data_max},
-            'exercises_daily_max': exercises_daily_max,
-            'exercises_daily_volume': exercises_daily_volume,
-            'exercise_progression': progression_list,
-            'top_exercises': top_exercises,
-            'sessions': sessions,
-            'weekly_ppl': weekly_ppl,
-            'rep_bins_weekly': rep_bins_weekly,
-            'rep_bins_total': rep_bins_total,
-            'muscle_28d': muscle_28d
+            "filters": {
+                "start": start,
+                "end": end,
+                "exercises": top_exercises,
+                "data_start": data_min,
+                "data_end": data_max,
+            },
+            "exercises_daily_max": exercises_daily_max,
+            "exercises_daily_volume": exercises_daily_volume,
+            "exercise_progression": progression_list,
+            "top_exercises": top_exercises,
+            "sessions": sessions,
+            "weekly_ppl": weekly_ppl,
+            "rep_bins_weekly": rep_bins_weekly,
+            "rep_bins_total": rep_bins_total,
+            "muscle_28d": muscle_28d,
         }

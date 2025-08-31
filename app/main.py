@@ -29,6 +29,7 @@ from .processing import (
     get_exercise_records,
     get_body_measurements,
     get_workout_calendar,
+    get_workout_detail,
     get_exercise_detail,
     get_muscle_group_balance,
     get_training_streak,
@@ -94,6 +95,15 @@ async def timing_middleware(request: Request, call_next):  # type: ignore[overri
 @app.get("/", response_class=HTMLResponse)
 async def dashboard(request: Request):
     return templates.TemplateResponse("dashboard.html", {"request": request})
+
+
+@app.get("/workout/{workout_date}", response_class=HTMLResponse)
+async def workout_detail_page(request: Request, workout_date: str):
+    """Shareable workout detail page - loads dashboard with specific workout opened"""
+    return templates.TemplateResponse("dashboard.html", {
+        "request": request, 
+        "workout_date": workout_date
+    })
 
 
 @app.get("/debug", response_class=HTMLResponse)
@@ -283,6 +293,14 @@ async def get_measurements():
 async def get_calendar():
     """Get workout calendar data - like Strong's workout frequency tracking"""
     return get_workout_calendar()
+
+@app.get("/api/workout/{workout_date}")
+async def get_workout_detail_endpoint(workout_date: str):
+    """Get detailed workout information for a specific date - like Strong's workout view"""
+    result = get_workout_detail(workout_date)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Workout not found for the specified date")
+    return result
 
 @app.get("/api/exercise-detail/{exercise}")
 async def get_exercise_detail_endpoint(exercise: str):

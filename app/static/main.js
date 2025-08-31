@@ -84,7 +84,7 @@ async function fetchDashboard(){
 async function refreshData(){
   try {
   console.log('[dashboard] refreshData start', {exercises:state.exercises});
-    const loadingTargets=['sparklineContainer','progressiveOverloadChart','volumeTrendChart','weeklyPPLChart','muscleBalanceChart','repDistributionChart','recoveryChart'];
+    const loadingTargets=['sparklineContainer','progressiveOverloadChart','volumeTrendChart','weeklyPPLChart','muscleBalanceChart','repDistributionChart','recoveryChart','calendarChart'];
     loadingTargets.forEach(id=>{ const el=document.getElementById(id); if(el) el.innerHTML='<div class="flex items-center justify-center h-full text-sm text-zinc-500 animate-pulse">Loading...</div>'; });
     const data = await fetchDashboard();
   window.__dashboardDebug = { phase:'afterFetch', fetchedAt: Date.now(), filters: data?.filters, params:{start:state.start,end:state.end,exercises:[...state.exercises]}, keys: data? Object.keys(data):[] };
@@ -105,7 +105,7 @@ async function refreshData(){
   } catch(e){
     console.error(e);
     const msg='<div class="flex items-center justify-center h-full text-sm text-rose-400">Error loading data</div>';
-    ['sparklineContainer','progressiveOverloadChart','volumeTrendChart','weeklyPPLChart','muscleBalanceChart','repDistributionChart','recoveryChart'].forEach(id=>{ const el=document.getElementById(id); if(el) el.innerHTML=msg; });
+    ['sparklineContainer','progressiveOverloadChart','volumeTrendChart','weeklyPPLChart','muscleBalanceChart','repDistributionChart','recoveryChart','calendarChart'].forEach(id=>{ const el=document.getElementById(id); if(el) el.innerHTML=msg; });
   window.__dashboardDebug = { phase:'error', error: e?.message || String(e) };
   }
 }
@@ -285,6 +285,7 @@ function renderAll(){
   renderWeeklyPPL();
   renderMuscleBalance();
   renderRepDistribution();
+  loadTrainingCalendar(); // Add calendar loading
   // recovery removed
 }
 
@@ -672,7 +673,7 @@ async function loadTrainingCalendar() {
         colorscale: 'Viridis',
         showscale: true
       },
-      hovertemplate: 'Date: %{x}<br>Exercises: %{y}<br>Volume: %{customdata.volume} kg<br>Sets: %{customdata.sets}<extra></extra>',
+      hovertemplate: 'Date: %{x}<br>Exercises: %{y}<br>Volume: %{customdata.volume} kg<br>Sets: %{customdata.sets}<br><i>Click to view workout details</i><extra></extra>',
       customdata: data.map(d => ({ volume: d.total_volume, sets: d.total_sets }))
     };
 
@@ -683,7 +684,43 @@ async function loadTrainingCalendar() {
       showlegend: false
     };
 
-    Plotly.newPlot('calendarChart', [trace], layout, { responsive: true, displayModeBar: false });
+    const plotDiv = document.getElementById('calendarChart');
+    Plotly.newPlot(plotDiv, [trace], layout, { responsive: true, displayModeBar: false });
+    
+    // Add click event listener for workout details
+    plotDiv.on('plotly_click', function(data) {
+      if (data.points && data.points.length > 0) {
+        const point = data.points[0];
+        const workoutDate = point.x; // Date from the clicked point
+        showWorkoutDetail(workoutDate);
+      }
+    });
+
+    // Populate recent workouts list (clickable entries)
+    const recentContainer = document.getElementById('recentWorkouts');
+    if (recentContainer) {
+      recentContainer.innerHTML = '';
+      // Show up to 12 most recent workouts
+      data.slice().reverse().slice(-12).reverse().forEach(d => {
+        const card = document.createElement('button');
+        card.className = 'w-full text-left px-4 py-3 rounded-lg bg-zinc-800/40 hover:bg-zinc-800 transition-colors flex items-center justify-between';
+        const left = document.createElement('div');
+        left.innerHTML = `<div class="text-sm font-medium text-zinc-100">${d.date}</div><div class="text-xs text-zinc-400">${d.exercises_performed} exercises • ${Math.round(d.total_volume)} kg</div>`;
+        const right = document.createElement('div');
+        right.className = 'text-xs text-zinc-400';
+        right.textContent = 'View';
+        card.appendChild(left);
+        card.appendChild(right);
+        card.addEventListener('click', () => {
+          // Update URL for shareable link
+          if (window.location.pathname !== `/workout/${d.date}`) {
+            window.history.pushState(null, '', `/workout/${d.date}`);
+          }
+          showWorkoutDetail(d.date);
+        });
+        recentContainer.appendChild(card);
+      });
+    }
 
   } catch (error) {
     console.error('Error loading training calendar:', error);
@@ -1212,3 +1249,207 @@ async function loadPlateauDetection() {
     console.error('Error loading plateau detection:', error);
   }
 }
+
+// ----------------------- Workout Detail Modal Functions -----------------------
+
+async function showWorkoutDetail(workoutDate) {
+  try {
+    const modal = document.getElementById('workoutModal');
+    const content = document.getElementById('workoutModalContent');
+    const title = document.getElementById('workoutModalTitle');
+    
+    // Show modal with loading state
+    modal.classList.remove('hidden');
+    content.innerHTML = '<div class="flex items-center justify-center h-32 text-zinc-500"><div class="animate-pulse">Loading workout details...</div></div>';
+    
+    // Fetch workout data
+    const response = await fetch(`/api/workout/${workoutDate}`);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch workout: ${response.statusText}`);
+    }
+    
+    const workout = await response.json();
+    
+    // Update modal title and badges
+    title.textContent = workout.workout_name || `Workout - ${workout.date}`;
+    
+    const badges = document.getElementById('workoutModalBadges');
+    badges.innerHTML = `
+      <span class="px-2 py-1 bg-indigo-600/20 text-indigo-300 rounded text-xs font-medium">
+        ${workout.total_exercises} exercises
+      </span>
+      <span class="px-2 py-1 bg-green-600/20 text-green-300 rounded text-xs font-medium">
+        ${workout.duration_minutes}min
+      </span>
+      ${workout.total_prs > 0 ? `<span class="px-2 py-1 bg-yellow-600/20 text-yellow-300 rounded text-xs font-medium">🏆 ${workout.total_prs} PR${workout.total_prs > 1 ? 's' : ''}</span>` : ''}
+    `;
+    
+    // Generate workout content
+    content.innerHTML = generateWorkoutHTML(workout);
+    
+    // Set up share functionality
+    const shareBtn = document.getElementById('shareWorkoutBtn');
+    shareBtn.onclick = () => shareWorkout(workoutDate);
+    
+  } catch (error) {
+    console.error('Error loading workout detail:', error);
+    document.getElementById('workoutModalContent').innerHTML = `
+      <div class="flex items-center justify-center h-32 text-red-400">
+        <div>Error loading workout details</div>
+      </div>
+    `;
+  }
+}
+
+function generateWorkoutHTML(workout) {
+  let html = `
+    <div class="space-y-6">
+      <!-- Workout Summary -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-zinc-800/50 rounded-xl">
+        <div class="text-center">
+          <div class="text-2xl font-bold text-indigo-400">${workout.total_sets}</div>
+          <div class="text-sm text-zinc-400">Total Sets</div>
+        </div>
+        <div class="text-center">
+          <div class="text-2xl font-bold text-green-400">${fmtInt(workout.total_volume)}</div>
+          <div class="text-sm text-zinc-400">Volume (kg)</div>
+        </div>
+        <div class="text-center">
+          <div class="text-2xl font-bold text-blue-400">${workout.duration_minutes}</div>
+          <div class="text-sm text-zinc-400">Duration (min)</div>
+        </div>
+        <div class="text-center">
+          <div class="text-2xl font-bold text-yellow-400">${workout.total_prs}</div>
+          <div class="text-sm text-zinc-400">Personal Records</div>
+        </div>
+      </div>
+      
+      <!-- Exercise Details -->
+      <div class="space-y-4">
+  `;
+  
+  workout.exercises.forEach((exercise, index) => {
+    const isFirstExercise = index === 0;
+    const bgColor = isFirstExercise ? 'bg-indigo-600/10 border-indigo-600/30' : 'bg-zinc-800/30 border-zinc-700';
+    const prBadge = exercise.personal_records > 0 ? '<span class="text-xs bg-yellow-600/20 text-yellow-300 px-2 py-0.5 rounded font-medium ml-2">🏆 PR</span>' : '';
+    
+    html += `
+      <div class="border ${bgColor} rounded-xl p-4">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="text-lg font-semibold text-zinc-100">${exercise.exercise_name}${prBadge}</h3>
+          <div class="text-sm text-zinc-400">
+            ${exercise.total_sets} sets • ${fmt1(exercise.total_volume)} kg total
+          </div>
+        </div>
+        
+        <!-- Sets Table -->
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="border-b border-zinc-700">
+                <th class="text-left py-2 text-zinc-400 font-medium">Set</th>
+                <th class="text-right py-2 text-zinc-400 font-medium">Weight</th>
+                <th class="text-right py-2 text-zinc-400 font-medium">Reps</th>
+                <th class="text-right py-2 text-zinc-400 font-medium">Volume</th>
+                <th class="text-right py-2 text-zinc-400 font-medium">Est. 1RM</th>
+              </tr>
+            </thead>
+            <tbody>
+    `;
+    
+    exercise.sets.forEach(set => {
+      const isBestSet = set.volume === exercise.best_set.volume;
+      const rowClass = isBestSet ? 'bg-green-600/10 text-green-300' : 'text-zinc-300';
+      const bestSetIcon = isBestSet ? ' <span class="text-green-400">★</span>' : '';
+      
+      html += `
+        <tr class="${rowClass} border-b border-zinc-800/50">
+          <td class="py-2">${set.set_number}${bestSetIcon}</td>
+          <td class="text-right py-2">${set.weight ? fmt1(set.weight) + ' kg' : '-'}</td>
+          <td class="text-right py-2">${set.reps || '-'}</td>
+          <td class="text-right py-2">${set.volume ? fmt1(set.volume) + ' kg' : '-'}</td>
+          <td class="text-right py-2">${set.estimated_1rm ? fmt1(set.estimated_1rm) + ' kg' : '-'}</td>
+        </tr>
+      `;
+    });
+    
+    html += `
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  });
+  
+  html += `
+      </div>
+    </div>
+  `;
+  
+  return html;
+}
+
+function shareWorkout(workoutDate) {
+  const url = `${window.location.origin}/workout/${workoutDate}`;
+  
+  if (navigator.share) {
+    // Use native share API if available (mobile)
+    navigator.share({
+      title: 'My Workout',
+      text: `Check out my workout from ${workoutDate}`,
+      url: url
+    }).catch(console.error);
+  } else {
+    // Fallback to clipboard
+    navigator.clipboard.writeText(url).then(() => {
+      // Show success feedback
+      const btn = document.getElementById('shareWorkoutBtn');
+      const originalText = btn.textContent;
+      btn.textContent = 'Copied!';
+      btn.className = btn.className.replace('bg-indigo-600 hover:bg-indigo-700', 'bg-green-600 hover:bg-green-700');
+      
+      setTimeout(() => {
+        btn.textContent = originalText;
+        btn.className = btn.className.replace('bg-green-600 hover:bg-green-700', 'bg-indigo-600 hover:bg-indigo-700');
+      }, 2000);
+    }).catch(console.error);
+  }
+}
+
+// Set up modal event listeners
+document.addEventListener('DOMContentLoaded', () => {
+  const modal = document.getElementById('workoutModal');
+  const closeBtn = document.getElementById('closeWorkoutModal');
+  
+  // Close modal handlers
+  closeBtn?.addEventListener('click', () => {
+    modal.classList.add('hidden');
+    // Update URL to remove workout parameter
+    if (window.location.pathname !== '/') {
+      window.history.pushState(null, '', '/');
+    }
+  });
+  
+  // Close on backdrop click
+  modal?.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      modal.classList.add('hidden');
+      if (window.location.pathname !== '/') {
+        window.history.pushState(null, '', '/');
+      }
+    }
+  });
+  
+  // Close on escape key
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !modal.classList.contains('hidden')) {
+      modal.classList.add('hidden');
+      if (window.location.pathname !== '/') {
+        window.history.pushState(null, '', '/');
+      }
+    }
+  });
+});
+
+// Make showWorkoutDetail globally available
+window.showWorkoutDetail = showWorkoutDetail;
