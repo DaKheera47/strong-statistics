@@ -306,18 +306,23 @@
             </div>
         </div>
 
-        <script src="/static/main.js"></script>
-        <script>
-            // Handle shareable workout URLs
-            document.addEventListener('DOMContentLoaded', () => {
-              const workoutDate = {{ workout_date|tojson if workout_date else 'null' }};
-              if (workoutDate) {
-                // Auto-open workout detail for shareable links
-                setTimeout(() => {
-                  showWorkoutDetail(workoutDate);
-                }, 1000); // Wait for dashboard to load
-              }
-            });
-        </script>
+                <script src="/static/main.core.js"></script>
+                <script src="/static/main.charts.js"></script>
+                <script src="/static/main.js"></script>
+                <script src="/static/main.plotly.js"></script>
+                        <script>
+                                // Wait until all modular scripts loaded, then bootstrap dashboard and handle shareable URL
+                                document.addEventListener('DOMContentLoaded', () => {
+                                    // Boot once
+                                    try { if(window.bootstrapDashboard) window.bootstrapDashboard(); else console.warn('bootstrapDashboard not available'); } catch(e){ console.error(e); }
+                                    const workoutDate = {{ workout_date|tojson if workout_date else 'null' }};
+                                    if (workoutDate) {
+                                        // Auto-open workout detail for shareable links
+                                        setTimeout(() => {
+                                            try { if(window.showWorkoutDetail) showWorkoutDetail(workoutDate); else console.warn('showWorkoutDetail not defined yet'); } catch(e){ console.error(e); }
+                                        }, 1000);
+                                    }
+                                });
+                        </script>
     </body>
 </html>

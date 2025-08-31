@@ -2,22 +2,23 @@
 // Only required 7 charts + filters.
 
 // ------------------------------ State ----------------------------------
-const state = {
-  start: null, // date filters removed (backend auto range) but keep keys for cache key stability
+// Use existing globals from main.core.js when available to avoid redeclaration
+window.state = window.state || {
+  start: null,
   end: null,
-  exercises: [], // applies ONLY to sparklines
+  exercises: [],
   data: null,
   cache: new Map()
 };
 
-const COLORS = {
+window.COLORS = window.COLORS || {
   primary: '#6366F1',
   secondary: '#EC4899',
   tertiary: '#10B981',
   quaternary: '#F59E0B',
   quinary: '#8B5CF6'
 };
-const SERIES_COLORS = [COLORS.primary, COLORS.secondary, COLORS.tertiary, COLORS.quaternary, COLORS.quinary];
+window.SERIES_COLORS = window.SERIES_COLORS || [window.COLORS.primary, window.COLORS.secondary, window.COLORS.tertiary, window.COLORS.quaternary, window.COLORS.quinary];
 
 function limitLegendSelection(series, maxVisible){
   const sel={};
@@ -28,10 +29,11 @@ function limitLegendSelection(series, maxVisible){
   return sel;
 }
 
-function fetchJSON(url) { return fetch(url).then(r => { if(!r.ok) throw new Error(r.statusText); return r.json(); }); }
-function fmtInt(x){ return x == null ? '-' : x.toLocaleString(); }
-function fmt1(x){ return x==null?'-': (Math.round(x*10)/10).toString(); }
-function parseISO(d){ return new Date(d+ (d.length===10?'T00:00:00Z':'')); }
+// Prefer helpers from main.core.js if present
+const fetchJSON = window.fetchJSON || (url => fetch(url).then(r => { if(!r.ok) throw new Error(r.statusText); return r.json(); }));
+const fmtInt = window.fmtInt || (x => x == null ? '-' : x.toLocaleString());
+const fmt1 = window.fmt1 || (x => x==null?'-': (Math.round(x*10)/10).toString());
+const parseISO = window.parseISO || (d => new Date(d+ (d.length===10?'T00:00:00Z':'')));
 
 // --------------------------- Filters UI --------------------------------
 function initFilters(){
@@ -1453,3 +1455,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Make showWorkoutDetail globally available
 window.showWorkoutDetail = showWorkoutDetail;
+
+// Expose other utilities if needed
+window.shareWorkout = window.shareWorkout || shareWorkout;
