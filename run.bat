@@ -1,5 +1,5 @@
 @echo off
-REM Lifting Pipeline launcher (development convenience)
+REM strong-statistics launcher (development convenience)
 REM Usage: run.bat [host] [port]
 REM Examples:
 REM   run.bat            -> 0.0.0.0:8069 (LAN accessible)
@@ -42,7 +42,7 @@ if exist .env (
   echo [WARN] .env not found. Copy .env.example to .env and set INGEST_TOKEN.
 )
 
-echo [START] Lifting Pipeline binding %HOST%:%PORT% (Ctrl+C to stop)
+echo [START] strong-statistics binding %HOST%:%PORT% (Ctrl+C to stop)
 uvicorn app.main:app --host %HOST% --port %PORT% --reload
 set CODE=%ERRORLEVEL%
 

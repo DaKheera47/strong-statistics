@@ -59,7 +59,7 @@ ALLOWED_ORIGINS = [o.strip() for o in os.getenv("ALLOWED_ORIGINS", "http://local
 MAX_UPLOAD_MB = int(os.getenv("MAX_UPLOAD_MB", "10"))
 
 # Logging
-logger = logging.getLogger("lifting")
+logger = logging.getLogger("strong-statistics")
 _log_level = os.getenv("LOG_LEVEL", "INFO").upper()
 try:
     logger.setLevel(getattr(logging, _log_level, logging.INFO))
@@ -71,7 +71,7 @@ handler.setFormatter(formatter)
 logger.addHandler(handler)
 faulthandler.enable(file=sys.stderr)
 
-app = FastAPI(title="Lifting Pipeline")
+app = FastAPI(title="strong-statistics")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
@@ -495,7 +495,7 @@ async def get_dashboard_endpoint(
 async def health():
     payload = {"ok": True, "time": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"), "last_ingested_at": get_meta("last_ingested_at")}
     # Add diagnostic header so we can tell if Cloudflare is reaching origin.
-    return JSONResponse(payload, headers={"X-Lifting-Origin": "fastapi"})
+    return JSONResponse(payload, headers={"X-Strong-Origin": "fastapi"})
 
 
 @app.post("/debug/inspect")

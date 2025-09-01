@@ -1,4 +1,4 @@
-"""Database utilities for the Lifting Pipeline.
+"""Database utilities for strong-statistics.
 
 Responsible for initializing the SQLite schema and providing a context
 manager for connections.
@@ -11,14 +11,19 @@ import threading
 import time
 import logging
 
-DB_PATH = Path(__file__).resolve().parent.parent / "data" / "lifting.db"
+BASE_DIR = Path(__file__).resolve().parent.parent
+DATA_DIR = BASE_DIR / "data"
+
+# New canonical DB filename after project rename
+DB_PATH = DATA_DIR / "strong.db"
+LEGACY_DB_PATH = DATA_DIR / "lifting.db"
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 
 # SQLite connections are NOT thread-safe by default when shared;
 # we create short-lived connections via contextmanager.
 _lock = threading.Lock()
 _LOCK_MAX_WAIT_SEC = 5  # fail fast if something holds the lock too long
-logger = logging.getLogger("lifting.db")
+logger = logging.getLogger("strong.db")
 
 SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS sets (
@@ -44,10 +49,25 @@ CREATE TABLE IF NOT EXISTS meta (
 );
 """
 
+def _migrate_legacy_db_if_needed() -> None:
+  """If the old lifting.db exists and strong.db does not, rename it.
+
+  This provides a seamless upgrade path for existing deployments.
+  Safe to call multiple times (idempotent).
+  """
+  try:
+    if LEGACY_DB_PATH.exists() and not DB_PATH.exists():
+      LEGACY_DB_PATH.rename(DB_PATH)
+      logger.info("Migrated legacy database %s -> %s", LEGACY_DB_PATH.name, DB_PATH.name)
+  except Exception as e:  # pragma: no cover - best effort
+    logger.error("Legacy DB migration failed: %s", e)
+
+
 def init_db() -> None:
-    """Initialize database schema if not present."""
-    with get_conn() as conn:
-        conn.executescript(SCHEMA_SQL)
+  """Initialize database schema if not present (and migrate legacy file)."""
+  _migrate_legacy_db_if_needed()
+  with get_conn() as conn:
+    conn.executescript(SCHEMA_SQL)
 
 
 def set_meta(key: str, value: str) -> None:

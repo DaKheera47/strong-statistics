@@ -24,7 +24,9 @@ logs/*.log.*
 !.env.example
 
 # Data artifacts (keep schema code, ignore db + uploaded raw CSVs)
+# Legacy DB filename (pre-rename) & current DB
 data/lifting.db
+data/strong.db
 data/uploads/
 
 # Jupyter / notebooks

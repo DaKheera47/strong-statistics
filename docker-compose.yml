@@ -1,7 +1,7 @@
 services:
-  lifting:
+  strong-statistics:
     build: .
-    container_name: lifting
+    container_name: strong-statistics
     restart: unless-stopped
     ports:
       - "8069:8069"

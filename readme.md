@@ -2,12 +2,14 @@
 
 Self‑hosted strength‑training analytics for **Strong** app exports. Import your CSV, see PRs, volume trends, rep ranges, and workout history — all stored locally in SQLite.
 
+![Dashboard overview](screenshots/full%20page%20desktop.png)
+
 ---
 
 ## 🚀 TL;DR (self‑host)
 
 ```bash
-git clone https://github.com/your-user/strong-statistics.git
+git clone https://github.com/DaKheera47/strong-statistics.git
 cd strong-statistics
 cp .env.example .env   # set INGEST_TOKEN to a long random string
 docker compose up -d
@@ -16,9 +18,6 @@ docker compose up -d
 Then open:
 
 * Dashboard → [http://localhost:8000/](http://localhost:8000/)
-* API docs → [http://localhost:8000/docs](http://localhost:8000/docs)
-
-That’s it. No proxies, no extras.
 
 ---
 
@@ -75,6 +74,8 @@ http -f POST :8000/ingest?token=$INGEST_TOKEN file@/path/to/strong-export.csv
 
 **Goal:** export from the Strong app, the iOS share sheet pops up, you tap a shortcut, and it POSTs the CSV straight to your server.
 
+![iOS Shortcut share sheet](screenshots/shortcut.jpg)
+
 ### A) Create the shortcut (one‑time)
 
 1. Open **Shortcuts** on iOS → tap **+** to create a new shortcut.
@@ -110,6 +111,10 @@ http -f POST :8000/ingest?token=$INGEST_TOKEN file@/path/to/strong-export.csv
 * Visit `/` for the main dashboard.
 * Click a date on the calendar to see that workout.
 * Share a workout page at `/workout/YYYY-MM-DD`.
+
+### Workout detail example
+
+![Workout detail view](screenshots/one%20workout.png)
 
 ---
 
