@@ -145,7 +145,22 @@ function renderWeeklyPPL(){
     yAxis.max=100;
   }
   const chart=getChart('weeklyPPLChart');
-  chart.setOption({ grid:{left:50,right:16,top:28,bottom:40}, legend:{top:0,textStyle:{color:'#d4d4d8'}}, tooltip:{trigger:'axis', axisPointer:{type:'shadow'}}, xAxis:{type:'category', data:weeks, axisLine:{lineStyle:{color:'#3f3f46'}}, axisLabel:{color:'#a1a1aa'}}, yAxis, series:[{name:'Push', type:'bar', stack:'ppl', data:pushD, itemStyle:{color:COLORS.primary}, emphasis:{focus:'none'}},{name:'Pull', type:'bar', stack:'ppl', data:pullD, itemStyle:{color:COLORS.tertiary}, emphasis:{focus:'none'}},{name:'Legs', type:'bar', stack:'ppl', data:legsD, itemStyle:{color:COLORS.quaternary}, emphasis:{focus:'none'}}] });
+  // Legend orientation: horizontal for absolute, vertical (right side) for percent to better use space
+  const legendOpt = mode==='absolute'
+    ? {top:0, left:0, orient:'horizontal', textStyle:{color:'#d4d4d8'}}
+    : {top:'middle', right:0, orient:'vertical', textStyle:{color:'#d4d4d8'}, itemGap:8};
+  chart.setOption({
+    grid:{left:50,right: mode==='absolute'? 16:70, top:28,bottom:40},
+    legend: legendOpt,
+    tooltip:{trigger:'axis', axisPointer:{type:'shadow'}},
+    xAxis:{type:'category', data:weeks, axisLine:{lineStyle:{color:'#3f3f46'}}, axisLabel:{color:'#a1a1aa'}},
+    yAxis,
+    series:[
+      {name:'Push', type:'bar', stack:'ppl', data:pushD, itemStyle:{color:COLORS.primary}, emphasis:{focus:'none'}},
+      {name:'Pull', type:'bar', stack:'ppl', data:pullD, itemStyle:{color:COLORS.tertiary}, emphasis:{focus:'none'}},
+      {name:'Legs', type:'bar', stack:'ppl', data:legsD, itemStyle:{color:COLORS.quaternary}, emphasis:{focus:'none'}}
+    ]
+  }, true); // notMerge=true ensures legend layout updates when toggling
 }
 
 function renderMuscleBalance(){
