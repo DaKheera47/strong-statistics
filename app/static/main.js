@@ -39,37 +39,15 @@ const fmt1 = window.fmt1 || (x => x==null?'-': (Math.round(x*10)/10).toString())
 function initFilters(){
   // Only metric placeholder remains (weight-only)
   const metricWrap=document.getElementById('metricToggle');
-  metricWrap.innerHTML='<span class="text-xs text-zinc-500">Weight mode</span>';
+  if(metricWrap){
+    metricWrap.innerHTML='<span class="text-xs text-zinc-500">Weight mode</span>';
+  }
 }
 
 function updateMetricButtons(){}
 
 // Date range presets removed
 
-// Exercise multi-select (simple dropdown)
-function initExerciseMulti(exNames){
-  const root=document.getElementById('exerciseMulti');
-  root.innerHTML='';
-  const btn=document.createElement('button');
-  btn.className='px-3 py-1.5 rounded-md bg-zinc-800 text-sm';
-  btn.textContent='Exercises ▾';
-  const panel=document.createElement('div');
-  panel.className='absolute z-20 mt-2 w-64 max-h-72 overflow-auto bg-zinc-900 ring-1 ring-zinc-800 rounded-lg shadow-lg p-2 hidden';
-  exNames.forEach(name=>{
-    const id= 'ex_'+btoa(name).replace(/=/g,'');
-    const label=document.createElement('label');
-    label.className='flex items-center gap-2 px-2 py-1 rounded hover:bg-zinc-800 text-xs';
-    label.innerHTML=`<input type="checkbox" class="accent-indigo-600" id="${id}" value="${name}" ${state.exercises.includes(name)?'checked':''}/> <span>${name}</span>`;
-    panel.appendChild(label);
-  });
-  btn.addEventListener('click',()=> panel.classList.toggle('hidden'));
-  root.appendChild(btn);root.appendChild(panel);
-  panel.addEventListener('change',()=>{
-    state.exercises=[...panel.querySelectorAll('input:checked')].map(i=>i.value);
-    refreshData();
-  });
-  document.addEventListener('click',e=>{ if(!root.contains(e.target)) panel.classList.add('hidden'); });
-}
 
 // ------------------------- Data Fetch & Cache ---------------------------
 async function fetchDashboard(){
@@ -95,11 +73,10 @@ async function refreshData(){
   state.data=data;
     document.getElementById('lastIngested').textContent = data.filters.end || '-';
     if(!state.exercises.length){
-      // Preselect by most improvement (delta)
+      // Preselect by most improvement (delta) (UI removed)
       const prog = (data.exercise_progression || []).map(p=> p.exercise);
       state.exercises = prog.slice(0,12);
       if(state.exercises.length===0) state.exercises = data.filters.exercises || (data.top_exercises || []);
-      initExerciseMulti(unique(state.data.exercises_daily_max.map(d=>d.exercise)));
     }
   renderAll();
   window.__dashboardDebug.phase='renderComplete';
@@ -247,27 +224,26 @@ function renderAll(){
 }
 
 // Toggle handlers
-document.getElementById('pplModeToggle').addEventListener('click', function(){ this.dataset.mode = this.dataset.mode==='absolute' ? 'percent':'absolute'; this.textContent= this.dataset.mode==='absolute'?'Absolute':'Percent'; renderWeeklyPPL(); });
-document.getElementById('repModeToggle').addEventListener('click', function(){ this.dataset.mode = this.dataset.mode==='weekly' ? 'summary':'weekly'; this.textContent= this.dataset.mode==='weekly'?'Weekly':'Summary'; renderRepDistribution(); });
+const _pplBtn = document.getElementById('pplModeToggle');
+if(_pplBtn){ _pplBtn.addEventListener('click', function(){ this.dataset.mode = this.dataset.mode==='absolute' ? 'percent':'absolute'; this.textContent= this.dataset.mode==='absolute'?'Absolute':'Percent'; renderWeeklyPPL(); }); }
+const _repBtn = document.getElementById('repModeToggle');
+if(_repBtn){ _repBtn.addEventListener('click', function(){ this.dataset.mode = this.dataset.mode==='weekly' ? 'summary':'weekly'; this.textContent= this.dataset.mode==='weekly'?'Weekly':'Summary'; renderRepDistribution(); }); }
 
 // Init
+let _bootstrapped = false;
 function bootstrapDashboard(){
+  if(_bootstrapped) return; _bootstrapped=true;
   console.log('[dashboard] bootstrap');
-  initFilters();
-  updateMetricButtons();
+  try { initFilters(); updateMetricButtons(); } catch(e){ console.warn('init filters failed', e); }
   refreshData();
 }
-if(document.readyState === 'loading'){
-  document.addEventListener('DOMContentLoaded', bootstrapDashboard);
-} else {
-  // DOM already parsed
-  bootstrapDashboard();
-}
+if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bootstrapDashboard); else bootstrapDashboard();
 
 window.addEventListener('resize', ()=>{ Object.values(window.charts).forEach(c=> c.resize()); });
 function renderExerciseVolume(){
   if(!state.data || !state.data.exercises_daily_volume) return;
-  const mode = document.getElementById('volumeModeToggle').dataset.mode; // stacked|grouped
+  const toggleEl = document.getElementById('volumeModeToggle');
+  const mode = toggleEl? toggleEl.dataset.mode : 'stacked'; // stacked|grouped
   const volsByEx={};
   state.data.exercises_daily_volume.forEach(r=> { volsByEx[r.exercise] = (volsByEx[r.exercise]||0)+ r.volume; });
   const top = Object.entries(volsByEx).sort((a,b)=> b[1]-a[1]).slice(0,6).map(e=> e[0]);

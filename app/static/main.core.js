@@ -43,31 +43,6 @@ function initFilters(){
 
 function updateMetricButtons(){}
 
-// Exercise multi-select (simple dropdown)
-function initExerciseMulti(exNames){
-  const root=document.getElementById('exerciseMulti');
-  if(!root) return;
-  root.innerHTML='';
-  const btn=document.createElement('button');
-  btn.className='px-3 py-1.5 rounded-md bg-zinc-800 text-sm';
-  btn.textContent='Exercises ▾';
-  const panel=document.createElement('div');
-  panel.className='absolute z-20 mt-2 w-64 max-h-72 overflow-auto bg-zinc-900 ring-1 ring-zinc-800 rounded-lg shadow-lg p-2 hidden';
-  exNames.forEach(name=>{
-    const id= 'ex_'+btoa(name).replace(/=/g,'');
-    const label=document.createElement('label');
-    label.className='flex items-center gap-2 px-2 py-1 rounded hover:bg-zinc-800 text-xs';
-    label.innerHTML=`<input type="checkbox" class="accent-indigo-600" id="${id}" value="${name}" ${state.exercises.includes(name)?'checked':''}/> <span>${name}</span>`;
-    panel.appendChild(label);
-  });
-  btn.addEventListener('click',()=> panel.classList.toggle('hidden'));
-  root.appendChild(btn);root.appendChild(panel);
-  panel.addEventListener('change',()=>{
-    state.exercises=[...panel.querySelectorAll('input:checked')].map(i=>i.value);
-    refreshData();
-  });
-  document.addEventListener('click',e=>{ if(!root.contains(e.target)) panel.classList.add('hidden'); });
-}
 
 // ------------------------- Data Fetch & Cache ---------------------------
 async function fetchDashboard(){
@@ -94,11 +69,10 @@ async function refreshData(){
     const lastIngestedEl = document.getElementById('lastIngested');
     if(lastIngestedEl) lastIngestedEl.textContent = data.filters.end || '-';
     if(!state.exercises.length){
-      // Preselect by most improvement (delta)
+      // Preselect by most improvement (delta) (kept internally; UI removed)
       const prog = (data.exercise_progression || []).map(p=> p.exercise);
       state.exercises = prog.slice(0,12);
       if(state.exercises.length===0) state.exercises = data.filters.exercises || (data.top_exercises || []);
-      initExerciseMulti(unique(state.data.exercises_daily_max.map(d=>d.exercise)));
     }
   // Call whichever aggregate render function is available (charts split across modules)
   try { (window.renderAllCharts || window.renderAll || (()=>{}))(); } catch(e){ console.error('Error during renderAll:', e); }
@@ -199,16 +173,6 @@ if(!document.getElementById('dashboard-shared-style')){
 }
 
 // Bootstrap
-function bootstrapDashboard(){
-  console.log('[dashboard] bootstrap');
-  initFilters();
-  updateMetricButtons();
-  refreshData();
-  // load some non-chart metadata
-  loadLastIngested();
-  loadTrainingStreak();
-}
-
-// Do not auto-run bootstrap here — wait until all modular scripts are loaded.
-// Expose the bootstrap function so the page can call it after loading chart modules.
-window.bootstrapDashboard = bootstrapDashboard;
+// Bootstrap is now centralized in main.js; expose helpers only if needed.
+window.loadLastIngested = loadLastIngested;
+window.loadTrainingStreak = loadTrainingStreak;
