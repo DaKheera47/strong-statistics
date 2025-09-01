@@ -85,6 +85,8 @@ init_db()
 async def timing_middleware(request: Request, call_next):  # type: ignore[override]
     start = datetime.utcnow()
     path = request.url.path
+    # Early diagnostic log to confirm request entered middleware
+    logger.info("middleware_enter path=%s method=%s", path, request.method)
     try:
         response = await call_next(request)
         return response

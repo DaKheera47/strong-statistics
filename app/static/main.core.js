@@ -28,10 +28,11 @@ function limitLegendSelection(series, maxVisible){
   return sel;
 }
 
-function fetchJSON(url) { return fetch(url).then(r => { if(!r.ok) throw new Error(r.statusText); return r.json(); }); }
-function fmtInt(x){ return x == null ? '-' : x.toLocaleString(); }
-function fmt1(x){ return x==null?'-': (Math.round(x*10)/10).toString(); }
-function parseISO(d){ return new Date(d+ (d.length===10?'T00:00:00Z':'')); }
+// Helpers (attach to window to avoid accidental redeclaration in other modules)
+window.fetchJSON = window.fetchJSON || function(url) { return fetch(url).then(r => { if(!r.ok) throw new Error(r.statusText); return r.json(); }); };
+window.fmtInt = window.fmtInt || function(x){ return x == null ? '-' : x.toLocaleString(); };
+window.fmt1 = window.fmt1 || function(x){ return x==null?'-': (Math.round(x*10)/10).toString(); };
+window.parseISO = window.parseISO || function(d){ return new Date(d+ (d.length===10?'T00:00:00Z':'')); };
 
 // --------------------------- Filters UI --------------------------------
 function initFilters(){
@@ -101,6 +102,10 @@ async function refreshData(){
     }
   // Call whichever aggregate render function is available (charts split across modules)
   try { (window.renderAllCharts || window.renderAll || (()=>{}))(); } catch(e){ console.error('Error during renderAll:', e); }
+  // Plotly calendar (and other plotly sections) lives in main.plotly.js
+  if(window.loadTrainingCalendar){
+    try { window.loadTrainingCalendar(); } catch(e){ console.error('calendar load failed', e); }
+  }
   window.__dashboardDebug.phase='renderComplete';
   console.log('[dashboard] render complete');
   } catch(e){
@@ -169,9 +174,11 @@ async function loadLastIngested() {
   }
 }
 
-// Add some global styles for better UX
-const style = document.createElement('style');
-style.textContent = `
+// Add some global styles for better UX (only once)
+if(!document.getElementById('dashboard-shared-style')){
+  const style = document.createElement('style');
+  style.id='dashboard-shared-style';
+  style.textContent = `
   .streak-item {
     transition: all 0.3s ease;
   }
@@ -188,7 +195,8 @@ style.textContent = `
     box-shadow: 0 8px 25px rgba(0,0,0,0.15);
   }
 `;
-document.head.appendChild(style);
+  document.head.appendChild(style);
+}
 
 // Bootstrap
 function bootstrapDashboard(){

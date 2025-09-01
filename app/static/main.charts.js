@@ -1,5 +1,5 @@
-// Chart rendering functions extracted from main.js
-let charts = {};
+// Chart rendering functions extracted from main.js (reuse global window.charts)
+window.charts = window.charts || {};
 function _clearLoading(el){ if(!el) return; const pulse=el.querySelector('.animate-pulse'); if(pulse) pulse.remove(); }
 function getChart(id){
   const el=document.getElementById(id);
@@ -10,9 +10,9 @@ function getChart(id){
       el.style.height = (id==='progressiveOverloadChart'?'300px':'230px');
     }
   }
-  if(!charts[id]) charts[id]=echarts.init(el);
-  setTimeout(()=>{ try { charts[id].resize(); } catch(_){} }, 40);
-  return charts[id];
+  if(!window.charts[id]) window.charts[id]=echarts.init(el);
+  setTimeout(()=>{ try { window.charts[id].resize(); } catch(_){} }, 40);
+  return window.charts[id];
 }
 
 function baseTimeAxis(){ return { type:'time', axisLine:{lineStyle:{color:'#3f3f46'}}, axisLabel:{color:'#a1a1aa', formatter: v=> new Date(v).toISOString().slice(5,10)}, splitLine:{show:false} }; }
@@ -95,10 +95,10 @@ function updateSlopes(chart, byEx, metricKey){
   const start = min? new Date(min): null; const end = max? new Date(max): null;
   const container=document.getElementById('overloadSlopes'); if(container) container.innerHTML='';
   Object.entries(byEx).forEach(([ex, arr], idx)=>{
-    const pts= arr.filter(a=> (!start || parseISO(a.date)>=start) && (!end || parseISO(a.date)<=end));
-    if(pts.length<2) return;
-    const t0 = parseISO(pts[0].date).getTime();
-    const xs = pts.map(p=> (parseISO(p.date).getTime()-t0)/ (86400000*7));
+  const pts= arr.filter(a=> (!start || window.parseISO(a.date)>=start) && (!end || window.parseISO(a.date)<=end));
+  if(pts.length<2) return;
+  const t0 = window.parseISO(pts[0].date).getTime();
+  const xs = pts.map(p=> (window.parseISO(p.date).getTime()-t0)/ (86400000*7));
     const ys = pts.map(p=> p[metricKey]);
     const mean = xs.reduce((s,v)=>s+v,0)/xs.length; const meanY= ys.reduce((s,v)=>s+v,0)/ys.length;
     let num=0, den=0; for(let i=0;i<xs.length;i++){ const dx=xs[i]-mean; num+= dx*(ys[i]-meanY); den+= dx*dx; }
@@ -111,7 +111,7 @@ function renderVolumeTrend(){
   if(!state.data || !state.data.sessions || !state.data.sessions.length){ const el=document.getElementById('volumeTrendChart'); if(el) el.innerHTML='<div class="flex items-center justify-center h-full text-sm text-zinc-500 italic">No sessions</div>'; return; }
   const sessions = state.data.sessions.slice(); sessions.sort((a,b)=> a.date.localeCompare(b.date));
   const seriesBar = sessions.map(s=> [s.date, s.total_volume]);
-  const rolling=[]; for(let i=0;i<sessions.length;i++){ const di=parseISO(sessions[i].date); const since = di.getTime()-27*86400000; const subset=sessions.filter(s=> parseISO(s.date).getTime()>=since && parseISO(s.date)<=di); const avg=subset.reduce((s,v)=>s+v.total_volume,0)/subset.length; rolling.push([sessions[i].date, avg]); }
+  const rolling=[]; for(let i=0;i<sessions.length;i++){ const di=window.parseISO(sessions[i].date); const since = di.getTime()-27*86400000; const subset=sessions.filter(s=> window.parseISO(s.date).getTime()>=since && window.parseISO(s.date)<=di); const avg=subset.reduce((s,v)=>s+v.total_volume,0)/subset.length; rolling.push([sessions[i].date, avg]); }
   const chart=getChart('volumeTrendChart');
   chart.setOption({ grid:{left:50,right:16,top:20,bottom:55}, xAxis: baseTimeAxis(), yAxis: baseValueAxis('Volume (kg)'), dataZoom:[{type:'inside'},{type:'slider',height:18,bottom:20}], tooltip:{trigger:'axis'}, series:[{type:'bar', name:'Session Volume', data:seriesBar, itemStyle:{color:COLORS.primary}, emphasis:{focus:'none'}},{type:'line', name:'4W Avg', data:rolling, smooth:true, showSymbol:false, lineStyle:{width:2,color:COLORS.secondary}, emphasis:{focus:'none'}}], markLine:{symbol:'none', silent:true, lineStyle:{color:'#3f3f46', width:1}, data: sessions.map(s=> ({xAxis:s.date}))} });
 }

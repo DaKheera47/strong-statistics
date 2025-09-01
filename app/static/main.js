@@ -33,7 +33,7 @@ function limitLegendSelection(series, maxVisible){
 const fetchJSON = window.fetchJSON || (url => fetch(url).then(r => { if(!r.ok) throw new Error(r.statusText); return r.json(); }));
 const fmtInt = window.fmtInt || (x => x == null ? '-' : x.toLocaleString());
 const fmt1 = window.fmt1 || (x => x==null?'-': (Math.round(x*10)/10).toString());
-const parseISO = window.parseISO || (d => new Date(d+ (d.length===10?'T00:00:00Z':'')));
+// Use window.parseISO provided by core; do not declare a global named parseISO here to avoid collisions
 
 // --------------------------- Filters UI --------------------------------
 function initFilters(){
@@ -117,7 +117,8 @@ async function refreshData(){
 function unique(arr){ return [...new Set(arr)]; }
 
 // ------------------------------ Charts ----------------------------------
-let charts = {};
+// Use shared charts registry to avoid redeclaration collisions (do not redeclare const across files)
+window.charts = window.charts || {};
 function _clearLoading(el){ if(!el) return; const pulse=el.querySelector('.animate-pulse'); if(pulse) pulse.remove(); }
 function getChart(id){
   const el=document.getElementById(id);
@@ -128,9 +129,9 @@ function getChart(id){
       el.style.height = (id==='progressiveOverloadChart'?'300px':'230px');
     }
   }
-  if(!charts[id]) charts[id]=echarts.init(el);
-  setTimeout(()=>{ try { charts[id].resize(); } catch(_){} }, 40);
-  return charts[id];
+  if(!window.charts[id]) window.charts[id]=echarts.init(el);
+  setTimeout(()=>{ try { window.charts[id].resize(); } catch(_){} }, 40);
+  return window.charts[id];
 }
 
 function baseTimeAxis(){ return { type:'time', axisLine:{lineStyle:{color:'#3f3f46'}}, axisLabel:{color:'#a1a1aa', formatter: v=> new Date(v).toISOString().slice(5,10)}, splitLine:{show:false} }; }
@@ -215,11 +216,11 @@ function updateSlopes(chart, byEx, metricKey){
   const start = min? new Date(min): null; const end = max? new Date(max): null;
   const container=document.getElementById('overloadSlopes'); container.innerHTML='';
   Object.entries(byEx).forEach(([ex, arr], idx)=>{
-    const pts= arr.filter(a=> (!start || parseISO(a.date)>=start) && (!end || parseISO(a.date)<=end));
+  const pts= arr.filter(a=> (!start || window.parseISO(a.date)>=start) && (!end || window.parseISO(a.date)<=end));
     if(pts.length<2) return;
     // Linear regression
-    const t0 = parseISO(pts[0].date).getTime();
-    const xs = pts.map(p=> (parseISO(p.date).getTime()-t0)/ (86400000*7));
+  const t0 = window.parseISO(pts[0].date).getTime();
+  const xs = pts.map(p=> (window.parseISO(p.date).getTime()-t0)/ (86400000*7));
     const ys = pts.map(p=> p[metricKey]);
     const mean = xs.reduce((s,v)=>s+v,0)/xs.length; const meanY= ys.reduce((s,v)=>s+v,0)/ys.length;
     let num=0, den=0; for(let i=0;i<xs.length;i++){ const dx=xs[i]-mean; num+= dx*(ys[i]-meanY); den+= dx*dx; }
@@ -233,8 +234,8 @@ function renderVolumeTrend(){
   console.log('[dashboard] renderVolumeTrend sessions', state.data.sessions.length);
   const sessions = state.data.sessions.slice(); sessions.sort((a,b)=> a.date.localeCompare(b.date));
   const seriesBar = sessions.map(s=> [s.date, s.total_volume]);
-  const rolling=[]; for(let i=0;i<sessions.length;i++){ const di=parseISO(sessions[i].date); const since = di.getTime()-27*86400000; const subset=sessions.filter(s=> parseISO(s.date).getTime()>=since && parseISO(s.date)<=di); const avg=subset.reduce((s,v)=>s+v.total_volume,0)/subset.length; rolling.push([sessions[i].date, avg]); }
-  const mondays = sessions.map(s=> s.date).filter(d=> parseISO(d).getUTCDay()===1);
+  const rolling=[]; for(let i=0;i<sessions.length;i++){ const di=window.parseISO(sessions[i].date); const since = di.getTime()-27*86400000; const subset=sessions.filter(s=> window.parseISO(s.date).getTime()>=since && window.parseISO(s.date)<=di); const avg=subset.reduce((s,v)=>s+v.total_volume,0)/subset.length; rolling.push([sessions[i].date, avg]); }
+  const mondays = sessions.map(s=> s.date).filter(d=> window.parseISO(d).getUTCDay()===1);
   const chart=getChart('volumeTrendChart');
   chart.setOption({ grid:{left:50,right:16,top:20,bottom:55}, xAxis: baseTimeAxis(), yAxis: baseValueAxis('Volume (kg)'), dataZoom:[{type:'inside'},{type:'slider',height:18,bottom:20}], tooltip:{trigger:'axis'}, series:[{type:'bar', name:'Session Volume', data:seriesBar, itemStyle:{color:COLORS.primary}, emphasis:{focus:'none'}},{type:'line', name:'4W Avg', data:rolling, smooth:true, showSymbol:false, lineStyle:{width:2,color:COLORS.secondary}, emphasis:{focus:'none'}}], markLine:{symbol:'none', silent:true, lineStyle:{color:'#3f3f46', width:1}, data: mondays.map(m=> ({xAxis:m}))} });
 }
@@ -309,7 +310,7 @@ if(document.readyState === 'loading'){
   bootstrapDashboard();
 }
 
-window.addEventListener('resize', ()=>{ Object.values(charts).forEach(c=> c.resize()); });
+window.addEventListener('resize', ()=>{ Object.values(window.charts).forEach(c=> c.resize()); });
 function renderExerciseVolume(){
   if(!state.data || !state.data.exercises_daily_volume) return;
   const mode = document.getElementById('volumeModeToggle').dataset.mode; // stacked|grouped
@@ -853,26 +854,15 @@ async function loadLastIngested() {
   }
 }
 
-// Add some global styles for better UX
-const style = document.createElement('style');
-style.textContent = `
-  .streak-item {
-    transition: all 0.3s ease;
-  }
-  .streak-item:hover {
-    transform: translateY(-5px);
-  }
-  table tbody tr {
-    transition: background-color 0.2s ease;
-  }
-  .chart-container {
-    transition: box-shadow 0.3s ease;
-  }
-  .chart-container:hover {
-    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
-  }
-`;
-document.head.appendChild(style);
+// (duplicate style block removed; core injects once)
+
+// Ensure workout modal functions are exposed early if calendar loaded first
+if(typeof window.showWorkoutDetail !== 'function'){
+  window.showWorkoutDetail = (...args)=>{
+    // replaced later when real function defined
+    console.warn('showWorkoutDetail placeholder invoked before definition');
+  };
+}
 
 // ADVANCED ANALYTICS FUNCTIONS - THE FULL ARSENAL 🔥
 
