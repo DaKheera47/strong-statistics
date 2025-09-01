@@ -160,3 +160,11 @@ docker compose up -d --build
 ## 📝 License
 
 MIT.
+
+---
+
+## 📫 Contact
+
+- **Discord:** `dakheera47`
+- **Email:** [shaheer30sarfaraz@gmail.com](mailto\:shaheer30sarfaraz@gmail.com)
+- **Website:** [https://dakheera47.com](https://dakheera47.com)
