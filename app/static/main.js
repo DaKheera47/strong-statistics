@@ -355,35 +355,41 @@ async function loadTrainingCalendar() {
       }
     });
 
-    // Populate recent workouts list (clickable entries)
-    const recentContainer = document.getElementById('recentWorkouts');
-    if (recentContainer) {
-      recentContainer.innerHTML = '';
-      // Show up to 12 most recent workouts
-      data.slice().reverse().slice(-12).reverse().forEach(d => {
-        const card = document.createElement('button');
-        card.className = 'w-full text-left px-4 py-3 rounded-lg bg-zinc-800/40 hover:bg-zinc-800 transition-colors flex items-center justify-between';
-        const left = document.createElement('div');
-        left.innerHTML = `<div class="text-sm font-medium text-zinc-100">${d.date}</div><div class="text-xs text-zinc-400">${d.exercises_performed} exercises • ${Math.round(d.total_volume)} kg</div>`;
-        const right = document.createElement('div');
-        right.className = 'text-xs text-zinc-400';
-        right.textContent = 'View';
-        card.appendChild(left);
-        card.appendChild(right);
-        card.addEventListener('click', () => {
-          // Update URL for shareable link
-          if (window.location.pathname !== `/workout/${d.date}`) {
-            window.history.pushState(null, '', `/workout/${d.date}`);
-          }
-          showWorkoutDetail(d.date);
-        });
-        recentContainer.appendChild(card);
-      });
-    }
+  populateRecentWorkouts(data);
 
   } catch (error) {
     console.error('Error loading training calendar:', error);
   }
+}
+
+function populateRecentWorkouts(calendarData){
+  if(!Array.isArray(calendarData)) return;
+  const recentContainer = document.getElementById('recentWorkouts');
+  if(!recentContainer) return; // widget not present
+  const countEl = document.getElementById('recentWorkoutsCount');
+  recentContainer.innerHTML = '';
+  const recent = calendarData.slice().reverse().slice(-20).reverse(); // keep last 20 before filtering to 12 if needed
+  // Show up to 12 most recent (non-zero sets) workouts
+  const filtered = recent.filter(d=> d.total_sets>0).slice(-12).reverse().reverse();
+  filtered.forEach(d => {
+    const card = document.createElement('button');
+    card.className = 'w-full text-left px-4 py-3 rounded-lg bg-zinc-800/40 hover:bg-zinc-800 transition-colors flex items-center justify-between';
+    const left = document.createElement('div');
+    left.innerHTML = `<div class="text-sm font-medium text-zinc-100">${d.date}</div><div class="text-xs text-zinc-400">${d.exercises_performed} exercises • ${Math.round(d.total_volume)} kg</div>`;
+    const right = document.createElement('div');
+    right.className = 'text-xs text-zinc-400';
+    right.textContent = 'View';
+    card.appendChild(left);
+    card.appendChild(right);
+    card.addEventListener('click', () => {
+      if (window.location.pathname !== `/workout/${d.date}`) {
+        window.history.pushState(null, '', `/workout/${d.date}`);
+      }
+      showWorkoutDetail(d.date);
+    });
+    recentContainer.appendChild(card);
+  });
+  if(countEl) countEl.textContent = filtered.length ? `${filtered.length} shown` : 'None';
 }
 
 async function loadMuscleGroupBalance() {

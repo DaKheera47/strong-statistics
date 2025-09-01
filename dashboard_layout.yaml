@@ -9,6 +9,7 @@
 #   weekly_ppl
 #   muscle_balance
 #   calendar
+#   recent_workouts
 # Width must be 1-12 (12 = full width). If omitted, defaults to 12.
 
 layout:
@@ -16,4 +17,4 @@ layout:
     - [progressive_overload:12]
     - [volume_trend:8, exercise_volume:4]
     - [rep_distribution:4, weekly_ppl:4, muscle_balance:4]
-    - [calendar:12]
+    - [calendar:8, recent_workouts:4]

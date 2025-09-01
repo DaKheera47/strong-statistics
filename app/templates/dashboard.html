@@ -111,10 +111,14 @@
                             <h2 class="text-xl font-semibold mb-2">Training Calendar</h2>
                             <p class="text-sm text-zinc-400 mb-4">Click on any workout day to view detailed information</p>
                             <div id="calendarChart" class="chart" style="height:300px" data-fixed-height="true"></div>
-                            <div class="mt-4">
-                                <h3 class="text-sm text-zinc-300 mb-2">Recent Workouts</h3>
-                                <div id="recentWorkouts" class="grid gap-2 grid-cols-1 md:grid-cols-2"></div>
+                        </div>
+                    {% elif cell.widget == 'recent_workouts' %}
+                        <div class="card col-span-12 md:col-span-{{w}} bg-zinc-900 rounded-2xl ring-1 ring-zinc-800 shadow-sm p-5 flex flex-col">
+                            <div class="flex items-center justify-between mb-2">
+                                <h2 class="text-xl font-semibold">Recent Workouts</h2>
+                                <span class="text-xs text-zinc-500" id="recentWorkoutsCount"></span>
                             </div>
+                            <div id="recentWorkouts" class="grid gap-2 grid-cols-1 md:grid-cols-2"></div>
                         </div>
                     {% endif %}
                 {% endfor %}
