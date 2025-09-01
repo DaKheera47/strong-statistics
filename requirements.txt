@@ -6,3 +6,5 @@ pydantic
 pandas
 plotly
 python-dotenv
+cairosvg
+pillow

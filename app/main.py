@@ -78,6 +78,43 @@ app.add_middleware(
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 app.mount("/static", StaticFiles(directory=str(Path(__file__).parent / "static")), name="static")
 
+# Favicon / logo routes serving the root-level icon.svg so we don't have to duplicate the asset.
+ICON_PATH = BASE_DIR / "icon.svg"
+
+# Derived icon (apple touch png) path (generated lazily on first request)
+APPLE_TOUCH_PATH = BASE_DIR / "static" / "apple-touch-icon.png"
+
+if ICON_PATH.exists():
+    @app.get("/favicon.svg", include_in_schema=False)
+    async def favicon_svg():  # type: ignore[override]
+        from fastapi.responses import FileResponse
+        return FileResponse(str(ICON_PATH), media_type="image/svg+xml")
+
+    # Provide /favicon.ico for user agents expecting .ico – browsers accept SVG served as ICO in practice; if needed convert later.
+    @app.get("/favicon.ico", include_in_schema=False)
+    async def favicon_ico():  # type: ignore[override]
+        from fastapi.responses import FileResponse
+        return FileResponse(str(ICON_PATH), media_type="image/svg+xml")
+
+    @app.get("/apple-touch-icon.png", include_in_schema=False)
+    async def apple_touch_icon():  # type: ignore[override]
+        """Serve (lazily generate) a 180x180 PNG for iOS home screen.
+
+        Generation only happens if file missing or older than svg mtime.
+        """
+        from fastapi.responses import FileResponse
+        try:
+            # Only import heavy deps when needed
+            if (not APPLE_TOUCH_PATH.exists()) or (APPLE_TOUCH_PATH.stat().st_mtime < ICON_PATH.stat().st_mtime):
+                from cairosvg import svg2png  # type: ignore
+                APPLE_TOUCH_PATH.parent.mkdir(parents=True, exist_ok=True)
+                png_bytes = svg2png(url=str(ICON_PATH), output_width=180, output_height=180)
+                APPLE_TOUCH_PATH.write_bytes(png_bytes)
+        except Exception:  # pragma: no cover - non critical
+            # Fall back to serving svg directly if conversion failed
+            return FileResponse(str(ICON_PATH), media_type="image/svg+xml")
+        return FileResponse(str(APPLE_TOUCH_PATH), media_type="image/png")
+
 init_db()
 
 # Simple request/response timing middleware for diagnostics when requests hang

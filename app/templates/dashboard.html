@@ -10,6 +10,9 @@
             content="width=device-width,initial-scale=1"
         />
         <title>Lifting Progression Dashboard</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="alternate icon" href="/favicon.ico" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
         <script src="https://cdn.plot.ly/plotly-2.24.1.min.js"></script>
         <!-- tailwind -->
@@ -32,9 +35,12 @@
     <body class="text-zinc-200 antialiased">
         <main class="mx-auto max-w-[1700px] px-6 py-6 space-y-8">
             <header class="flex flex-col gap-2">
-                <h1 class="text-3xl font-bold tracking-tight">
-                    Progression • Overload • Balance
-                </h1>
+                <div class="flex items-center gap-3">
+                    <img src="/favicon.svg" alt="Logo" class="w-10 h-10 select-none" />
+                    <h1 class="text-3xl font-bold tracking-tight">
+                        Progression • Overload • Balance
+                    </h1>
+                </div>
                 <p class="text-sm text-zinc-500">
                     Focused dashboard – no fluff. Data last updated:
                     <span
