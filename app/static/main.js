@@ -1,33 +1,94 @@
-// Refactored progression-focused dashboard JS (ECharts + Tailwind)
-// Only required 7 charts + filters.
+// Slim main.js: only bootstrap + workout modal + share functionality (charts in core/charts files)
+// NOTE: File replaced to remove duplicated logic.
 
-// ------------------------------ State ----------------------------------
-// Use existing globals from main.core.js when available to avoid redeclaration
-window.state = window.state || {
-  start: null,
-  end: null,
-  exercises: [],
-  data: null,
-  cache: new Map()
-};
+(function(){
+  function bootstrapDashboard(){
+    if(window.__dashboardBooted) return; window.__dashboardBooted = true;
+    if(typeof window.refreshData === 'function') window.refreshData(); else setTimeout(()=> window.refreshData && window.refreshData(), 150);
+  }
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bootstrapDashboard); else bootstrapDashboard();
 
-window.COLORS = window.COLORS || {
-  primary: '#6366F1',
-  secondary: '#EC4899',
-  tertiary: '#10B981',
-  quaternary: '#F59E0B',
-  quinary: '#8B5CF6'
-};
-window.SERIES_COLORS = window.SERIES_COLORS || [window.COLORS.primary, window.COLORS.secondary, window.COLORS.tertiary, window.COLORS.quaternary, window.COLORS.quinary];
+  window.addEventListener('resize', ()=>{ if(window.charts) Object.values(window.charts).forEach(c=> { try { c.resize(); } catch(_){ } }); });
 
-function limitLegendSelection(series, maxVisible){
-  const sel={};
-  let count=0;
-  series.forEach(s=>{
-    if(!s.name.endsWith(' 7MA') && count<maxVisible){ sel[s.name]=true; count++; } else { sel[s.name]=false; }
+  function fmt1(x){ return window.fmt1? window.fmt1(x): (x==null?'-': (Math.round(x*10)/10).toString()); }
+  function fmtInt(x){ return window.fmtInt? window.fmtInt(x): (x==null?'-': x.toLocaleString()); }
+
+  async function showWorkoutDetail(workoutDate) {
+    try {
+      const modal = document.getElementById('workoutModal');
+      const content = document.getElementById('workoutModalContent');
+      const title = document.getElementById('workoutModalTitle');
+      if(!modal) return;
+      modal.classList.remove('hidden');
+      if(content) content.innerHTML = '<div class="flex items-center justify-center h-32 text-zinc-500"><div class="animate-pulse">Loading workout details...</div></div>';
+      const resp = await fetch(`/api/workout/${workoutDate}`);
+      if(!resp.ok) throw new Error('Failed to fetch workout');
+      const workout = await resp.json();
+      if(title) title.textContent = workout.workout_name || `Workout - ${workout.date}`;
+      const badges = document.getElementById('workoutModalBadges');
+      if(badges) badges.innerHTML = `
+        <span class=\"px-2 py-1 bg-indigo-600/20 text-indigo-300 rounded text-xs font-medium\">${workout.total_exercises} exercises</span>
+        <span class=\"px-2 py-1 bg-green-600/20 text-green-300 rounded text-xs font-medium\">${workout.duration_minutes}min</span>
+        ${workout.total_prs > 0 ? `<span class=\"px-2 py-1 bg-yellow-600/20 text-yellow-300 rounded text-xs font-medium\">🏆 ${workout.total_prs} PR${workout.total_prs>1?'s':''}</span>`:''}
+      `;
+      if(content) content.innerHTML = generateWorkoutHTML(workout);
+      const shareBtn=document.getElementById('shareWorkoutBtn');
+      if(shareBtn) shareBtn.onclick=()=> shareWorkout(workoutDate);
+    } catch(e){
+      console.error('Error loading workout detail', e);
+      const content = document.getElementById('workoutModalContent');
+      if(content) content.innerHTML = '<div class="flex items-center justify-center h-32 text-red-400">Error loading workout details</div>';
+    }
+  }
+
+  function generateWorkoutHTML(workout){
+    let html = '<div class="space-y-6">';
+    html += `<div class=\"grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-zinc-800/50 rounded-xl\">`+
+      `<div class=\"text-center\"><div class=\"text-2xl font-bold text-indigo-400\">${workout.total_sets}</div><div class=\"text-sm text-zinc-400\">Total Sets</div></div>`+
+      `<div class=\"text-center\"><div class=\"text-2xl font-bold text-green-400\">${fmtInt(workout.total_volume)}</div><div class=\"text-sm text-zinc-400\">Volume (kg)</div></div>`+
+      `<div class=\"text-center\"><div class=\"text-2xl font-bold text-blue-400\">${workout.duration_minutes}</div><div class=\"text-sm text-zinc-400\">Duration (min)</div></div>`+
+      `<div class=\"text-center\"><div class=\"text-2xl font-bold text-yellow-400\">${workout.total_prs}</div><div class=\"text-sm text-zinc-400\">Personal Records</div></div>`+
+    `</div>`;
+    html += '<div class="space-y-4">';
+    workout.exercises.forEach((ex,i)=>{
+      const prBadge = ex.personal_records>0? '<span class="text-xs bg-yellow-600/20 text-yellow-300 px-2 py-0.5 rounded font-medium ml-2">🏆 PR</span>':'';
+      html += `<div class=\"border ${i===0?'bg-indigo-600/10 border-indigo-600/30':'bg-zinc-800/30 border-zinc-700'} rounded-xl p-4\">`+
+        `<div class=\"flex items-center justify-between mb-3\"><h3 class=\"text-lg font-semibold text-zinc-100\">${ex.exercise_name}${prBadge}</h3>`+
+        `<div class=\"text-sm text-zinc-400\">${ex.total_sets} sets • ${fmt1(ex.total_volume)} kg total</div></div>`+
+        `<div class=\"overflow-x-auto\"><table class=\"w-full text-sm\"><thead><tr class=\"border-b border-zinc-700\"><th class=\"text-left py-2 text-zinc-400 font-medium\">Set</th><th class=\"text-right py-2 text-zinc-400 font-medium\">Weight</th><th class=\"text-right py-2 text-zinc-400 font-medium\">Reps</th><th class=\"text-right py-2 text-zinc-400 font-medium\">Volume</th><th class=\"text-right py-2 text-zinc-400 font-medium\">Est. 1RM</th></tr></thead><tbody>`;
+      ex.sets.forEach(set=>{
+        const isBest = set.volume === ex.best_set.volume;
+        html += `<tr class=\"${isBest?'bg-green-600/10 text-green-300':'text-zinc-300'} border-b border-zinc-800/50\"><td class=\"py-2\">${set.set_number}${isBest?' <span class=\\"text-green-400\\">★</span>':''}</td><td class=\"text-right py-2\">${set.weight? fmt1(set.weight)+' kg':'-'}</td><td class=\"text-right py-2\">${set.reps||'-'}</td><td class=\"text-right py-2\">${set.volume? fmt1(set.volume)+' kg':'-'}</td><td class=\"text-right py-2\">${set.estimated_1rm? fmt1(set.estimated_1rm)+' kg':'-'}</td></tr>`;
+      });
+      html += '</tbody></table></div></div>';
+    });
+    html += '</div></div>';
+    return html;
+  }
+
+  function shareWorkout(workoutDate){
+    const url = `${window.location.origin}/workout/${workoutDate}`;
+    const btn = document.getElementById('shareWorkoutBtn');
+    if(navigator.share){
+      navigator.share({title:'My Workout', text:`Check out my workout from ${workoutDate}`, url}).catch(()=>{});
+    } else if(navigator.clipboard){
+      navigator.clipboard.writeText(url).then(()=>{
+        if(!btn) return; const orig=btn.textContent; btn.textContent='Copied!'; btn.classList.add('bg-green-600'); setTimeout(()=>{ btn.textContent=orig; btn.classList.remove('bg-green-600'); },1500);
+      });
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', ()=>{
+    const modal=document.getElementById('workoutModal');
+    const closeBtn=document.getElementById('closeWorkoutModal');
+    closeBtn?.addEventListener('click', ()=>{ modal.classList.add('hidden'); if(window.location.pathname!=='/') history.pushState(null,'','/'); });
+    modal?.addEventListener('click', e=>{ if(e.target===modal){ modal.classList.add('hidden'); if(window.location.pathname!=='/') history.pushState(null,'','/'); } });
+    document.addEventListener('keydown', e=>{ if(e.key==='Escape' && !modal.classList.contains('hidden')){ modal.classList.add('hidden'); if(window.location.pathname!=='/') history.pushState(null,'','/'); } });
   });
-  return sel;
-}
+
+    window.showWorkoutDetail = showWorkoutDetail;
+    window.shareWorkout = shareWorkout;
+  })();
 
 // Prefer helpers from main.core.js if present
 const fetchJSON = window.fetchJSON || (url => fetch(url).then(r => { if(!r.ok) throw new Error(r.statusText); return r.json(); }));
@@ -36,342 +97,7 @@ const fmt1 = window.fmt1 || (x => x==null?'-': (Math.round(x*10)/10).toString())
 // Use window.parseISO provided by core; do not declare a global named parseISO here to avoid collisions
 
 // --------------------------- Filters UI --------------------------------
-function initFilters(){
-  // Only metric placeholder remains (weight-only)
-  const metricWrap=document.getElementById('metricToggle');
-  if(metricWrap){
-    metricWrap.innerHTML='<span class="text-xs text-zinc-500">Weight mode</span>';
-  }
-}
-
-function updateMetricButtons(){}
-
-// Date range presets removed
-
-
-// ------------------------- Data Fetch & Cache ---------------------------
-async function fetchDashboard(){
-  const key = JSON.stringify({start:state.start,end:state.end});
-  if(state.cache.has(key)) return state.cache.get(key);
-  const params = new URLSearchParams();
-  if(state.start) params.set('start', state.start);
-  if(state.end) params.set('end', state.end);
-  // exercises & metric no longer passed to backend
-  const data = await fetchJSON('/api/dashboard?'+params.toString());
-  state.cache.set(key,data); return data;
-}
-
-async function refreshData(){
-  try {
-  console.log('[dashboard] refreshData start', {exercises:state.exercises});
-    const loadingTargets=['sparklineContainer','progressiveOverloadChart','volumeTrendChart','weeklyPPLChart','muscleBalanceChart','repDistributionChart','recoveryChart','calendarChart'];
-    loadingTargets.forEach(id=>{ const el=document.getElementById(id); if(el) el.innerHTML='<div class="flex items-center justify-center h-full text-sm text-zinc-500 animate-pulse">Loading...</div>'; });
-    const data = await fetchDashboard();
-  window.__dashboardDebug = { phase:'afterFetch', fetchedAt: Date.now(), filters: data?.filters, params:{start:state.start,end:state.end,exercises:[...state.exercises]}, keys: data? Object.keys(data):[] };
-  console.log('[dashboard] data fetched', window.__dashboardDebug);
-  // No date preset logic
-  state.data=data;
-    document.getElementById('lastIngested').textContent = data.filters.end || '-';
-    if(!state.exercises.length){
-      // Preselect by most improvement (delta) (UI removed)
-      const prog = (data.exercise_progression || []).map(p=> p.exercise);
-      state.exercises = prog.slice(0,12);
-      if(state.exercises.length===0) state.exercises = data.filters.exercises || (data.top_exercises || []);
-    }
-  renderAll();
-  window.__dashboardDebug.phase='renderComplete';
-  console.log('[dashboard] render complete');
-  } catch(e){
-    console.error(e);
-    const msg='<div class="flex items-center justify-center h-full text-sm text-rose-400">Error loading data</div>';
-    ['sparklineContainer','progressiveOverloadChart','volumeTrendChart','weeklyPPLChart','muscleBalanceChart','repDistributionChart','recoveryChart','calendarChart'].forEach(id=>{ const el=document.getElementById(id); if(el) el.innerHTML=msg; });
-  window.__dashboardDebug = { phase:'error', error: e?.message || String(e) };
-  }
-}
-
-// Range helper removed
-
-function unique(arr){ return [...new Set(arr)]; }
-
-// ------------------------------ Charts ----------------------------------
-// Use shared charts registry to avoid redeclaration collisions (do not redeclare const across files)
-window.charts = window.charts || {};
-function _clearLoading(el){ if(!el) return; const pulse=el.querySelector('.animate-pulse'); if(pulse) pulse.remove(); }
-function getChart(id){
-  const el=document.getElementById(id);
-  if(!el) return null;
-  _clearLoading(el);
-  if(!el.dataset.fixedHeight){
-    if((!el.style.height || el.clientHeight<120)){
-      el.style.height = (id==='progressiveOverloadChart'?'300px':'230px');
-    }
-  }
-  if(!window.charts[id]) window.charts[id]=echarts.init(el);
-  setTimeout(()=>{ try { window.charts[id].resize(); } catch(_){} }, 40);
-  return window.charts[id];
-}
-
-function baseTimeAxis(){ return { type:'time', axisLine:{lineStyle:{color:'#3f3f46'}}, axisLabel:{color:'#a1a1aa', formatter: v=> new Date(v).toISOString().slice(5,10)}, splitLine:{show:false} }; }
-function baseValueAxis(name){ return { type:'value', name, nameTextStyle:{color:'#a1a1aa'}, axisLine:{lineStyle:{color:'#3f3f46'}}, axisLabel:{color:'#a1a1aa'}, splitLine:{lineStyle:{color:'#27272a'}}, scale:true }; }
-
-function renderSparklines(){
-  const container=document.getElementById('sparklineContainer');
-    if(!state.data || !state.data.exercises_daily_max || !state.data.exercises_daily_max.length){
-      container.innerHTML='<div class="text-sm text-zinc-500 italic">No exercise data in range</div>';
-      return;
-    }
-  console.log('[dashboard] renderSparklines count', state.data.exercises_daily_max.length);
-    container.innerHTML='';
-  const metricKey= 'max_weight';
-    const byEx={};
-    state.data.exercises_daily_max.forEach(r=>{ (byEx[r.exercise] ||= []).push(r); });
-    Object.entries(byEx).forEach(([ex, arr], idx)=>{
-      const card=document.createElement('div');
-      card.className='bg-zinc-900 rounded-2xl ring-1 ring-zinc-800 shadow-sm p-4 flex flex-col';
-      const last = arr[arr.length-1];
-      card.innerHTML=`<div class='flex items-center justify-between mb-2'><span class='text-sm font-medium text-zinc-300 truncate'>${ex}</span><span class='text-xs text-zinc-500'>${fmt1(last[metricKey])}</span></div><div class='flex-1' id='spark_${idx}' style='height:60px;'></div>`;
-      container.appendChild(card);
-      const chart=echarts.init(card.querySelector('#spark_'+idx));
-      const prPoints = arr.filter(a=>a.is_pr).map(a=> [a.date, a[metricKey]]);
-      chart.setOption({ animation:false, grid:{left:2,right:2,top:0,bottom:0}, xAxis:{type:'time',show:false}, yAxis:{type:'value',show:false}, tooltip:{trigger:'axis', formatter: params=>{
-        const p=params[0]; return `${ex}<br>${p.axisValueLabel}: ${fmt1(p.data[1])}`;}}, series:[{type:'line',data:arr.map(a=>[a.date,a[metricKey]]), showSymbol:false, smooth:true, lineStyle:{width:1.2,color:SERIES_COLORS[idx%SERIES_COLORS.length]}, areaStyle:{color:SERIES_COLORS[idx%SERIES_COLORS.length]+'33'}},{type:'scatter', data: prPoints.slice(-8), symbolSize:6, itemStyle:{color:'#fde047'}}] });
-    });
-}
-
-// renderProgressiveOverload now lives exclusively in main.charts.js to avoid duplication.
-
-function updateSlopes(chart, byEx, metricKey){
-  const opt=chart.getOption(); const [min,max]= opt.xAxis[0].range || [opt.xAxis[0].min, opt.xAxis[0].max];
-  const start = min? new Date(min): null; const end = max? new Date(max): null;
-  const container=document.getElementById('overloadSlopes'); container.innerHTML='';
-  Object.entries(byEx).forEach(([ex, arr], idx)=>{
-  const pts= arr.filter(a=> (!start || window.parseISO(a.date)>=start) && (!end || window.parseISO(a.date)<=end));
-    if(pts.length<2) return;
-    // Linear regression
-  const t0 = window.parseISO(pts[0].date).getTime();
-  const xs = pts.map(p=> (window.parseISO(p.date).getTime()-t0)/ (86400000*7));
-    const ys = pts.map(p=> p[metricKey]);
-    const mean = xs.reduce((s,v)=>s+v,0)/xs.length; const meanY= ys.reduce((s,v)=>s+v,0)/ys.length;
-    let num=0, den=0; for(let i=0;i<xs.length;i++){ const dx=xs[i]-mean; num+= dx*(ys[i]-meanY); den+= dx*dx; }
-    const slope = den? num/den:0; // units per week
-    const pill=document.createElement('span'); pill.className='px-2 py-1 rounded bg-zinc-800 text-zinc-300'; pill.textContent=`${ex}: ${slope>=0?'+':''}${fmt1(slope)} /wk`; container.appendChild(pill);
-  });
-}
-
-function renderVolumeTrend(){
-  if(!state.data || !state.data.sessions || !state.data.sessions.length){ const el=document.getElementById('volumeTrendChart'); if(el) el.innerHTML='<div class="flex items-center justify-center h-full text-sm text-zinc-500 italic">No sessions</div>'; return; } // compute 4-week rolling avg client side
-  console.log('[dashboard] renderVolumeTrend sessions', state.data.sessions.length);
-  const sessions = state.data.sessions.slice(); sessions.sort((a,b)=> a.date.localeCompare(b.date));
-  const seriesBar = sessions.map(s=> [s.date, s.total_volume]);
-  const rolling=[]; for(let i=0;i<sessions.length;i++){ const di=window.parseISO(sessions[i].date); const since = di.getTime()-27*86400000; const subset=sessions.filter(s=> window.parseISO(s.date).getTime()>=since && window.parseISO(s.date)<=di); const avg=subset.reduce((s,v)=>s+v.total_volume,0)/subset.length; rolling.push([sessions[i].date, avg]); }
-  const mondays = sessions.map(s=> s.date).filter(d=> window.parseISO(d).getUTCDay()===1);
-  const chart=getChart('volumeTrendChart');
-  chart.setOption({ grid:{left:50,right:16,top:20,bottom:55}, xAxis: baseTimeAxis(), yAxis: baseValueAxis('Volume (kg)'), dataZoom:[{type:'inside'},{type:'slider',height:18,bottom:20}], tooltip:{trigger:'axis'}, series:[{type:'bar', name:'Session Volume', data:seriesBar, itemStyle:{color:COLORS.primary}, emphasis:{focus:'none'}},{type:'line', name:'4W Avg', data:rolling, smooth:true, showSymbol:false, lineStyle:{width:2,color:COLORS.secondary}, emphasis:{focus:'none'}}], markLine:{symbol:'none', silent:true, lineStyle:{color:'#3f3f46', width:1}, data: mondays.map(m=> ({xAxis:m}))} });
-}
-
-function renderWeeklyPPL(){
-  if(!state.data || !state.data.weekly_ppl || !state.data.weekly_ppl.length){ const el=document.getElementById('weeklyPPLChart'); if(el) el.innerHTML='<div class="flex items-center justify-center h-full text-sm text-zinc-500 italic">No weekly data</div>'; return; } const mode = document.getElementById('pplModeToggle').dataset.mode; // absolute|percent
-  console.log('[dashboard] renderWeeklyPPL weeks', state.data.weekly_ppl.length);
-  const weeks = state.data.weekly_ppl.map(w=> w.week_start); // show ISO week start date (YYYY-MM-DD)
-  const push = state.data.weekly_ppl.map(w=> w.push);
-  const pull = state.data.weekly_ppl.map(w=> w.pull);
-  const legs = state.data.weekly_ppl.map(w=> w.legs);
-  let pushD=push, pullD=pull, legsD=legs; let yAxis={type:'value', name: mode==='absolute'? 'Weekly Volume (kg)':'% Volume', nameTextStyle:{color:'#a1a1aa'}, axisLine:{lineStyle:{color:'#3f3f46'}}, axisLabel:{color:'#a1a1aa'}};
-  if(mode!=='absolute'){
-    pushD=[]; pullD=[]; legsD=[];
-    for(let i=0;i<weeks.length;i++){ const tot=push[i]+pull[i]+legs[i]; if(tot===0){ pushD.push(0); pullD.push(0); legsD.push(0);} else { pushD.push(push[i]/tot*100); pullD.push(pull[i]/tot*100); legsD.push(legs[i]/tot*100);} }
-    yAxis.max=100;
-  }
-  const chart=getChart('weeklyPPLChart');
-  chart.setOption({ grid:{left:50,right:16,top:28,bottom:40}, legend:{top:0,textStyle:{color:'#d4d4d8'}}, tooltip:{trigger:'axis', axisPointer:{type:'shadow'}}, xAxis:{type:'category', data:weeks, axisLine:{lineStyle:{color:'#3f3f46'}}, axisLabel:{color:'#a1a1aa'}}, yAxis, series:[{name:'Push', type:'bar', stack:'ppl', data:pushD, itemStyle:{color:COLORS.primary}, emphasis:{focus:'none'}},{name:'Pull', type:'bar', stack:'ppl', data:pullD, itemStyle:{color:COLORS.tertiary}, emphasis:{focus:'none'}},{name:'Legs', type:'bar', stack:'ppl', data:legsD, itemStyle:{color:COLORS.quaternary}, emphasis:{focus:'none'}}] });
-}
-
-function renderMuscleBalance(){
-  if(!state.data || !state.data.muscle_28d){ const el=document.getElementById('muscleBalanceChart'); if(el) el.innerHTML='<div class="flex items-center justify-center h-full text-sm text-zinc-500 italic">No data</div>'; return; } const data = state.data.muscle_28d;
-  console.log('[dashboard] renderMuscleBalance entries', data.length);
-  const names=data.map(d=> d.group); const vals=data.map(d=> d.volume);
-  getChart('muscleBalanceChart').setOption({ grid:{left:110,right:30,top:10,bottom:25}, xAxis:{type:'value', axisLine:{lineStyle:{color:'#3f3f46'}}, axisLabel:{color:'#a1a1aa'}, splitLine:{lineStyle:{color:'#27272a'}}}, yAxis:{type:'category', data:names, axisLine:{show:false}, axisLabel:{color:'#d4d4d8'}}, tooltip:{trigger:'item', formatter: p=> `${p.name}: ${fmtInt(p.value)} kg`}, series:[{type:'bar', data:vals, barWidth:'40%', itemStyle:{color:(p)=> SERIES_COLORS[p.dataIndex]}, emphasis:{focus:'none'}, label:{show:true, position:'right', color:'#a1a1aa', formatter: p=> fmtInt(p.value)}}] });
-}
-
-function renderRepDistribution(){
-  const mode = document.getElementById('repModeToggle').dataset.mode; // weekly|summary if(!state.data){ return; }
-  console.log('[dashboard] renderRepDistribution mode', mode);
-  if(mode==='weekly'){
-  const weeks = state.data.rep_bins_weekly.map(r=> r.week_start);
-    const b1 = state.data.rep_bins_weekly.map(r=> r.bin_1_5);
-    const b2 = state.data.rep_bins_weekly.map(r=> r.bin_6_12);
-    const b3 = state.data.rep_bins_weekly.map(r=> r.bin_13_20);
-  getChart('repDistributionChart').setOption({ grid:{left:55,right:16,top:28,bottom:40}, legend:{top:0,textStyle:{color:'#d4d4d8'}}, tooltip:{trigger:'axis', axisPointer:{type:'shadow'}}, xAxis:{type:'category', data:weeks, axisLabel:{color:'#a1a1aa'}, axisLine:{lineStyle:{color:'#3f3f46'}}}, yAxis:{type:'value', name:'Volume (kg)', nameTextStyle:{color:'#a1a1aa'}, axisLabel:{color:'#a1a1aa'}, splitLine:{lineStyle:{color:'#27272a'}}}, series:[{name:'1–5', type:'bar', stack:'reps', data:b1, itemStyle:{color:COLORS.secondary}, emphasis:{focus:'none'}},{name:'6–12', type:'bar', stack:'reps', data:b2, itemStyle:{color:COLORS.primary}, emphasis:{focus:'none'}},{name:'13–20', type:'bar', stack:'reps', data:b3, itemStyle:{color:COLORS.tertiary}, emphasis:{focus:'none'}}] });
-  } else {
-    const t = state.data.rep_bins_total; const total=t.total||1; const bars=[{name:'1–5', val:t.bin_1_5},{name:'6–12', val:t.bin_6_12},{name:'13–20', val:t.bin_13_20}];
-  getChart('repDistributionChart').setOption({ grid:{left:110,right:30,top:10,bottom:25}, xAxis:{type:'value', axisLabel:{color:'#a1a1aa'}, axisLine:{lineStyle:{color:'#3f3f46'}}, splitLine:{lineStyle:{color:'#27272a'}}}, yAxis:{type:'category', data:bars.map(b=> b.name), axisLabel:{color:'#d4d4d8'}}, tooltip:{trigger:'item', formatter: p=>{ const v=bars[p.dataIndex].val; return `${p.name}: ${fmtInt(v)} kg (${(v/total*100).toFixed(1)}%)`; }}, series:[{type:'bar', data:bars.map(b=> b.val), itemStyle:{color:(p)=> [COLORS.secondary,COLORS.primary,COLORS.tertiary][p.dataIndex]}, emphasis:{focus:'none'}, barWidth:'45%', label:{show:true, position:'right', formatter: p=> (bars[p.dataIndex].val/total*100).toFixed(1)+'%', color:'#a1a1aa'}}] });
-  }
-}
-
-// Recovery chart removed
-
-function renderAll(){
-  renderSparklines();
-  renderProgressiveOverload();
-  renderVolumeTrend();
-  // Added: exercise volume chart (stacked/grouped)
-  try { if(typeof renderExerciseVolume === 'function') renderExerciseVolume(); } catch(e){ console.warn('renderExerciseVolume failed', e); }
-  renderWeeklyPPL();
-  renderMuscleBalance();
-  renderRepDistribution();
-  loadTrainingCalendar(); // Add calendar loading
-  // recovery removed
-}
-
-// Toggle handlers
-const _pplBtn = document.getElementById('pplModeToggle');
-if(_pplBtn){ _pplBtn.addEventListener('click', function(){ this.dataset.mode = this.dataset.mode==='absolute' ? 'percent':'absolute'; this.textContent= this.dataset.mode==='absolute'?'Absolute':'Percent'; renderWeeklyPPL(); }); }
-const _repBtn = document.getElementById('repModeToggle');
-if(_repBtn){ _repBtn.addEventListener('click', function(){ this.dataset.mode = this.dataset.mode==='weekly' ? 'summary':'weekly'; this.textContent= this.dataset.mode==='weekly'?'Weekly':'Summary'; renderRepDistribution(); }); }
-
-// Init
-let _bootstrapped = false;
-function bootstrapDashboard(){
-  if(_bootstrapped) return; _bootstrapped=true;
-  console.log('[dashboard] bootstrap');
-  try { initFilters(); updateMetricButtons(); } catch(e){ console.warn('init filters failed', e); }
-  refreshData();
-}
-if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bootstrapDashboard); else bootstrapDashboard();
-
-window.addEventListener('resize', ()=>{ Object.values(window.charts).forEach(c=> c.resize()); });
-function renderExerciseVolume(){
-  if(!state.data || !state.data.exercises_daily_volume) return;
-  const toggleEl = document.getElementById('volumeModeToggle');
-  const mode = toggleEl? toggleEl.dataset.mode : 'grouped'; // stacked|grouped (default grouped)
-  const volsByEx={};
-  state.data.exercises_daily_volume.forEach(r=> { volsByEx[r.exercise] = (volsByEx[r.exercise]||0)+ r.volume; });
-  const top = Object.entries(volsByEx).sort((a,b)=> b[1]-a[1]).slice(0,6).map(e=> e[0]);
-  const filtered = state.data.exercises_daily_volume.filter(r=> top.includes(r.exercise));
-  const dates = Array.from(new Set(filtered.map(r=> r.date))).sort();
-  const series = top.map((ex,i)=>{
-    const data = dates.map(d=> { const rec = filtered.find(r=> r.exercise===ex && r.date===d); return rec? rec.volume:0; });
-    return { name: ex.split('(')[0].trim(), type:'bar', stack: mode==='stacked'? 'vol': undefined, data, itemStyle:{color: SERIES_COLORS[i%SERIES_COLORS.length]}, emphasis:{focus:'none'} };
-  });
-  const chart=getChart('exerciseVolumeChart');
-  chart.setOption({ grid:{left:50,right:12,top:30,bottom:55}, legend:{top:0,textStyle:{color:'#d4d4d8'}}, tooltip:{trigger:'axis', axisPointer:{type:'shadow'}}, xAxis:{type:'category', data:dates, axisLabel:{color:'#a1a1aa', formatter:v=> v.slice(5)}, axisLine:{lineStyle:{color:'#3f3f46'}}}, yAxis:{type:'value', name:'Volume (kg)', nameTextStyle:{color:'#a1a1aa'}, axisLabel:{color:'#a1a1aa'}, splitLine:{lineStyle:{color:'#27272a'}}}, series });
-}
-
-async function loadPersonalRecords() {
-  try {
-    const data = await fetchJSON('/api/personal-records');
-    
-    if (!data || data.length === 0) return;
-
-    // Group PRs by exercise for better visualization
-    const exerciseGroups = {};
-    data.forEach(pr => {
-      if (!exerciseGroups[pr.exercise]) {
-        exerciseGroups[pr.exercise] = [];
-      }
-      exerciseGroups[pr.exercise].push(pr);
-    });
-
-    // Create scatter plot showing PR timeline
-    const traces = [];
-    let colorIndex = 0;
-
-    Object.entries(exerciseGroups).forEach(([exercise, prs]) => {
-      traces.push({
-        x: prs.map(pr => pr.date),
-        y: prs.map(pr => pr.weight),
-        type: 'scatter',
-        mode: 'markers+text',
-        name: exercise,
-        marker: { 
-          size: 12, 
-          color: exerciseColors[colorIndex % exerciseColors.length],
-          symbol: 'star'
-        },
-        text: prs.map(pr => `${pr.weight}kg`),
-        textposition: 'top center',
-        hovertemplate: `<b>${exercise}</b><br>` +
-                      `Date: %{x}<br>` +
-                      `Weight: %{y} kg<br>` +
-                      `<extra></extra>`
-      });
-      colorIndex++;
-    });
-
-    const layout = {
-      title: 'Personal Records Achievement',
-      xaxis: { 
-        title: 'Date',
-        tickangle: -45,
-        type: 'date'
-      },
-      yaxis: { title: 'Weight (kg)' },
-      hovermode: 'closest',
-      legend: { orientation: 'h', y: -0.2 }
-    };
-
-    Plotly.newPlot('personalRecordsChart', traces, layout, { 
-      responsive: true,
-      displayModeBar: false 
-    });
-
-  } catch (error) {
-    console.error('Error loading personal records:', error);
-  }
-}
-
-// Training Consistency Chart
-async function loadTrainingConsistency() {
-  try {
-    const data = await fetchJSON('/api/training-consistency');
-    
-    if (!data || !data.weekly || data.weekly.length === 0) return;
-
-    const traces = [
-      {
-        x: data.weekly.map(d => d.week),
-        y: data.weekly.map(d => d.workouts),
-        type: 'bar',
-        name: 'Workouts/Week',
-        marker: { color: colors.success },
-        hovertemplate: 'Week: %{x}<br>Workouts: %{y}<extra></extra>'
-      }
-    ];
-
-    // Add target line (e.g., 3 workouts per week)
-    const targetWorkouts = 3;
-    traces.push({
-      x: data.weekly.map(d => d.week),
-      y: Array(data.weekly.length).fill(targetWorkouts),
-      type: 'scatter',
-      mode: 'lines',
-      name: 'Target (3/week)',
-      line: { dash: 'dash', color: colors.danger, width: 2 },
-      hovertemplate: 'Target: %{y} workouts/week<extra></extra>'
-    });
-
-    const layout = {
-      title: 'Weekly Workout Frequency',
-      xaxis: { 
-        title: 'Week',
-        tickangle: -45
-      },
-      yaxis: { 
-        title: 'Workouts per Week',
-        dtick: 1
-      },
-      hovermode: 'x unified'
-    };
-
-    Plotly.newPlot('trainingConsistencyChart', traces, layout, { 
-      responsive: true,
-      displayModeBar: false 
-    });
-
-  } catch (error) {
-    console.error('Error loading training consistency:', error);
-  }
-}
+// (legacy code removed)
 
 // Strength Balance Chart
 async function loadStrengthBalance() {
@@ -737,52 +463,7 @@ async function loadBodyMeasurements() {
   }
 }
 
-async function loadTrainingStreak() {
-  try {
-    const data = await fetchJSON('/api/training-streak');
-    
-    document.getElementById('currentStreak').textContent = data.current_streak || '0';
-    document.getElementById('longestStreak').textContent = data.longest_streak || '0';
-    document.getElementById('totalWorkouts').textContent = data.total_workout_days || '0';
-    
-    // Add some animation
-    const elements = ['currentStreak', 'longestStreak', 'totalWorkouts'];
-    elements.forEach((id, index) => {
-      const element = document.getElementById(id);
-      setTimeout(() => {
-        element.style.transform = 'scale(1.1)';
-        setTimeout(() => {
-          element.style.transform = 'scale(1)';
-        }, 200);
-      }, index * 100);
-    });
-
-  } catch (error) {
-    console.error('Error loading training streak:', error);
-  }
-}
-
-// Load metadata
-async function loadLastIngested() {
-  try {
-    const health = await fetchJSON('/health');
-    const lastIngested = health.last_ingested_at;
-    const element = document.getElementById('lastIngested');
-    
-    if (lastIngested) {
-      const date = new Date(lastIngested);
-      element.textContent = `Last data update: ${date.toLocaleString()}`;
-      element.style.color = '#27ae60';
-    } else {
-      element.textContent = 'No data ingested yet';
-      element.style.color = '#e74c3c';
-    }
-
-  } catch (error) {
-    console.error('Error loading last ingested:', error);
-    document.getElementById('lastIngested').textContent = 'Status unknown';
-  }
-}
+// Training streak & last ingested now exposed by core (avoid dup)
 
 // (duplicate style block removed; core injects once)
 
@@ -794,7 +475,7 @@ if(typeof window.showWorkoutDetail !== 'function'){
   };
 }
 
-// ADVANCED ANALYTICS FUNCTIONS - THE FULL ARSENAL 🔥
+// ADVANCED ANALYTICS FUNCTIONS (Plotly extras)
 
 async function loadVolumeHeatmap() {
   try {

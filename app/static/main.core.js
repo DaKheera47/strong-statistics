@@ -10,6 +10,9 @@ const state = {
   cache: new Map()
 };
 
+// Expose reference for modules that (incorrectly) check window.state
+if(!window.state) window.state = state;
+
 const COLORS = {
   primary: '#6366F1',
   secondary: '#EC4899',
@@ -176,3 +179,6 @@ if(!document.getElementById('dashboard-shared-style')){
 // Bootstrap is now centralized in main.js; expose helpers only if needed.
 window.loadLastIngested = loadLastIngested;
 window.loadTrainingStreak = loadTrainingStreak;
+// Expose refresh so bootstrap in main.js can invoke
+window.refreshData = window.refreshData || refreshData;
+window.fetchDashboard = window.fetchDashboard || fetchDashboard;

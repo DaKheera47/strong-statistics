@@ -170,12 +170,42 @@ function renderRepDistribution(){
 }
 
 // Exported single function to render all echarts-based charts
+// Exercise Volume (stacked / grouped) moved from main.js so all ECharts live together
+function renderExerciseVolume(){
+  if(!window.state || !window.state.data){ return; }
+  const volumeArr = state.data.exercises_daily_volume;
+  if(!Array.isArray(volumeArr)){
+    const el=document.getElementById('exerciseVolumeChart');
+    if(el) el.innerHTML='<div class="flex items-center justify-center h-full text-xs text-zinc-500 italic">No volume field</div>';
+    console.warn('[exerciseVolume] missing exercises_daily_volume in payload keys=', Object.keys(state.data||{}));
+    return;
+  }
+  if(volumeArr.length===0){
+    const el=document.getElementById('exerciseVolumeChart');
+    if(el) el.innerHTML='<div class="flex items-center justify-center h-full text-xs text-zinc-500 italic">No volume entries</div>';
+    console.info('[exerciseVolume] empty array received');
+    return;
+  }
+  const toggleEl = document.getElementById('volumeModeToggle');
+  const mode = toggleEl? toggleEl.dataset.mode : 'grouped'; // stacked|grouped
+  const volsByEx={};
+  volumeArr.forEach(r=> { volsByEx[r.exercise] = (volsByEx[r.exercise]||0)+ r.volume; });
+  const top = Object.entries(volsByEx).sort((a,b)=> b[1]-a[1]).slice(0,6).map(e=> e[0]);
+  const filtered = volumeArr.filter(r=> top.includes(r.exercise));
+  const dates = Array.from(new Set(filtered.map(r=> r.date))).sort();
+  const series = top.map((ex,i)=>{
+    const data = dates.map(d=> { const rec = filtered.find(r=> r.exercise===ex && r.date===d); return rec? rec.volume:0; });
+    return { name: ex.split('(')[0].trim(), type:'bar', stack: mode==='stacked'? 'vol': undefined, data, itemStyle:{color: SERIES_COLORS[i%SERIES_COLORS.length]}, emphasis:{focus:'none'} };
+  });
+  const chart=getChart('exerciseVolumeChart');
+  chart.setOption({ grid:{left:50,right:12,top:30,bottom:55}, legend:{top:0,textStyle:{color:'#d4d4d8'}}, tooltip:{trigger:'axis', axisPointer:{type:'shadow'}}, xAxis:{type:'category', data:dates, axisLabel:{color:'#a1a1aa', formatter:v=> v.slice(5)}, axisLine:{lineStyle:{color:'#3f3f46'}}}, yAxis:{type:'value', name:'Volume (kg)', nameTextStyle:{color:'#a1a1aa'}, axisLabel:{color:'#a1a1aa'}, splitLine:{lineStyle:{color:'#27272a'}}}, series });
+}
+
 function renderAll(){
   renderSparklines();
   renderProgressiveOverload();
   renderVolumeTrend();
-  // NEW: exercise volume chart (stacked/grouped)
-  try { if(typeof renderExerciseVolume === 'function') renderExerciseVolume(); } catch(e){ console.warn('renderExerciseVolume failed', e); }
+  renderExerciseVolume();
   renderWeeklyPPL();
   renderMuscleBalance();
   renderRepDistribution();
@@ -187,16 +217,35 @@ window.renderAllCharts = renderAll;
 
 // Attach volume mode toggle handler (was missing so chart never appeared)
 document.addEventListener('DOMContentLoaded', ()=>{
-  const btn = document.getElementById('volumeModeToggle');
-  if(btn && !btn.dataset._bound){
-    btn.dataset._bound = '1';
-    // Ensure label matches current mode (grouped default set in HTML)
-    btn.textContent = btn.dataset.mode === 'stacked' ? 'Stacked' : 'Grouped';
-    btn.addEventListener('click', function(){
-      // Flip mode
+  // Volume mode toggle
+  const volBtn = document.getElementById('volumeModeToggle');
+  if(volBtn && !volBtn.dataset._bound){
+    volBtn.dataset._bound = '1';
+    volBtn.textContent = volBtn.dataset.mode === 'stacked' ? 'Stacked' : 'Grouped';
+    volBtn.addEventListener('click', function(){
       this.dataset.mode = this.dataset.mode === 'grouped' ? 'stacked' : 'grouped';
       this.textContent = this.dataset.mode === 'stacked' ? 'Stacked' : 'Grouped';
-      if(typeof renderExerciseVolume === 'function') renderExerciseVolume();
+      renderExerciseVolume();
+    });
+  }
+  // PPL mode toggle
+  const pplBtn = document.getElementById('pplModeToggle');
+  if(pplBtn && !pplBtn.dataset._bound){
+    pplBtn.dataset._bound='1';
+    pplBtn.addEventListener('click', function(){
+      this.dataset.mode = this.dataset.mode==='absolute' ? 'percent':'absolute';
+      this.textContent= this.dataset.mode==='absolute'?'Absolute':'Percent';
+      renderWeeklyPPL();
+    });
+  }
+  // Rep distribution mode toggle
+  const repBtn = document.getElementById('repModeToggle');
+  if(repBtn && !repBtn.dataset._bound){
+    repBtn.dataset._bound='1';
+    repBtn.addEventListener('click', function(){
+      this.dataset.mode = this.dataset.mode==='weekly' ? 'summary':'weekly';
+      this.textContent= this.dataset.mode==='weekly'?'Weekly':'Summary';
+      renderRepDistribution();
     });
   }
 });
