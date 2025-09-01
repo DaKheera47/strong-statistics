@@ -1,0 +1,22 @@
+services:
+  lifting:
+    build: .
+    container_name: lifting
+    restart: unless-stopped
+    ports:
+      - "8069:8069"
+    env_file:
+      - .env
+    environment:
+      # Fallbacks if not in .env
+      - HOST=0.0.0.0
+      - PORT=8069
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./dashboard_layout.yaml:/app/dashboard_layout.yaml:ro
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8069/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3

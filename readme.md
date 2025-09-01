@@ -398,6 +398,104 @@ curl http://127.0.0.1:8069/api/sessions
 
 Load http://127.0.0.1:8069/ — charts render.
 
+---
+
+## Self‑Hosting (Docker) Quick Start
+
+For a minimal reproducible deployment using Docker:
+
+1. Clone repo & copy env
+  cp .env.example .env
+  (Edit .env to set a strong INGEST_TOKEN and adjust ALLOWED_ORIGINS.)
+
+2. Build & run (foreground)
+  docker compose up --build
+
+3. Visit the dashboard:
+  http://localhost:8069
+
+4. Ingest a Strong export:
+  curl -F "file=@strong_export.csv" "http://localhost:8069/ingest?token=$INGEST_TOKEN"
+
+Data & logs persist in the host `data/` and `logs/` folders via volume mounts.
+
+Upgrade:
+  git pull
+  docker compose build
+  docker compose up -d
+
+Stop:
+  docker compose down
+
+### Run in Background (Detached) With Auto-Restart
+
+If you just want it to stay up ("run unless stopped") run detached with the existing `restart: unless-stopped` policy in `docker-compose.yml`:
+
+```
+docker compose up -d --build
+```
+
+
+Check status:
+```
+docker compose ps
+```
+
+Follow logs live:
+```
+docker compose logs -f
+```
+
+Stop (this also disables the restart policy until you start again):
+```
+docker compose down
+```
+
+After a host reboot the container will auto-start because of `restart: unless-stopped` (unless you explicitly brought it down with `docker compose down`).
+
+## Production Hardening Checklist
+
+- Use a reverse proxy (Caddy / Nginx / Traefik) terminating HTTPS in front of the container.
+- Restrict /debug/* endpoints by disabling them (comment routes) or ensuring token set.
+- Rotate `INGEST_TOKEN` periodically; never share it publicly.
+- Backup `data/lifting.db` (simple copy) on a schedule.
+- Enable metrics (optional): sidecar (e.g., cAdvisor) + reverse proxy logs.
+- Consider read-only FS except for `/app/data` and `/app/logs`.
+- Run container as non-root (already default `appuser` in Dockerfile).
+
+## Deploy via Docker + Caddy (Example Snippet)
+
+Example Caddyfile mapping a domain with automatic HTTPS:
+```
+lifting.example.com {
+  reverse_proxy 127.0.0.1:8069
+  encode zstd gzip
+  header Content-Security-Policy "default-src 'self'; script-src 'self' https://cdn.plot.ly; style-src 'self' 'unsafe-inline'"
+  header Referrer-Policy no-referrer
+  header X-Content-Type-Options nosniff
+  header X-Frame-Options DENY
+}
+```
+
+Run Caddy beside the app container, or use Traefik labels if preferred.
+
+## Environment Variables Summary
+
+| Var | Purpose |
+|-----|---------|
+| INGEST_TOKEN | Required token for uploads & debug endpoints |
+| ALLOWED_ORIGINS | CORS allow-list for browser clients |
+| MAX_UPLOAD_MB | File size guard for ingestion |
+| LOG_LEVEL | Logging verbosity (INFO default) |
+| TZ | Human display timezone (client side) |
+
+---
+
+## License
+
+This project is released under the MIT License (see `LICENSE`).
+
+
 ## Dashboard Layout Configuration (YAML)
 
 You can control the order & widths of dashboard components via `dashboard_layout.yaml` at the project root. Example (default):

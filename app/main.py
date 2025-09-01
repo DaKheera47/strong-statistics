@@ -60,7 +60,11 @@ MAX_UPLOAD_MB = int(os.getenv("MAX_UPLOAD_MB", "10"))
 
 # Logging
 logger = logging.getLogger("lifting")
-logger.setLevel(logging.INFO)
+_log_level = os.getenv("LOG_LEVEL", "INFO").upper()
+try:
+    logger.setLevel(getattr(logging, _log_level, logging.INFO))
+except Exception:  # pragma: no cover
+    logger.setLevel(logging.INFO)
 handler = RotatingFileHandler(LOG_DIR / "app.log", maxBytes=2_000_000, backupCount=3)
 formatter = logging.Formatter("%(asctime)s %(levelname)s %(message)s")
 handler.setFormatter(formatter)
