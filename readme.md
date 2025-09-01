@@ -398,6 +398,36 @@ curl http://127.0.0.1:8069/api/sessions
 
 Load http://127.0.0.1:8069/ — charts render.
 
+## Dashboard Layout Configuration (YAML)
+
+You can control the order & widths of dashboard components via `dashboard_layout.yaml` at the project root. Example (default):
+
+```
+layout:
+  rows:
+    - [progressive_overload:12]
+    - [volume_trend:8, exercise_volume:4]
+    - [rep_distribution:4, weekly_ppl:7, muscle_balance:5]
+    - [calendar:12]
+```
+
+Rules:
+* Each row is a list. Items use `widget:width` (1–12). Missing width defaults to 12.
+* Supported widget keys:
+  * progressive_overload
+  * volume_trend
+  * exercise_volume
+  * rep_distribution
+  * weekly_ppl
+  * muscle_balance
+  * calendar
+* Unknown widgets are ignored silently.
+* File reload requires an application restart (config is read at startup).
+
+Widths map to Tailwind `md:col-span-{width}` (grid is 12 columns). On small screens all widgets stack full-width.
+
+To hide a widget, remove it from the YAML. To move it, change its row order or width.
+
 
 11) Observability & Ops
 

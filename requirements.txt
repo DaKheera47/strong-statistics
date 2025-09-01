@@ -8,3 +8,4 @@ plotly
 python-dotenv
 cairosvg
 pillow
+PyYAML

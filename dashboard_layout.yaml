@@ -1,0 +1,19 @@
+# Dashboard layout configuration
+# Define rows of widgets and their widths (Tailwind md:col-span-*)
+# Each row is a list of entries in the form widget:width
+# Valid widgets:
+#   progressive_overload
+#   volume_trend
+#   exercise_volume
+#   rep_distribution
+#   weekly_ppl
+#   muscle_balance
+#   calendar
+# Width must be 1-12 (12 = full width). If omitted, defaults to 12.
+
+layout:
+  rows:
+    - [progressive_overload:12]
+    - [volume_trend:8, exercise_volume:4]
+    - [rep_distribution:4, weekly_ppl:4, muscle_balance:4]
+    - [calendar:12]

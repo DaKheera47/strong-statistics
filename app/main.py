@@ -14,6 +14,7 @@ import logging
 from logging.handlers import RotatingFileHandler
 import faulthandler
 import sys
+import yaml
 import threading, traceback, time
 
 from .db import init_db, get_meta
@@ -76,6 +77,72 @@ app.add_middleware(
 )
 
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
+
+# ---------------- Layout Config (YAML) -----------------
+DEFAULT_LAYOUT = {
+    "layout": {
+        "rows": [
+            ["progressive_overload:12"],
+            ["volume_trend:8", "exercise_volume:4"],
+            ["rep_distribution:4", "weekly_ppl:7", "muscle_balance:5"],
+            ["calendar:12"],
+        ]
+    }
+}
+
+_LAYOUT_PATH = BASE_DIR / "dashboard_layout.yaml"
+
+def load_layout_config():
+    try:
+        if _LAYOUT_PATH.exists():
+            with _LAYOUT_PATH.open("r", encoding="utf-8") as f:
+                raw = yaml.safe_load(f) or {}
+        else:
+            raw = {}
+    except Exception as e:  # pragma: no cover - config parse failure fallback
+        logger.error("failed parsing dashboard_layout.yaml: %s", e)
+        raw = {}
+    # Merge defaults
+    rows = (raw.get("layout", {}) or {}).get("rows") or DEFAULT_LAYOUT["layout"]["rows"]
+    # Normalise rows -> list[list[str]] of tokens "widget[:width]"
+    norm_rows: list[list[dict]] = []
+    for row in rows:
+        norm_row = []
+        if not isinstance(row, list):
+            continue
+        for cell in row:
+            # Accept either "name:width" or dict {name: width}
+            name = None
+            width = 12
+            if isinstance(cell, str):
+                if ":" in cell:
+                    name_part, width_part = cell.split(":", 1)
+                    name = name_part.strip()
+                    try:
+                        width = int(width_part)
+                    except ValueError:
+                        width = 12
+                else:
+                    name = cell.strip()
+            elif isinstance(cell, dict):
+                # first key
+                if cell:
+                    name, width_val = next(iter(cell.items()))
+                    name = str(name)
+                    try:
+                        width = int(width_val)
+                    except Exception:
+                        width = 12
+            if not name:
+                continue
+            width = max(1, min(12, width))
+            norm_row.append({"widget": name, "width": width})
+        if norm_row:
+            norm_rows.append(norm_row)
+    return {"rows": norm_rows}
+
+LAYOUT_CONFIG = load_layout_config()
+
 app.mount("/static", StaticFiles(directory=str(Path(__file__).parent / "static")), name="static")
 
 # Favicon / logo routes serving the root-level icon.svg so we don't have to duplicate the asset.
@@ -133,15 +200,16 @@ async def timing_middleware(request: Request, call_next):  # type: ignore[overri
 
 @app.get("/", response_class=HTMLResponse)
 async def dashboard(request: Request):
-    return templates.TemplateResponse("dashboard.html", {"request": request})
+    return templates.TemplateResponse("dashboard.html", {"request": request, "layout_config": LAYOUT_CONFIG})
 
 
 @app.get("/workout/{workout_date}", response_class=HTMLResponse)
 async def workout_detail_page(request: Request, workout_date: str):
     """Shareable workout detail page - loads dashboard with specific workout opened"""
     return templates.TemplateResponse("dashboard.html", {
-        "request": request, 
-        "workout_date": workout_date
+        "request": request,
+        "workout_date": workout_date,
+        "layout_config": LAYOUT_CONFIG,
     })
 
 
