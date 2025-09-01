@@ -190,8 +190,11 @@ document.addEventListener('DOMContentLoaded', ()=>{
   const btn = document.getElementById('volumeModeToggle');
   if(btn && !btn.dataset._bound){
     btn.dataset._bound = '1';
+    // Ensure label matches current mode (grouped default set in HTML)
+    btn.textContent = btn.dataset.mode === 'stacked' ? 'Stacked' : 'Grouped';
     btn.addEventListener('click', function(){
-      this.dataset.mode = this.dataset.mode === 'stacked' ? 'grouped' : 'stacked';
+      // Flip mode
+      this.dataset.mode = this.dataset.mode === 'grouped' ? 'stacked' : 'grouped';
       this.textContent = this.dataset.mode === 'stacked' ? 'Stacked' : 'Grouped';
       if(typeof renderExerciseVolume === 'function') renderExerciseVolume();
     });

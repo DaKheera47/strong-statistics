@@ -243,7 +243,7 @@ window.addEventListener('resize', ()=>{ Object.values(window.charts).forEach(c=>
 function renderExerciseVolume(){
   if(!state.data || !state.data.exercises_daily_volume) return;
   const toggleEl = document.getElementById('volumeModeToggle');
-  const mode = toggleEl? toggleEl.dataset.mode : 'stacked'; // stacked|grouped
+  const mode = toggleEl? toggleEl.dataset.mode : 'grouped'; // stacked|grouped (default grouped)
   const volsByEx={};
   state.data.exercises_daily_volume.forEach(r=> { volsByEx[r.exercise] = (volsByEx[r.exercise]||0)+ r.volume; });
   const top = Object.entries(volsByEx).sort((a,b)=> b[1]-a[1]).slice(0,6).map(e=> e[0]);
