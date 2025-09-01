@@ -161,55 +161,7 @@ function renderSparklines(){
     });
 }
 
-function renderProgressiveOverload(){
-  if(!state.data || !state.data.exercises_daily_max || !state.data.exercises_daily_max.length){ const el=document.getElementById('progressiveOverloadChart'); if(el) el.innerHTML='<div class="flex items-center justify-center h-full text-sm text-zinc-500 italic">No data</div>'; return; }
-  const metricKey= 'max_weight';
-  const byEx={}; state.data.exercises_daily_max.forEach(r=>{ (byEx[r.exercise] ||= []).push(r); });
-  const names = Object.keys(byEx).sort();
-  // Determine palette (repeat but shift for variety)
-  const colorMap={}; names.forEach((n,i)=> colorMap[n]= SERIES_COLORS[i%SERIES_COLORS.length]);
-  const activeSet = new Set(names.slice(0,5)); // default first 5 visible
-  // Build legend pills
-  const legendRoot=document.getElementById('poLegend'); legendRoot.innerHTML='';
-  names.forEach(name=>{
-    const pill=document.createElement('button');
-    pill.className='px-2 py-0.5 rounded-full border text-xs flex items-center gap-1 transition-colors';
-    pill.dataset.fullName = name;
-    pill.textContent = name.split('(')[0].trim();
-    const applyStyles = ()=>{
-      const on = activeSet.has(name);
-      pill.style.borderColor = on? colorMap[name]: '#3f3f46';
-      pill.style.background = on? colorMap[name]+'22':'#18181b';
-      pill.style.color = on? '#e4e4e7':'#a1a1aa';
-      pill.title = (on? 'Hide ':'Show ')+ name;
-    };
-    applyStyles();
-    pill.onclick = ()=>{ if(activeSet.has(name)) activeSet.delete(name); else activeSet.add(name); applyStyles(); renderChart(); };
-    legendRoot.appendChild(pill);
-  });
-  function buildSeries(){
-    const series=[];
-    names.forEach(name=>{
-      if(!activeSet.has(name)) return;
-      const arr = byEx[name].slice().sort((a,b)=> a.date.localeCompare(b.date));
-  const lname = name.toLowerCase();
-  const isCable = lname.includes('cable');
-  const isMachine = lname.includes('machine');
-  series.push({ name, type:'line', showSymbol:false, smooth:true, data: arr.map(a=> [a.date, a[metricKey]]), lineStyle:{width:2, color: colorMap[name], type: isCable? 'dashed':'solid'}, areaStyle:{color: colorMap[name] + (isMachine? '35':'25')}, symbol: isCable? 'circle':'none', symbolSize: isCable? 5:4 });
-      const ma=[]; const vals=[]; arr.forEach(a=>{ vals.push(a[metricKey]); if(vals.length>7) vals.shift(); ma.push([a.date, vals.reduce((s,v)=>s+v,0)/vals.length]); });
-      series.push({ name: name+' 7MA', type:'line', showSymbol:false, smooth:true, data: ma, lineStyle:{width:1, type:'dashed', color: colorMap[name]}, emphasis:{disabled:true}, tooltip:{show:false} });
-    });
-    return series;
-  }
-  function renderChart(){
-    const chart=getChart('progressiveOverloadChart');
-    chart.setOption({animationDuration:250, grid:{left:42,right:12,top:10,bottom:55}, legend:{show:false}, dataZoom:[{type:'inside'},{type:'slider',height:16,bottom:18}], xAxis: baseTimeAxis(), yAxis: baseValueAxis('Max Weight (kg)'), tooltip:{trigger:'axis', valueFormatter:v=>fmt1(v)}, series: buildSeries().map(s=> ({...s, emphasis:{focus:'none'}})) }, true);
-    chart.off('dataZoom'); chart.on('dataZoom', ()=> updateSlopes(chart, byEx, metricKey));
-    updateSlopes(chart, byEx, metricKey);
-  }
-  document.getElementById('resetOverloadZoom').onclick=()=>{ const chart=getChart('progressiveOverloadChart'); chart.dispatchAction({type:'dataZoom', start:0, end:100}); };
-  renderChart();
-}
+// renderProgressiveOverload now lives exclusively in main.charts.js to avoid duplication.
 
 function updateSlopes(chart, byEx, metricKey){
   const opt=chart.getOption(); const [min,max]= opt.xAxis[0].range || [opt.xAxis[0].min, opt.xAxis[0].max];

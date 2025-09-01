@@ -46,15 +46,24 @@ function renderProgressiveOverload(){
   if(!state.data || !state.data.exercises_daily_max || !state.data.exercises_daily_max.length){ const el=document.getElementById('progressiveOverloadChart'); if(el) el.innerHTML='<div class="flex items-center justify-center h-full text-sm text-zinc-500 italic">No data</div>'; return; }
   const metricKey= 'max_weight';
   const byEx={}; state.data.exercises_daily_max.forEach(r=>{ (byEx[r.exercise] ||= []).push(r); });
-  const names = Object.keys(byEx).sort();
-  const colorMap={}; names.forEach((n,i)=> colorMap[n]= SERIES_COLORS[i%SERIES_COLORS.length]);
-  const activeSet = new Set(names.slice(0,5));
+  // Sort exercises by number of datapoints (desc) then alphabetically
+  const names = Object.keys(byEx).sort((a,b)=> byEx[b].length - byEx[a].length || a.localeCompare(b));
+  // Helper to derive base name (strip cable/machine words)
+  const baseName = (n)=> n.replace(/\b(cable|machine)\b/ig,'').replace(/\s+/g,' ').replace(/\(.*?\)/g,'').trim() || n;
+  // Color map per base name so cable/machine variants share color
+  const baseColorMap={}; let colorIdx=0;
+  names.forEach(n=>{ const b=baseName(n); if(!baseColorMap[b]){ baseColorMap[b]= SERIES_COLORS[colorIdx%SERIES_COLORS.length]; colorIdx++; } });
+  const colorMap={}; names.forEach(n=>{ colorMap[n]= baseColorMap[baseName(n)]; });
+  // Preselect top 5 (most datapoints)
+  const activeSet = new Set(names.slice(0,2));
   const legendRoot=document.getElementById('poLegend'); if(legendRoot) legendRoot.innerHTML='';
   names.forEach(name=>{
     const pill=document.createElement('button');
     pill.className='px-2 py-0.5 rounded-full border text-xs flex items-center gap-1 transition-colors';
     pill.dataset.fullName = name;
-    pill.textContent = name.split('(')[0].trim();
+    const lname=name.toLowerCase(); const isCable=lname.includes('cable'); const isMachine=lname.includes('machine');
+    const labelBase = baseName(name);
+    pill.textContent = labelBase + (isCable?' (Cable)': isMachine? ' (Machine)':'' );
     const applyStyles = ()=>{
       const on = activeSet.has(name);
       pill.style.borderColor = on? colorMap[name]: '#3f3f46';
@@ -71,12 +80,19 @@ function renderProgressiveOverload(){
     names.forEach(name=>{
       if(!activeSet.has(name)) return;
       const arr = byEx[name].slice().sort((a,b)=> a.date.localeCompare(b.date));
-  const lname = name.toLowerCase();
-  const isCable = lname.includes('cable');
-  const isMachine = lname.includes('machine');
-  series.push({ name, type:'line', showSymbol:false, smooth:true, data: arr.map(a=> [a.date, a[metricKey]]), lineStyle:{width:2, color: colorMap[name], type: isCable? 'dashed':'solid'}, areaStyle:{color: colorMap[name] + (isMachine? '35':'25')}, symbol: isCable? 'circle':'none', symbolSize: isCable? 5:4 });
-      const ma=[]; const vals=[]; arr.forEach(a=>{ vals.push(a[metricKey]); if(vals.length>7) vals.shift(); ma.push([a.date, vals.reduce((s,v)=>s+v,0)/vals.length]); });
-      series.push({ name: name+' 7MA', type:'line', showSymbol:false, smooth:true, data: ma, lineStyle:{width:1, type:'dashed', color: colorMap[name]}, emphasis:{disabled:true}, tooltip:{show:false} });
+      const lname = name.toLowerCase();
+      const isCable = lname.includes('cable');
+      const isMachine = lname.includes('machine');
+      if(arr.length === 1){
+        // Single point: use scatter so it actually shows
+        series.push({ name, type:'scatter', data: arr.map(a=> [a.date, a[metricKey]]), symbol:'circle', symbolSize:8, itemStyle:{color: colorMap[name]}, emphasis:{focus:'none'} });
+        return; // no MA for single-point series
+      }
+      series.push({ name, type:'line', showSymbol: arr.length<=3, smooth:true, data: arr.map(a=> [a.date, a[metricKey]]), lineStyle:{width:2, color: colorMap[name], type: isCable? 'dashed':'solid'}, areaStyle:{color: colorMap[name] + (isMachine? '35':'25')}, symbol: isCable? 'circle':'none', symbolSize: isCable? 5:4 });
+      if(arr.length>2){
+        const ma=[]; const vals=[]; arr.forEach(a=>{ vals.push(a[metricKey]); if(vals.length>7) vals.shift(); ma.push([a.date, vals.reduce((s,v)=>s+v,0)/vals.length]); });
+        series.push({ name: name+' 7MA', type:'line', showSymbol:false, smooth:true, data: ma, lineStyle:{width:1, type:'dashed', color: colorMap[name]}, emphasis:{disabled:true}, tooltip:{show:false} });
+      }
     });
     return series;
   }
