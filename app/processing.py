@@ -526,6 +526,7 @@ def get_workout_calendar():
             """
             SELECT 
                 date(substr(date,1,10)) as workout_date,
+                MIN(workout_name) as workout_name,
                 COUNT(DISTINCT exercise) as exercises_performed,
                 SUM(COALESCE(weight,0) * COALESCE(reps,0)) as total_volume,
                 COUNT(*) as total_sets,
@@ -542,10 +543,11 @@ def get_workout_calendar():
             calendar_data.append(
                 {
                     "date": row[0],
-                    "exercises_performed": row[1],
-                    "total_volume": round(row[2], 1),
-                    "total_sets": row[3],
-                    "duration_minutes": round(row[4], 1) if row[4] else 0,
+                    "workout_name": row[1] or "Workout",
+                    "exercises_performed": row[2],
+                    "total_volume": round(row[3], 1),
+                    "total_sets": row[4],
+                    "duration_minutes": round(row[5], 1) if row[5] else 0,
                 }
             )
 

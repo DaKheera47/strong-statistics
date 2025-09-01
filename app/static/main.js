@@ -367,30 +367,65 @@ function populateRecentWorkouts(calendarData){
   const recentContainer = document.getElementById('recentWorkouts');
   if(!recentContainer) return; // widget not present
   const countEl = document.getElementById('recentWorkoutsCount');
-  recentContainer.innerHTML = '';
-  const recent = calendarData.slice().reverse().slice(-20).reverse(); // keep last 20 before filtering to 12 if needed
-  // Show up to 12 most recent (non-zero sets) workouts
-  const filtered = recent.filter(d=> d.total_sets>0).slice(-12).reverse().reverse();
-  filtered.forEach(d => {
-    const card = document.createElement('button');
-    card.className = 'w-full text-left px-4 py-3 rounded-lg bg-zinc-800/40 hover:bg-zinc-800 transition-colors flex items-center justify-between';
-    const left = document.createElement('div');
-    left.innerHTML = `<div class="text-sm font-medium text-zinc-100">${d.date}</div><div class="text-xs text-zinc-400">${d.exercises_performed} exercises • ${Math.round(d.total_volume)} kg</div>`;
-    const right = document.createElement('div');
-    right.className = 'text-xs text-zinc-400';
-    right.textContent = 'View';
-    card.appendChild(left);
-    card.appendChild(right);
-    card.addEventListener('click', () => {
-      if (window.location.pathname !== `/workout/${d.date}`) {
-        window.history.pushState(null, '', `/workout/${d.date}`);
-      }
-      showWorkoutDetail(d.date);
-    });
-    recentContainer.appendChild(card);
-  });
+  const recent = calendarData.slice().reverse();
+  const filtered = recent.filter(d=> d.total_sets>0).slice(0,50); // latest 50
   if(countEl) countEl.textContent = filtered.length ? `${filtered.length} shown` : 'None';
+  // Build table
+  let html = `
+    <div class="overflow-x-auto">
+    <table class="w-full text-sm border-separate border-spacing-0">
+      <thead class="text-[11px] uppercase tracking-wide text-zinc-400 bg-zinc-800/60">
+        <tr>
+          <th class="py-2 pl-3 pr-2 text-left font-medium">Date</th>
+          <th class="py-2 px-2 text-left font-medium">Workout</th>
+          <th class="py-2 px-2 text-right font-medium">Exercises</th>
+          <th class="py-2 px-2 text-right font-medium">Sets</th>
+          <th class="py-2 px-2 text-right font-medium">Volume</th>
+          <th class="py-2 px-2 text-right font-medium">Duration</th>
+        </tr>
+      </thead>
+      <tbody>
+  `;
+  filtered.forEach(d=>{
+  const volStr = (d.total_volume != null ? Math.round(d.total_volume).toLocaleString() + ' kg' : '-');
+  const durStr = d.duration_minutes ? (d.duration_minutes >= 60 ? (Math.floor(d.duration_minutes/60)+'h '+Math.round(d.duration_minutes%60)+'m') : Math.round(d.duration_minutes)+'m') : '-';
+    html += `
+      <tr class="group cursor-pointer transition-colors odd:bg-zinc-800/20 hover:bg-zinc-800/60" data-date="${d.date}">
+        <td class="py-2 pl-3 pr-2 font-medium text-zinc-200 whitespace-nowrap">${d.date}</td>
+        <td class="py-2 px-2 text-indigo-300 group-hover:underline whitespace-nowrap">${(d.workout_name||'Workout')}</td>
+        <td class="py-2 px-2 text-right text-zinc-300">${d.exercises_performed}</td>
+        <td class="py-2 px-2 text-right text-zinc-300">${d.total_sets}</td>
+    <td class="py-2 px-2 text-right text-zinc-300">${volStr}</td>
+    <td class="py-2 px-2 text-right text-zinc-300">${durStr}</td>
+      </tr>`;
+  });
+  html += `</tbody></table></div>`;
+  recentContainer.innerHTML = html;
+  // Row click handlers
+  recentContainer.querySelectorAll('tr[data-date]').forEach(row=>{
+    row.addEventListener('click', ()=>{
+      const date = row.getAttribute('data-date');
+      if (window.location.pathname !== `/workout/${date}`) {
+        window.history.pushState(null, '', `/workout/${date}`);
+      }
+      showWorkoutDetail(date);
+    });
+  });
 }
+
+// Refresh button for recent workouts
+document.addEventListener('DOMContentLoaded', ()=>{
+  const btn = document.getElementById('recentRefreshBtn');
+  if(btn && !btn.dataset._bound){
+    btn.dataset._bound='1';
+    btn.addEventListener('click', async ()=>{
+      try { const data = await fetchJSON('/api/calendar'); populateRecentWorkouts(data); } catch(e){ console.error('recent refresh failed', e); }
+    });
+  }
+});
+
+// Expose for other script files (plotly loader)
+window.populateRecentWorkouts = window.populateRecentWorkouts || populateRecentWorkouts;
 
 async function loadMuscleGroupBalance() {
   try {

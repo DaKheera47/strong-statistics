@@ -114,11 +114,11 @@
                         </div>
                     {% elif cell.widget == 'recent_workouts' %}
                         <div class="card col-span-12 md:col-span-{{w}} bg-zinc-900 rounded-2xl ring-1 ring-zinc-800 shadow-sm p-5 flex flex-col">
-                            <div class="flex items-center justify-between mb-2">
-                                <h2 class="text-xl font-semibold">Recent Workouts</h2>
-                                <span class="text-xs text-zinc-500" id="recentWorkoutsCount"></span>
+                            <div class="flex items-center justify-between mb-4">
+                                <h2 class="text-xl font-semibold flex items-center gap-2">Recent Workouts <span class="text-xs font-normal text-zinc-500" id="recentWorkoutsCount"></span></h2>
+                                <button id="recentRefreshBtn" class="text-xs px-2 py-1 rounded bg-zinc-800 hover:bg-zinc-700">Refresh</button>
                             </div>
-                            <div id="recentWorkouts" class="grid gap-2 grid-cols-1 md:grid-cols-2"></div>
+                            <div id="recentWorkouts" class="overflow-x-auto -mx-5 px-5"></div>
                         </div>
                     {% endif %}
                 {% endfor %}
@@ -194,10 +194,11 @@
             </div>
         </div>
 
-                <script src="/static/main.core.js"></script>
-                <script src="/static/main.charts.js"></script>
-                <script src="/static/main.js"></script>
-                <script src="/static/main.plotly.js"></script>
+                {% set v = (layout_config.rows|length) %}
+                <script src="/static/main.core.js?v={{v}}"></script>
+                <script src="/static/main.charts.js?v={{v}}"></script>
+                <script src="/static/main.js?v={{v}}"></script>
+                <script src="/static/main.plotly.js?v={{v}}"></script>
                         <script>
                                 // Wait until all modular scripts loaded, then bootstrap dashboard and handle shareable URL
                                 document.addEventListener('DOMContentLoaded', () => {

@@ -73,19 +73,9 @@ async function loadTrainingCalendar() {
       }
     });
 
-    // Populate recent workouts (most recent first)
-    const recentContainer = document.getElementById('recentWorkouts');
-    if (recentContainer) {
-      recentContainer.innerHTML='';
-      const recent = data.slice(-12).reverse();
-      recent.forEach(d=>{
-        const card=document.createElement('button');
-        card.type='button';
-        card.className='w-full text-left px-4 py-3 rounded-lg bg-zinc-800/40 hover:bg-zinc-800 transition-colors flex items-center justify-between';
-        card.innerHTML=`<div><div class=\"text-sm font-medium text-zinc-100\">${d.date}</div><div class=\"text-xs text-zinc-400\">${d.exercises_performed} exercises • ${Math.round(d.total_volume)} kg</div></div><div class=\"text-xs text-indigo-400 font-medium\">View ▸</div>`;
-        card.addEventListener('click', ()=> openWorkout(d.date));
-        recentContainer.appendChild(card);
-      });
+    // Populate recent workouts table (new view)
+    if (typeof window.populateRecentWorkouts === 'function') {
+      try { window.populateRecentWorkouts(data); } catch(e){ console.warn('populateRecentWorkouts failed', e); }
     }
   } catch (error) { console.error('Error loading training calendar:', error); }
 }
