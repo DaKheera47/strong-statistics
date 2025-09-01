@@ -147,10 +147,10 @@ function renderWeeklyPPL(){
   const chart=getChart('weeklyPPLChart');
   // Legend orientation: horizontal for absolute, vertical (right side) for percent to better use space
   const legendOpt = mode==='absolute'
-    ? {top:0, left:0, orient:'horizontal', textStyle:{color:'#d4d4d8'}}
-    : {top:'middle', right:0, orient:'vertical', textStyle:{color:'#d4d4d8'}, itemGap:8};
+    ? {top:0, left:0, orient:'horizontal', textStyle:{color:'#d4d4d8'}, padding:0}
+    : {top:'middle', right:0, orient:'vertical', textStyle:{color:'#d4d4d8'}, itemGap:8, padding:0};
   chart.setOption({
-    grid:{left:50,right: mode==='absolute'? 16:70, top:28,bottom:40},
+    grid:{left:50,right: mode==='absolute'? 16:90, top: mode==='absolute'? 70:28,bottom:40}, // generous first pass for absolute mode
     legend: legendOpt,
     tooltip:{trigger:'axis', axisPointer:{type:'shadow'}},
     xAxis:{type:'category', data:weeks, axisLine:{lineStyle:{color:'#3f3f46'}}, axisLabel:{color:'#a1a1aa'}},
@@ -161,6 +161,23 @@ function renderWeeklyPPL(){
       {name:'Legs', type:'bar', stack:'ppl', data:legsD, itemStyle:{color:COLORS.quaternary}, emphasis:{focus:'none'}}
     ]
   }, true); // notMerge=true ensures legend layout updates when toggling
+  setTimeout(()=>{
+    try {
+      const dom = chart.getDom();
+      const legend = dom.querySelector('.echarts-legend');
+      if(!legend) return;
+      if(mode==='absolute'){
+        const h = legend.getBoundingClientRect().height;
+        const newTop = Math.min(Math.max(h + 24, 60), 140);
+        const opt = chart.getOption(); if(opt.grid[0].top !== newTop){ chart.setOption({grid:{left:50,right:16,top:newTop,bottom:40}}); chart.resize(); }
+      } else {
+        // percent mode: ensure right padding fits legend width
+        const w = legend.getBoundingClientRect().width;
+        const neededRight = Math.min(Math.max(w + 16, 70), 160);
+        const opt = chart.getOption(); if(opt.grid[0].right !== neededRight){ chart.setOption({grid:{left:50,right:neededRight,top:28,bottom:40}}); chart.resize(); }
+      }
+    } catch(e){ console.warn('weeklyPPL legend adjust fail', e); }
+  }, 50);
 }
 
 function renderMuscleBalance(){
@@ -177,7 +194,15 @@ function renderRepDistribution(){
     const b1 = state.data.rep_bins_weekly.map(r=> r.bin_1_5);
     const b2 = state.data.rep_bins_weekly.map(r=> r.bin_6_12);
     const b3 = state.data.rep_bins_weekly.map(r=> r.bin_13_20);
-    getChart('repDistributionChart').setOption({ grid:{left:55,right:16,top:28,bottom:40}, legend:{top:0,textStyle:{color:'#d4d4d8'}}, tooltip:{trigger:'axis', axisPointer:{type:'shadow'}}, xAxis:{type:'category', data:weeks, axisLabel:{color:'#a1a1aa'}, axisLine:{lineStyle:{color:'#3f3f46'}}}, yAxis:{type:'value', name:'Volume (kg)', nameTextStyle:{color:'#a1a1aa'}, axisLabel:{color:'#a1a1aa'}, splitLine:{lineStyle:{color:'#27272a'}}}, series:[{name:'1–5', type:'bar', stack:'reps', data:b1, itemStyle:{color:COLORS.secondary}, emphasis:{focus:'none'}},{name:'6–12', type:'bar', stack:'reps', data:b2, itemStyle:{color:COLORS.primary}, emphasis:{focus:'none'}},{name:'13–20', type:'bar', stack:'reps', data:b3, itemStyle:{color:COLORS.tertiary}, emphasis:{focus:'none'}}] });
+    const chart = getChart('repDistributionChart');
+    chart.setOption({ grid:{left:55,right:16,top:70,bottom:40}, legend:{top:0,textStyle:{color:'#d4d4d8'}, padding:0}, tooltip:{trigger:'axis', axisPointer:{type:'shadow'}}, xAxis:{type:'category', data:weeks, axisLabel:{color:'#a1a1aa'}, axisLine:{lineStyle:{color:'#3f3f46'}}}, yAxis:{type:'value', name:'Volume (kg)', nameTextStyle:{color:'#a1a1aa'}, axisLabel:{color:'#a1a1aa'}, splitLine:{lineStyle:{color:'#27272a'}}}, series:[{name:'1–5', type:'bar', stack:'reps', data:b1, itemStyle:{color:COLORS.secondary}, emphasis:{focus:'none'}},{name:'6–12', type:'bar', stack:'reps', data:b2, itemStyle:{color:COLORS.primary}, emphasis:{focus:'none'}},{name:'13–20', type:'bar', stack:'reps', data:b3, itemStyle:{color:COLORS.tertiary}, emphasis:{focus:'none'}}] });
+    setTimeout(()=>{
+      try {
+        const legend = chart.getDom().querySelector('.echarts-legend');
+        if(!legend) return; const h=legend.getBoundingClientRect().height; const newTop = Math.min(Math.max(h+24,60),140);
+        const opt=chart.getOption(); if(opt.grid[0].top!==newTop){ chart.setOption({grid:{left:55,right:16,top:newTop,bottom:40}}); chart.resize(); }
+      } catch(e){ console.warn('repDistribution legend adjust failed', e); }
+    },50);
   } else {
     const t = state.data.rep_bins_total; const total=t.total||1; const bars=[{name:'1–5', val:t.bin_1_5},{name:'6–12', val:t.bin_6_12},{name:'13–20', val:t.bin_13_20}];
     getChart('repDistributionChart').setOption({ grid:{left:110,right:30,top:10,bottom:25}, xAxis:{type:'value', axisLabel:{color:'#a1a1aa'}, axisLine:{lineStyle:{color:'#3f3f46'}}, splitLine:{lineStyle:{color:'#27272a'}}}, yAxis:{type:'category', data:bars.map(b=> b.name), axisLabel:{color:'#d4d4d8'}}, tooltip:{trigger:'item', formatter: p=>{ const v=bars[p.dataIndex].val; return `${p.name}: ${fmtInt(v)} kg (${(v/total*100).toFixed(1)}%)`; }}, series:[{type:'bar', data:bars.map(b=> b.val), itemStyle:{color:(p)=> [COLORS.secondary,COLORS.primary,COLORS.tertiary][p.dataIndex]}, emphasis:{focus:'none'}, barWidth:'45%', label:{show:true, position:'right', formatter: p=> (bars[p.dataIndex].val/total*100).toFixed(1)+'%', color:'#a1a1aa'}}] });
@@ -213,7 +238,22 @@ function renderExerciseVolume(){
     return { name: ex.split('(')[0].trim(), type:'bar', stack: mode==='stacked'? 'vol': undefined, data, itemStyle:{color: SERIES_COLORS[i%SERIES_COLORS.length]}, emphasis:{focus:'none'} };
   });
   const chart=getChart('exerciseVolumeChart');
-  chart.setOption({ grid:{left:50,right:12,top:30,bottom:55}, legend:{top:0,textStyle:{color:'#d4d4d8'}}, tooltip:{trigger:'axis', axisPointer:{type:'shadow'}}, xAxis:{type:'category', data:dates, axisLabel:{color:'#a1a1aa', formatter:v=> v.slice(5)}, axisLine:{lineStyle:{color:'#3f3f46'}}}, yAxis:{type:'value', name:'Volume (kg)', nameTextStyle:{color:'#a1a1aa'}, axisLabel:{color:'#a1a1aa'}, splitLine:{lineStyle:{color:'#27272a'}}}, series });
+  // First pass: render with generous top padding; then measure legend height and adjust grid
+  chart.setOption({ grid:{left:50,right:12,top:84,bottom:55}, legend:{top:0,textStyle:{color:'#d4d4d8'}, padding:0}, tooltip:{trigger:'axis', axisPointer:{type:'shadow'}}, xAxis:{type:'category', data:dates, axisLabel:{color:'#a1a1aa', formatter:v=> v.slice(5)}, axisLine:{lineStyle:{color:'#3f3f46'}}}, yAxis:{type:'value', name:'Volume (kg)', nameTextStyle:{color:'#a1a1aa'}, axisLabel:{color:'#a1a1aa'}, splitLine:{lineStyle:{color:'#27272a'}}}, series });
+  setTimeout(()=>{ // allow DOM layout
+    try {
+      const legendEl = chart.getDom().querySelector('.echarts-legend');
+      if(legendEl){
+        const h = legendEl.getBoundingClientRect().height; // actual legend height
+  const newTop = Math.min(Math.max(h + 24, 60), 140); // extra spacing below legend
+        const opt = chart.getOption();
+        if(opt.grid[0].top !== newTop){
+          chart.setOption({grid:{left:50,right:12,top:newTop,bottom:55}});
+          chart.resize();
+        }
+      }
+    } catch(e){ console.warn('legend measure failed', e); }
+  }, 50);
 }
 
 function renderAll(){
