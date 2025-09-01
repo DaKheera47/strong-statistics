@@ -158,6 +158,8 @@ function renderAll(){
   renderSparklines();
   renderProgressiveOverload();
   renderVolumeTrend();
+  // NEW: exercise volume chart (stacked/grouped)
+  try { if(typeof renderExerciseVolume === 'function') renderExerciseVolume(); } catch(e){ console.warn('renderExerciseVolume failed', e); }
   renderWeeklyPPL();
   renderMuscleBalance();
   renderRepDistribution();
@@ -166,3 +168,16 @@ function renderAll(){
 // Expose
 window.getChart = getChart;
 window.renderAllCharts = renderAll;
+
+// Attach volume mode toggle handler (was missing so chart never appeared)
+document.addEventListener('DOMContentLoaded', ()=>{
+  const btn = document.getElementById('volumeModeToggle');
+  if(btn && !btn.dataset._bound){
+    btn.dataset._bound = '1';
+    btn.addEventListener('click', function(){
+      this.dataset.mode = this.dataset.mode === 'stacked' ? 'grouped' : 'stacked';
+      this.textContent = this.dataset.mode === 'stacked' ? 'Stacked' : 'Grouped';
+      if(typeof renderExerciseVolume === 'function') renderExerciseVolume();
+    });
+  }
+});

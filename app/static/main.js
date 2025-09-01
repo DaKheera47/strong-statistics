@@ -285,6 +285,8 @@ function renderAll(){
   renderSparklines();
   renderProgressiveOverload();
   renderVolumeTrend();
+  // Added: exercise volume chart (stacked/grouped)
+  try { if(typeof renderExerciseVolume === 'function') renderExerciseVolume(); } catch(e){ console.warn('renderExerciseVolume failed', e); }
   renderWeeklyPPL();
   renderMuscleBalance();
   renderRepDistribution();
