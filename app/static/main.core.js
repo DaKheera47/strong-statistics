@@ -62,7 +62,7 @@ async function fetchDashboard(){
 async function refreshData(){
   try {
   console.log('[dashboard] refreshData start', {exercises:state.exercises});
-  const loadingTargets=['sparklineContainer','progressiveOverloadChart','volumeTrendChart','exerciseVolumeChart','weeklyPPLChart','muscleBalanceChart','repDistributionChart','recoveryChart','calendarChart'];
+  const loadingTargets=['sparklineContainer','volumeSparklineContainer','progressiveOverloadChart','volumeTrendChart','exerciseVolumeChart','weeklyPPLChart','muscleBalanceChart','repDistributionChart','recoveryChart','calendarChart'];
     loadingTargets.forEach(id=>{ const el=document.getElementById(id); if(el) el.innerHTML='<div class="flex items-center justify-center h-full text-sm text-zinc-500 animate-pulse">Loading...</div>'; });
     const data = await fetchDashboard();
   window.__dashboardDebug = { phase:'afterFetch', fetchedAt: Date.now(), filters: data?.filters, params:{start:state.start,end:state.end,exercises:[...state.exercises]}, keys: data? Object.keys(data):[] };
@@ -88,7 +88,7 @@ async function refreshData(){
   } catch(e){
     console.error(e);
     const msg='<div class="flex items-center justify-center h-full text-sm text-rose-400">Error loading data</div>';
-    ['sparklineContainer','progressiveOverloadChart','volumeTrendChart','weeklyPPLChart','muscleBalanceChart','repDistributionChart','recoveryChart','calendarChart'].forEach(id=>{ const el=document.getElementById(id); if(el) el.innerHTML=msg; });
+  ['sparklineContainer','volumeSparklineContainer','progressiveOverloadChart','volumeTrendChart','weeklyPPLChart','muscleBalanceChart','repDistributionChart','recoveryChart','calendarChart'].forEach(id=>{ const el=document.getElementById(id); if(el) el.innerHTML=msg; });
   window.__dashboardDebug = { phase:'error', error: e?.message || String(e) };
   }
 }

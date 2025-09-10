@@ -42,6 +42,46 @@ function renderSparklines(){
     });
 }
 
+// Daily Volume Sparklines (running PR style for per-day volume per exercise)
+function renderVolumeSparklines(){
+  const container=document.getElementById('volumeSparklineContainer');
+  if(!container) return; // section may be omitted by layout
+  const volArr = state?.data?.exercises_daily_volume;
+  if(!Array.isArray(volArr) || !volArr.length){
+    container.innerHTML='<div class="text-sm text-zinc-500 italic">No volume data</div>';
+    return;
+  }
+  console.log('[dashboard] renderVolumeSparklines count', volArr.length);
+  container.innerHTML='';
+  // group by exercise
+  const byEx={}; volArr.forEach(r=>{ (byEx[r.exercise] ||= []).push(r); });
+  Object.entries(byEx).forEach(([ex, arr], idx)=>{
+    arr.sort((a,b)=> a.date.localeCompare(b.date));
+    // compute running volume PRs
+    let best=-1; arr.forEach(a=>{ if(a.volume>best){ a._is_vpr=true; best=a.volume; } else a._is_vpr=false; });
+    const last=arr[arr.length-1];
+    const card=document.createElement('div');
+    card.className='bg-zinc-900 rounded-2xl ring-1 ring-zinc-800 shadow-sm p-4 flex flex-col';
+    card.innerHTML=`<div class='flex items-center justify-between mb-2'><span class='text-sm font-medium text-zinc-300 truncate'>${ex}</span><span class='text-xs text-zinc-500'>${fmtInt(Math.round(last.volume))}</span></div><div class='flex-1' id='vspark_${idx}' style='height:60px;'></div>`;
+    container.appendChild(card);
+    const chart=echarts.init(card.querySelector('#vspark_'+idx));
+    const prPoints = arr.filter(a=> a._is_vpr).map(a=> [a.date, a.volume]);
+    const allPoints = arr.map(a=> [a.date,a.volume]);
+    const showAllSymbols = arr.length <= 40; // keep light for dense series
+    chart.setOption({
+      animation:false,
+      grid:{left:2,right:2,top:0,bottom:0},
+      xAxis:{type:'time',show:false},
+      yAxis:{type:'value',show:false},
+      tooltip:{trigger:'axis', formatter: params=>{ const p=params[0]; return `${ex}<br>${p.axisValueLabel}: ${fmtInt(Math.round(p.data[1]))} kg`; }},
+      series:[
+        {type:'line', data: allPoints, showSymbol: showAllSymbols, symbolSize:4, smooth:true, lineStyle:{width:1.2,color:SERIES_COLORS[idx%SERIES_COLORS.length]}, areaStyle:{color:SERIES_COLORS[idx%SERIES_COLORS.length]+'33'}},
+        {type:'scatter', data: prPoints, symbolSize:6, itemStyle:{color:'#34d399'}}
+      ]
+    });
+  });
+}
+
 function renderProgressiveOverload(){
   if(!state.data || !state.data.exercises_daily_max || !state.data.exercises_daily_max.length){ const el=document.getElementById('progressiveOverloadChart'); if(el) el.innerHTML='<div class="flex items-center justify-center h-full text-sm text-zinc-500 italic">No data</div>'; return; }
   const metricKey= 'max_weight';
@@ -258,6 +298,7 @@ function renderExerciseVolume(){
 
 function renderAll(){
   renderSparklines();
+  renderVolumeSparklines();
   renderProgressiveOverload();
   renderVolumeTrend();
   renderExerciseVolume();
