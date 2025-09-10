@@ -31,6 +31,24 @@
                 width: 100%;
             }
         </style>
+        <style>
+            .floating-hamster {
+                position: fixed;
+                right: 24px;
+                bottom: 24px;
+                z-index: 1000;
+                width: 80px;
+                height: auto;
+                pointer-events: auto;
+                opacity: 0.92;
+                transition: transform 0.2s;
+            }
+            .floating-hamster:hover {
+                transform: scale(1.08) rotate(-8deg);
+                opacity: 1;
+                pointer-events: auto;
+            }
+        </style>
     </head>
     <body class="text-zinc-200 antialiased">
         <script id="workoutDateData" type="application/json">{{ workout_date|tojson if workout_date is defined else 'null' }}</script>
@@ -52,6 +70,17 @@
                 </h2>
                 <div
                     id="sparklineContainer"
+                    class="grid gap-4 md:grid-cols-3 lg:grid-cols-5 auto-rows-fr"
+                ></div>
+            </section>
+
+            <!-- Volume Sparklines -->
+            <section>
+                <h2 class="text-xl font-semibold mb-3">
+                    Daily Volume Sparklines
+                </h2>
+                <div
+                    id="volumeSparklineContainer"
                     class="grid gap-4 md:grid-cols-3 lg:grid-cols-5 auto-rows-fr"
                 ></div>
             </section>
@@ -213,5 +242,6 @@
                                     }
                                 });
                         </script>
+        <img src="/static/images/hamster.gif" alt="Hamster" class="floating-hamster" />
     </body>
 </html>
