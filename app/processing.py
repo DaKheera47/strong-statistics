@@ -141,10 +141,25 @@ def count_sets() -> int:
 
 
 def process_csv_to_db(csv_path: Path) -> int:
+    import pandas as pd  # if not already imported
+
     df = pd.read_csv(csv_path)
+
+    # Convert "Duration" like "35m" or "1h 3m" -> integer minutes
+    if "Duration" in df.columns:
+        s = df["Duration"].astype("string").str.lower().str.strip()
+        hrs = pd.to_numeric(s.str.extract(r"(\d+)\s*h", expand=False), errors="coerce")
+        mins = pd.to_numeric(s.str.extract(r"(\d+)\s*m", expand=False), errors="coerce")
+
+        total_min = (hrs.fillna(0) * 60 + mins.fillna(0)).astype("Int64")
+        # if neither h nor m was present, keep it null
+        total_min[hrs.isna() & mins.isna()] = pd.NA
+
+        df["Duration"] = total_min
+
     normalized = normalize_df(df)
     before = count_sets()
-    upsert_sets(normalized)
+    upsert_sets(normalized)  # your existing upsert; no extra dedupe added
     after = count_sets()
     inserted = after - before
     set_meta("last_ingested_at", datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"))
