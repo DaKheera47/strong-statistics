@@ -2,7 +2,6 @@ export const runtime = "nodejs";
 
 import { NextResponse } from "next/server";
 import { DatabaseSync } from "node:sqlite";
-import path from "path";
 
 export interface Exercise {
   name: string;
@@ -10,7 +9,7 @@ export interface Exercise {
 
 export async function GET() {
   try {
-    const dbPath = "/data/strong.db"
+    const dbPath = process.env.DB_FILE || "/data/strong.db";
     const db = new DatabaseSync(dbPath);
 
     const query = `

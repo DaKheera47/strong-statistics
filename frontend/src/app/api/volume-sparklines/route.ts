@@ -2,7 +2,6 @@ export const runtime = "nodejs"; // ensure not running on Edge
 
 import { NextResponse } from "next/server";
 import { DatabaseSync } from "node:sqlite";
-import path from "path";
 
 export interface VolumeSparklineData {
   exercise: string;
@@ -13,7 +12,7 @@ export interface VolumeSparklineData {
 
 export async function GET() {
   try {
-    const dbPath = "/data/strong.db"
+    const dbPath = process.env.DB_FILE || "/data/strong.db";
     const db = new DatabaseSync(dbPath);
 
     const query = `

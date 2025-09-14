@@ -11,7 +11,7 @@ export interface ExerciseWithLastActivity {
 
 export async function GET() {
   try {
-    const dbPath = "/data/strong.db"
+    const dbPath = process.env.DB_FILE || "/data/strong.db"
     const db = new DatabaseSync(dbPath);
 
     // Get exercises with their most recent activity date

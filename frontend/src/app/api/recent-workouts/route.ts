@@ -62,7 +62,7 @@ export async function GET(request: Request) {
     const workoutDate = searchParams.get("date");
     const workoutName = searchParams.get("workout_name");
 
-    const dbPath = "/data/strong.db"
+    const dbPath = process.env.DB_FILE || "/data/strong.db"
     const db = new DatabaseSync(dbPath);
 
     if (workoutDate && workoutName) {

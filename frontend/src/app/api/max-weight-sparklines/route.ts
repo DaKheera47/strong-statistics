@@ -14,7 +14,7 @@ export interface MaxWeightSparklineData {
 
 export async function GET() {
   try {
-    const dbPath = "/data/strong.db"
+    const dbPath = process.env.DB_FILE || "/data/strong.db"
     const db = new DatabaseSync(dbPath);
 
     // We keep reps as the actual reps count even for distance-based exercises like carries,

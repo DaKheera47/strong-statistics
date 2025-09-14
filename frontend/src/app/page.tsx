@@ -7,6 +7,8 @@ import ProgressiveOverloadWidget from "@/components/ProgressiveOverloadWidget";
 import SessionVolumeTrend from "@/components/SessionVolumeTrend";
 import RecentWorkouts from "@/components/RecentWorkouts";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
 import { Accordion, AccordionItem } from "@/components/ui/accordion";
 
 export default function Home() {
@@ -17,13 +19,16 @@ export default function Home() {
           <div className='flex justify-between items-start mb-4'>
             <div>
               <h1 className='text-3xl font-bold text-foreground mb-2'>
-                Lifting Nova
+                Strong Statistics
               </h1>
               <p className='text-muted-foreground'>
                 Your training analytics dashboard
               </p>
             </div>
             <div className='flex items-center gap-4'>
+              <Link href='/workouts'>
+                <Button variant='outline'>All Workouts</Button>
+              </Link>
               <ThemeToggle />
             </div>
           </div>
