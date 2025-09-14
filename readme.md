@@ -4,6 +4,8 @@ Self‑hosted strength‑training analytics for **Strong** app exports. Import y
 
 ![Dashboard overview](screenshots/full%20page%20desktop.png)
 
+**🎯 See it in action:** [lifting.dakheera47.com](https://lifting.dakheera47.com) (forgive the low numbers, I just started! 😅)
+
 ---
 
 ## 🚀 TL;DR (self‑host)
