@@ -1,22 +1,50 @@
 services:
-  strong-statistics:
-    build: .
-    container_name: strong-statistics
-    restart: unless-stopped
-    ports:
-      - "8069:8069"
-    env_file:
-      - .env
-    environment:
-      # Fallbacks if not in .env
-      - HOST=0.0.0.0
-      - PORT=8069
-    volumes:
-      - ./data:/app/data
-      - ./logs:/app/logs
-      - ./dashboard_layout.yaml:/app/dashboard_layout.yaml:ro
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    env_file: .env
+    expose:
+      - "8000"
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8069/health"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/health"]
+      interval: 15s
+      timeout: 3s
+      retries: 10
+    volumes:
+      # Bind mount host ./data directory so container sees live DB & uploads
+      - ./data:/app/data
+      # Also mount at /data so path matches host expectation (/data)
+      - ./data:/data
+      - strong_logs:/app/logs
+
+  web:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.web
+    environment:
+      DB_FILE: /data/strong.db
+      NEXT_PUBLIC_API_URL: http://localhost:8069
+    expose:
+      - "3000"
+    depends_on:
+      api:
+        condition: service_healthy
+    volumes:
+      # Read-only access to same host data dir (only needs to read DB)
+      - ./data:/data:ro
+
+  proxy:
+    image: caddy:2
+    depends_on:
+      api:
+        condition: service_healthy
+      web:
+        condition: service_started
+    ports:
+      - "8069:80" # single host port
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+
+volumes:
+  strong_logs:

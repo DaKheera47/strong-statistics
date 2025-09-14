@@ -1,0 +1,56 @@
+# ---------- deps (install with pnpm via Corepack) ----------
+FROM node:22-alpine AS deps
+WORKDIR /app
+
+# enable pnpm via Corepack (bundled with Node 22)
+RUN corepack enable
+
+# copy lockfile + package.json first for better caching
+COPY pnpm-lock.yaml package.json ./
+# if you use other lockfiles, copy them instead (but pick one lockfile)
+
+# install all deps incl. dev deps for build (no audits/fund noise)
+RUN pnpm install --prefer-offline --frozen-lockfile --prod=false
+
+# ---------- builder ----------
+FROM node:22-alpine AS builder
+WORKDIR /app
+ENV NEXT_TELEMETRY_DISABLED=1 \
+    NODE_OPTIONS="--experimental-sqlite"
+
+RUN corepack enable
+# (optional but safer: use your pinned pnpm version)
+# RUN corepack prepare "$(node -p 'require(\"./package.json\").packageManager')" --activate
+
+# copy source FIRST
+COPY . .
+
+# now bring node_modules from deps so it wins
+COPY --from=deps /app/node_modules ./node_modules
+
+RUN pnpm run build
+
+# ---------- runner ----------
+FROM node:22-alpine AS runner
+WORKDIR /app
+ENV NODE_ENV=production \
+    NEXT_TELEMETRY_DISABLED=1 \
+    PORT=3000 \
+    NODE_OPTIONS="--experimental-sqlite"
+
+RUN corepack enable
+# optional non-root user
+RUN addgroup -S nextjs && adduser -S nextjs -G nextjs
+USER nextjs
+
+# copy runtime artifacts
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/public ./public
+# keep node_modules from build (works fine with pnpm’s symlinks)
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package.json ./package.json
+COPY --from=builder /app/pnpm-lock.yaml ./pnpm-lock.yaml
+
+EXPOSE 3000
+# your package.json has "start": "next start -p $PORT"
+CMD ["pnpm", "start"]

@@ -6,50 +6,18 @@ import faulthandler
 import logging
 import os
 import sys
-import threading
-import time
-import traceback
 from datetime import datetime
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
-import yaml
 from dotenv import load_dotenv
 from fastapi import FastAPI, File, HTTPException, Query, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, JSONResponse
-from fastapi.staticfiles import StaticFiles
+from fastapi.responses import JSONResponse
 from starlette.requests import Request
-from starlette.templating import Jinja2Templates
 
 from .db import get_meta, init_db
-from .processing import (
-    build_dashboard_data,
-    exercise_analysis,
-    get_best_sets_analysis,
-    get_body_measurements,
-    get_exercise_detail,
-    get_exercise_frequency,
-    get_exercise_records,
-    get_muscle_group_balance,
-    get_plateau_detection,
-    get_progressive_overload_rate,
-    get_recovery_tracking,
-    get_rep_range_distribution,
-    get_strength_ratios,
-    get_training_streak,
-    get_weekly_volume_heatmap,
-    get_workout_calendar,
-    get_workout_detail,
-    get_workout_duration_trends,
-    list_exercises,
-    personal_records_timeline,
-    process_csv_to_db,
-    progressive_overload_data,
-    strength_balance,
-    training_consistency,
-    volume_progression,
-)
+from .processing import process_csv_to_db
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = BASE_DIR / "data"

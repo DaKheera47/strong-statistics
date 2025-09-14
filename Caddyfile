@@ -1,0 +1,17 @@
+:80 {
+	# Send /ingest* to FastAPI (keep the path)
+	@ingest path /ingest*
+	handle @ingest {
+		reverse_proxy api:8000
+	}
+
+	# Health also goes to FastAPI
+	handle /health {
+		reverse_proxy api:8000
+	}
+
+	# Everything else → Next.js
+	handle {
+		reverse_proxy web:3000
+	}
+}

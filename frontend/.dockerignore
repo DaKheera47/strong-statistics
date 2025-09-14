@@ -1,0 +1,10 @@
+# frontend/.dockerignore
+node_modules
+.next
+.git
+.gitignore
+Dockerfile
+Dockerfile.web
+*.log
+.env
+.env.*
