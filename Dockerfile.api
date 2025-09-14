@@ -13,7 +13,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # app
 COPY app ./app
-COPY icon.svg ./icon.svg
 COPY .env.example .env.example
 
 # dirs exist even before volume is mounted
