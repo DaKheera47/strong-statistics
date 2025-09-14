@@ -6,7 +6,7 @@ import faulthandler
 import logging
 import os
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
@@ -17,7 +17,7 @@ from fastapi.responses import JSONResponse
 from starlette.requests import Request
 
 from .db import get_meta, init_db
-from .processing import process_csv_to_db
+from .config import get_enabled_import_type, detect_format_mismatch, get_processor_function, validate_file_constraints
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = BASE_DIR / "data"
@@ -153,37 +153,64 @@ async def ingest(
     if size_mb > MAX_UPLOAD_MB:
         raise HTTPException(status_code=400, detail="file too large")
 
-    # Basic header validation
-    header_line = raw.splitlines()[0].decode(errors="ignore") if raw else ""
-    if not header_line.startswith("Date,Workout Name,Duration,Exercise Name"):
-        raise HTTPException(status_code=400, detail="invalid csv header")
+    # Validate file constraints (size, content type)
+    try:
+        validate_file_constraints(raw, content_type)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
+    # Get configured import type
+    import_type = get_enabled_import_type()
+    if not import_type:
+        raise HTTPException(
+            status_code=500,
+            detail="No import type is enabled in configuration"
+        )
+
+    # Check for format mismatch and provide helpful error message
+    header_line = raw.splitlines()[0].decode(errors="ignore") if raw else ""
+    detected_format = detect_format_mismatch(header_line, import_type)
+
+    if detected_format:
+        raise HTTPException(
+            status_code=400,
+            detail=f"CSV header looks like {detected_format} format, but configuration is set to {import_type}. "
+                   f"Please check your config.yml file and enable the correct import type."
+        )
+
+    # Optional: Validate that the header actually matches the expected format
+    # This provides better error messages for completely unknown formats
+
+    # Store file with import type prefix
     ts = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
-    stored_name = f"strong_{ts}.csv"
+    stored_name = f"{import_type}_{ts}.csv"
     dest = UPLOAD_DIR / stored_name
     dest.write_bytes(raw)
 
+    # Route to appropriate processor based on import type
     try:
-        inserted = process_csv_to_db(dest)
+        processor_function = get_processor_function(import_type)
+        inserted = processor_function(dest)
     except Exception as e:
-        logger.exception("failed ingest for %s", stored_name)
+        logger.exception("failed ingest for %s (type: %s)", stored_name, import_type)
         raise HTTPException(status_code=500, detail=str(e))
 
     logger.info(
-        "ingested file=%s inserted_rows=%s mode=%s size_bytes=%s",
+        "ingested file=%s inserted_rows=%s mode=%s size_bytes=%s type=%s",
         stored_name,
         inserted,
         mode,
         len(raw),
+        import_type,
     )
-    return {"stored": stored_name, "rows": inserted}
+    return {"stored": stored_name, "rows": inserted, "type": import_type}
 
 
 @app.get("/health")
 async def health():
     payload = {
         "ok": True,
-        "time": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "time": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "last_ingested_at": get_meta("last_ingested_at"),
     }
     # Add diagnostic header so we can tell if Cloudflare is reaching origin.

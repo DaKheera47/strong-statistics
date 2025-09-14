@@ -1,0 +1,19 @@
+import_types:
+  strong:
+    enabled: true
+    header_validation: "Date,Workout Name,Duration,Exercise Name,Set Order,Weight,Reps,Distance,Seconds,RPE"
+    processor_module: "app.processors.strong_processor"
+    processor_function: "process_strong_csv"
+
+  hevy:
+    enabled: false
+    header_validation: "\"title\",\"start_time\",\"end_time\",\"description\",\"exercise_title\",\"superset_id\",\"exercise_notes\",\"set_index\",\"set_type\",\"weight_kg\",\"reps\",\"distance_km\",\"duration_seconds\",\"rpe\""
+    processor_module: "app.processors.hevy_processor"
+    processor_function: "process_hevy_csv"
+
+validation:
+  max_file_size_mb: 10
+  supported_content_types:
+    - "text/csv"
+    - "application/vnd.ms-excel"
+    - "application/octet-stream"
