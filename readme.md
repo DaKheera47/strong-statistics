@@ -3,6 +3,7 @@
 Self‑hosted strength‑training analytics for **Strong** app exports. Import your CSV, see PRs, volume trends, rep ranges, and workout history — all stored locally in SQLite.
 
 ![Dashboard overview](screenshots/full%20page%20desktop.png)
+![Recent workouts](screenshots/recent%20workouts.png)
 
 **🎯 See it in action:** [lifting.dakheera47.com](https://lifting.dakheera47.com) (forgive the low numbers, I just started! 😅)
 
