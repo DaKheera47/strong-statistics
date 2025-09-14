@@ -13,6 +13,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # app
 COPY app ./app
+COPY ./config.yml ./config.yml
 COPY .env.example .env.example
 
 # dirs exist even before volume is mounted
