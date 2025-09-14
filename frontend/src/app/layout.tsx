@@ -33,6 +33,11 @@ export const metadata: Metadata = {
   authors: [{ name: "Strong Statistics" }],
   creator: "Strong Statistics",
   publisher: "Strong Statistics",
+  icons: {
+    icon: "/favicon.svg",
+    shortcut: "/favicon.svg",
+    apple: "/favicon.svg",
+  },
   openGraph: {
     type: "website",
     locale: "en_US",
