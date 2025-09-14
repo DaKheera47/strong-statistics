@@ -17,7 +17,7 @@ docker compose up -d
 
 Then open:
 
-* Dashboard → [http://localhost:8000/](http://localhost:8000/)
+* Dashboard → [http://localhost:8069/](http://localhost:8069/)
 
 ---
 
@@ -28,11 +28,8 @@ Edit `.env` before first run:
 | Variable       | Required | Default | What it does                                  |
 | -------------- | -------- | ------- | --------------------------------------------- |
 | `INGEST_TOKEN` | ✅        | —       | Secret required to upload CSVs via `/ingest`. |
-| `APP_PORT`     | ❌        | `8000`  | Web port inside the container.                |
-| `DATA_DIR`     | ❌        | `/data` | Where the SQLite DB (`strong.db`) lives.      |
-| `LOG_DIR`      | ❌        | `/logs` | Where app logs are written.                   |
 
-Data & logs are bind‑mounted to `./data` and `./logs` by the included `docker-compose.yml`.
+Data is bind‑mounted to `./data` and logs are stored in a named Docker volume by the included `docker-compose.yml`.
 
 ---
 
@@ -44,25 +41,22 @@ Data & logs are bind‑mounted to `./data` and `./logs` by the included `docker-
 **cURL**
 
 ```bash
-curl -X POST "http://localhost:8000/ingest?token=$INGEST_TOKEN" \
+curl -X POST "http://localhost:8069/ingest?token=$INGEST_TOKEN" \
   -F "file=@/path/to/strong-export.csv"
 ```
 
 **HTTPie**
 
 ```bash
-http -f POST :8000/ingest?token=$INGEST_TOKEN file@/path/to/strong-export.csv
+http -f POST :8069/ingest?token=$INGEST_TOKEN file@/path/to/strong-export.csv
 ```
 
 **Expected response**
 
 ```json
 {
-  "status": "ok",
-  "rows_received": 1234,
-  "rows_inserted": 1230,
-  "duplicates_skipped": 4,
-  "workouts_detected": 87
+  "stored": "strong_20240914_123456.csv",
+  "rows": 1230
 }
 ```
 
@@ -83,7 +77,7 @@ http -f POST :8000/ingest?token=$INGEST_TOKEN file@/path/to/strong-export.csv
 3. Tap the **info (ⓘ)** button → enable **Show in Share Sheet** → under **Accepts**, select **Files** (CSV).
 4. Add action **Get Contents of URL**:
 
-   * **URL:** `https://YOUR_DOMAIN/ingest?token=<TOKEN>`
+   * **URL:** `http://YOUR_DOMAIN:8069/ingest?token=<TOKEN>`
 
      > Replace `YOUR_DOMAIN` and `<TOKEN>` with your real domain and **INGEST\_TOKEN**.
    * **Method:** `POST`
@@ -108,9 +102,19 @@ http -f POST :8000/ingest?token=$INGEST_TOKEN file@/path/to/strong-export.csv
 
 ## 📊 Using the dashboard
 
-* Visit `/` for the main dashboard.
-* Click a date on the calendar to see that workout.
-* Share a workout page at `/workout/YYYY-MM-DD`.
+The dashboard provides several analytics widgets in collapsible sections:
+
+* **Recent Workouts** - List of recent training sessions with details
+* **Progressive Overload Widget** - Track strength progression over time
+* **Session Volume Trend** - Visualize total training volume trends
+* **Volume Sparklines** - Per-exercise volume trends in compact charts
+* **Max Weight Sparklines** - Track maximum weights over time per exercise
+* **Rep Range Distribution** - Analyze your preferred rep ranges
+
+Navigation:
+* Main Dashboard → `/` (all analytics widgets)
+* All Workouts → `/workouts` (detailed workout history table)
+* Click any workout row to view detailed sets and exercises
 
 ### Workout detail example
 
@@ -118,16 +122,49 @@ http -f POST :8000/ingest?token=$INGEST_TOKEN file@/path/to/strong-export.csv
 
 ---
 
-## 🔌 Handy API endpoints
+## 🐳 Docker Architecture
 
-(Full list with schemas at `/docs`.)
+The application runs as three containers orchestrated by Docker Compose:
 
-* `GET /health` → `{ "status": "ok" }`
-* `POST /ingest?token=<TOKEN>` → upload CSV (needs `<TOKEN>`)
-* `GET /api/personal-records`
-* `GET /api/calendar?year=2025&month=8`
-* `GET /api/workout/2025-08-14`
-* `GET /api/volume?group=week`
+* **`api`** (FastAPI backend) - Handles CSV ingestion, data processing, and serves favicon/health endpoints
+  - Built from `Dockerfile.api` (Python 3.12-slim)
+  - Exposes port 8000 internally
+  - Health checks via `/health` endpoint
+  - Data directory bind-mounted to `./data`
+  - Logs stored in named volume `strong_logs`
+
+* **`web`** (Next.js frontend) - Analytics dashboard and workout viewer
+  - Built from `frontend/Dockerfile.web` (Node.js 22-alpine with pnpm)
+  - Exposes port 3000 internally
+  - Read-only access to SQLite database via bind-mounted `./data`
+  - Built with Turbopack for faster builds
+
+* **`proxy`** (Caddy reverse proxy) - Routes traffic between frontend and backend
+  - Routes `/ingest*` and `/health` to API backend
+  - Routes everything else to Next.js frontend
+  - Single external port 8069 for all traffic
+  - Configured via `Caddyfile`
+
+**Data persistence:**
+- SQLite database and uploads: `./data` directory (bind-mounted to host)
+- Application logs: `strong_logs` named Docker volume
+
+---
+
+## 🔌 API endpoints
+
+**Backend (FastAPI):**
+* `GET /health` → Health check with last ingested timestamp
+* `POST /ingest?token=<TOKEN>` → Upload Strong CSV export (requires token)
+* `GET /favicon.svg` → App icon
+* `GET /favicon.ico` → App icon (fallback)
+* `GET /apple-touch-icon.png` → iOS home screen icon
+
+**Frontend API routes:** (Next.js API routes)
+* `GET /api/recent-workouts` → Recent workout list
+* `GET /api/recent-workouts?date=YYYY-MM-DD&workout_name=...` → Specific workout details
+
+> Frontend queries SQLite directly for analytics data via server-side API routes.
 
 ---
 
@@ -150,10 +187,13 @@ docker compose up -d --build
 
 ## 🧪 Troubleshooting
 
-* **401 on `/ingest`** → missing/incorrect `?token=`.
-* **400 on `/ingest`** → wrong form field (must be `file`) or not a CSV.
-* **`database is locked`** → try again; avoid concurrent imports; SQLite is single‑writer.
-* **CORS errors** → if you changed origins, set `ALLOWED_ORIGINS` in `.env`.
+* **Can't reach dashboard** → Make sure you're using port 8069 (not 8000)
+* **401 on `/ingest`** → Missing/incorrect `?token=` or `X-Token` header
+* **400 on `/ingest`** → Wrong form field (must be `file`) or not a Strong CSV export
+* **500 on `/ingest`** → Check Docker logs: `docker compose logs api`
+* **Database errors** → SQLite database issues, check file permissions in `./data`
+* **Container startup issues** → Run `docker compose up` (without `-d`) to see logs
+* **Frontend won't load** → Check if all containers are healthy: `docker compose ps`
 
 ---
 
