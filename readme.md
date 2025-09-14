@@ -5,11 +5,11 @@ Self‑hosted strength‑training analytics for **Strong** app exports. Import y
 ![Dashboard overview](screenshots/full%20page%20desktop.png)
 ![Recent workouts](screenshots/recent%20workouts.png)
 
-**🎯 See it in action:** [lifting.dakheera47.com](https://lifting.dakheera47.com) (forgive the low numbers, I just started! 😅)
+**See it in action:** [lifting.dakheera47.com](https://lifting.dakheera47.com) (forgive the low numbers, I just started!)
 
 ---
 
-## 🚀 TL;DR (self‑host)
+## TL;DR (self‑host)
 
 ```bash
 git clone https://github.com/DaKheera47/strong-statistics.git
@@ -24,7 +24,7 @@ Then open:
 
 ---
 
-## ⚙️ Configuration (minimal)
+## Configuration (minimal)
 
 Edit `.env` before first run:
 
@@ -36,7 +36,7 @@ Data is bind‑mounted to `./data` and logs are stored in a named Docker volume 
 
 ---
 
-## 📥 Import your Strong data
+## Import your Strong data
 
 1. **Export from Strong** (iOS/Android): Settings → **Export Data** → **CSV**.
 2. **Upload to strong-statistics** using your token.
@@ -67,7 +67,7 @@ http -f POST :8069/ingest?token=$INGEST_TOKEN file@/path/to/strong-export.csv
 
 ---
 
-## 📱 iOS Shortcut: one‑tap export → ingest
+## iOS Shortcut: one‑tap export → ingest
 
 **Goal:** export from the Strong app, the iOS share sheet pops up, you tap a shortcut, and it POSTs the CSV straight to your server.
 
@@ -103,7 +103,7 @@ http -f POST :8069/ingest?token=$INGEST_TOKEN file@/path/to/strong-export.csv
 
 ---
 
-## 📊 Using the dashboard
+## Using the dashboard
 
 The dashboard provides several analytics widgets in collapsible sections:
 
@@ -125,7 +125,7 @@ Navigation:
 
 ---
 
-## 🐳 Docker Architecture
+## Docker Architecture
 
 The application runs as three containers orchestrated by Docker Compose:
 
@@ -154,7 +154,7 @@ The application runs as three containers orchestrated by Docker Compose:
 
 ---
 
-## 🔌 API endpoints
+## API endpoints
 
 **Backend (FastAPI):**
 * `GET /health` → Health check with last ingested timestamp
@@ -171,13 +171,13 @@ The application runs as three containers orchestrated by Docker Compose:
 
 ---
 
-## 🔒 Quick security note
+## Quick security note
 
 * Keep `INGEST_TOKEN` secret. Don’t post it in screenshots.
 
 ---
 
-## ♻️ Update the app
+## Update the app
 
 From the repo root:
 
@@ -188,7 +188,7 @@ docker compose up -d --build
 
 ---
 
-## 🧪 Troubleshooting
+## Troubleshooting
 
 * **Can't reach dashboard** → Make sure you're using port 8069 (not 8000)
 * **401 on `/ingest`** → Missing/incorrect `?token=` or `X-Token` header
@@ -200,13 +200,13 @@ docker compose up -d --build
 
 ---
 
-## 📝 License
+## License
 
 MIT.
 
 ---
 
-## 📫 Contact
+## Contact
 
 - **Discord:** `dakheera47`
 - **Email:** [shaheer30sarfaraz@gmail.com](mailto\:shaheer30sarfaraz@gmail.com)
