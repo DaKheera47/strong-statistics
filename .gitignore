@@ -28,6 +28,7 @@ logs/*.log.*
 data/lifting.db
 data/strong.db
 data/uploads/
+data/
 
 # Jupyter / notebooks
 .ipynb_checkpoints/
