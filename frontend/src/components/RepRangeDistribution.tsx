@@ -146,7 +146,7 @@ export default function RepRangeDistribution() {
   } = useExerciseSelection();
 
   const [localSelectedExercises, setLocalSelectedExercises] = useState<string[]>([]);
-  const [showRecentOnly, setShowRecentOnly] = useState(true);
+  const [showRecentOnly, setShowRecentOnly] = useState(false);
   const [initialized, setInitialized] = useState(false);
 
   const limit = getRepRangeDistributionLimit();
