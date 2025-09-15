@@ -3,7 +3,6 @@
 from __future__ import annotations
 from pathlib import Path
 import pandas as pd
-import re
 from datetime import datetime, timezone
 from ..db import get_conn, set_meta
 
@@ -11,14 +10,14 @@ DATE_COL = "Date"
 EXPECTED_COLUMNS = [
     "Date",
     "Workout Name",
-    "Duration",
+    "Duration (sec)",
     "Exercise Name",
     "Set Order",
-    "Weight",
+    "Weight (kg)",
     "Reps",
-    "Distance",
-    "Seconds",
     "RPE",
+    "Distance (meters)",
+    "Seconds",
 ]
 
 NORMALIZED_COLUMNS = [
@@ -33,15 +32,13 @@ NORMALIZED_COLUMNS = [
     "seconds",
 ]
 
-DURATION_RE = re.compile(r"^(?P<mins>\d+)(m)?$")
-
 
 def normalize_df(df: pd.DataFrame) -> pd.DataFrame:
     """Normalize raw Strong CSV DataFrame to schema columns.
 
     - Validates expected columns presence (subset check).
     - Parses Date into ISO string (naive) preserving order.
-    - Extracts integer minutes from Duration like '35m'.
+    - Converts Duration (sec) to duration_min by dividing by 60.
     - Renames columns & selects standardized subset.
     - Coerces numeric columns to floats (NaNs allowed).
     """
@@ -60,19 +57,17 @@ def normalize_df(df: pd.DataFrame) -> pd.DataFrame:
 
     df["date"] = df[DATE_COL].map(parse_dt)
 
-    # Duration minutes
-    def parse_duration(s):
+    # Duration minutes - convert from seconds to minutes
+    def parse_duration_sec(s):
         if pd.isna(s):
             return None
-        s = str(s).strip()
-        if not s:
+        try:
+            seconds = float(s)
+            return seconds / 60.0
+        except (ValueError, TypeError):
             return None
-        m = DURATION_RE.match(s)
-        if m:
-            return float(m.group("mins"))
-        return None
 
-    df["duration_min"] = df["Duration"].map(parse_duration)
+    df["duration_min"] = df["Duration (sec)"].map(parse_duration_sec)
 
     df["workout_name"] = (
         df["Workout Name"].astype(str).where(~df["Workout Name"].isna(), None)
@@ -81,9 +76,9 @@ def normalize_df(df: pd.DataFrame) -> pd.DataFrame:
 
     numeric_map = {
         "Set Order": "set_order",
-        "Weight": "weight",
+        "Weight (kg)": "weight",
         "Reps": "reps",
-        "Distance": "distance",
+        "Distance (meters)": "distance",
         "Seconds": "seconds",
     }
     for src, dst in numeric_map.items():
@@ -141,19 +136,7 @@ def process_strong_csv(csv_path: Path) -> int:
     """Process Strong app CSV file and insert into database."""
     import pandas as pd
 
-    df = pd.read_csv(csv_path)
-
-    # Convert "Duration" like "35m" or "1h 3m" -> integer minutes
-    if "Duration" in df.columns:
-        s = df["Duration"].astype("string").str.lower().str.strip()
-        hrs = pd.to_numeric(s.str.extract(r"(\d+)\s*h", expand=False), errors="coerce")
-        mins = pd.to_numeric(s.str.extract(r"(\d+)\s*m", expand=False), errors="coerce")
-
-        total_min = (hrs.fillna(0) * 60 + mins.fillna(0)).astype("Int64")
-        # if neither h nor m was present, keep it null
-        total_min[hrs.isna() & mins.isna()] = pd.NA
-
-        df["Duration"] = total_min
+    df = pd.read_csv(csv_path, sep=None, engine="python")
 
     normalized = normalize_df(df)
     before = count_sets()
