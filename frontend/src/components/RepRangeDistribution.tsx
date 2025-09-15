@@ -1,15 +1,17 @@
 'use client';
 
-import { useMemo, useEffect } from 'react';
+import { useMemo, useEffect, useState } from 'react';
 import { useRepRangeDistribution } from '@/hooks/useRepRangeDistribution';
 import { BarChart, Bar, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { useChartColors } from '@/hooks/useChartColors';
-import { ExerciseFilter } from './exercise-filter';
+import { ExerciseFilter, getRecentExercises } from './exercise-filter';
 import { useExerciseSelection } from '@/hooks/useExerciseSelection';
 import { WidgetWrapper } from './WidgetWrapper';
 import { WidgetHeader } from './WidgetHeader';
 import { AccordionContent } from './ui/accordion';
+import { Button } from './ui/button';
 import { shouldDisplayDistance, getDistanceUnit } from '@/lib/exercise-config';
+import { getRepRangeDistributionLimit } from '@/lib/localStorage';
 
 interface RepRangeCardProps {
   exercise: string;
@@ -137,11 +139,17 @@ function RepRangeCard({ exercise, data }: RepRangeCardProps) {
 export default function RepRangeDistribution() {
   const {
     allExercises,
-    selectedExercises,
-    setSelectedExercises,
+    selectedExercises: globalSelectedExercises,
+    setSelectedExercises: setGlobalSelectedExercises,
     loading: exercisesLoading,
     error: exercisesError
   } = useExerciseSelection();
+
+  const [localSelectedExercises, setLocalSelectedExercises] = useState<string[]>([]);
+  const [showRecentOnly, setShowRecentOnly] = useState(true);
+  const [initialized, setInitialized] = useState(false);
+
+  const limit = getRepRangeDistributionLimit();
   
   // === Rep-based exercise filtering ===
   // We only show / allow exercises that are rep-based for this widget since the distribution is reps-based.
@@ -150,45 +158,94 @@ export default function RepRangeDistribution() {
   }, [allExercises]);
 
   // Sanitize currently selected exercises so distance-based ones are silently removed.
-  const sanitizedSelectedExercises = useMemo(() => {
-    if (selectedExercises.length === 0) return selectedExercises;
+  const sanitizedGlobalSelection = useMemo(() => {
+    if (globalSelectedExercises.length === 0) return globalSelectedExercises;
     const repNames = new Set(repBasedExercises.map(e => e.name));
-    return selectedExercises.filter(name => repNames.has(name));
-  }, [selectedExercises, repBasedExercises]);
+    return globalSelectedExercises.filter(name => repNames.has(name));
+  }, [globalSelectedExercises, repBasedExercises]);
+
+  // Initialize local selection with limited exercises
+  useEffect(() => {
+    if (!initialized && repBasedExercises.length > 0 && sanitizedGlobalSelection.length > 0) {
+      // If more than 10 exercises are selected globally, limit to default
+      const limitedSelection = sanitizedGlobalSelection.length > 10
+        ? sanitizedGlobalSelection.slice(0, limit)
+        : sanitizedGlobalSelection;
+      setLocalSelectedExercises(limitedSelection);
+      setInitialized(true);
+    }
+  }, [repBasedExercises, sanitizedGlobalSelection, limit, initialized]);
 
   // Effect to commit sanitized selection if it differs (avoids re-render loop by shallow compare)
   useEffect(() => {
-    if (sanitizedSelectedExercises.length !== selectedExercises.length) {
+    if (sanitizedGlobalSelection.length !== globalSelectedExercises.length) {
       // Distance-based exercises were removed
-      setSelectedExercises(sanitizedSelectedExercises);
+      setGlobalSelectedExercises(sanitizedGlobalSelection);
     } else {
       // Possible case: same length but different ordering after filtering (unlikely); ensure stable ordering of original selection
-      const changed = sanitizedSelectedExercises.some((n, i) => n !== selectedExercises[i]);
+      const changed = sanitizedGlobalSelection.some((n, i) => n !== globalSelectedExercises[i]);
       if (changed) {
-        setSelectedExercises(sanitizedSelectedExercises);
+        setGlobalSelectedExercises(sanitizedGlobalSelection);
       }
     }
-  }, [sanitizedSelectedExercises, selectedExercises, setSelectedExercises]);
+  }, [sanitizedGlobalSelection, globalSelectedExercises, setGlobalSelectedExercises]);
+
+  // Get filtered exercise list based on recent filter (memoized)
+  const filteredRepBasedExercises = useMemo(() => {
+    if (!showRecentOnly) return repBasedExercises;
+    const recentExerciseNames = getRecentExercises(allExercises);
+    return repBasedExercises.filter(ex => recentExerciseNames.includes(ex.name));
+  }, [showRecentOnly, repBasedExercises, allExercises]);
+
+  // Memoize selected exercises to prevent render loops
+  const selectedExercises = useMemo(() => {
+    return showRecentOnly
+      ? filteredRepBasedExercises.map(ex => ex.name)
+      : localSelectedExercises;
+  }, [showRecentOnly, filteredRepBasedExercises, localSelectedExercises]);
+
+
+  const handleToggleRecentOnly = () => {
+    setShowRecentOnly(!showRecentOnly);
+    if (!showRecentOnly) {
+      // When turning on recent filter, it will auto-select all recent exercises via selectedExercises logic
+      // No need to manually update selection here
+    } else {
+      // When turning off recent filter, reset to limited selection
+      const currentSelection = filteredRepBasedExercises.map(ex => ex.name);
+      if (currentSelection.length > limit) {
+        const limitedSelection = currentSelection.slice(0, limit);
+        setLocalSelectedExercises(limitedSelection);
+      } else {
+        setLocalSelectedExercises(currentSelection);
+      }
+    }
+  };
 
   // Handler to ensure any attempted additions of distance-based exercises are ignored
   const handleSelectionChange = useMemo(() => (newSelection: string[]) => {
     const repNames = new Set(repBasedExercises.map(e => e.name));
     const filtered = newSelection.filter(n => repNames.has(n));
-    // Only update if something changed to avoid unnecessary renders
-    if (filtered.length !== newSelection.length || filtered.length !== selectedExercises.length || filtered.some((n, i) => n !== selectedExercises[i])) {
-      setSelectedExercises(filtered);
+
+    if (showRecentOnly) {
+      // When in recent mode, update global selection but don't limit
+      setGlobalSelectedExercises(filtered);
+    } else {
+      // When in normal mode, update both local and global
+      setLocalSelectedExercises(filtered);
+      setGlobalSelectedExercises(filtered);
     }
-  }, [repBasedExercises, setSelectedExercises, selectedExercises]);
+  }, [repBasedExercises, setGlobalSelectedExercises, showRecentOnly]);
   
-  const { data, loading, error } = useRepRangeDistribution(sanitizedSelectedExercises);
+  const { data, loading, error } = useRepRangeDistribution(selectedExercises);
 
   if (loading) {
     return (
       <WidgetWrapper>
         <WidgetHeader title="Rep Range Distribution">
           <ExerciseFilter
-            allExercises={repBasedExercises}
-            selectedExercises={sanitizedSelectedExercises}
+            allExercises={filteredRepBasedExercises}
+            selectedExercises={selectedExercises}
             onSelectionChange={handleSelectionChange}
             loading={exercisesLoading}
             error={exercisesError}
@@ -212,8 +269,8 @@ export default function RepRangeDistribution() {
       <WidgetWrapper>
         <WidgetHeader title="Rep Range Distribution">
           <ExerciseFilter
-            allExercises={repBasedExercises}
-            selectedExercises={sanitizedSelectedExercises}
+            allExercises={filteredRepBasedExercises}
+            selectedExercises={selectedExercises}
             onSelectionChange={handleSelectionChange}
             loading={exercisesLoading}
             error={exercisesError}
@@ -234,8 +291,8 @@ export default function RepRangeDistribution() {
       <WidgetWrapper>
         <WidgetHeader title="Rep Range Distribution">
           <ExerciseFilter
-            allExercises={repBasedExercises}
-            selectedExercises={sanitizedSelectedExercises}
+            allExercises={filteredRepBasedExercises}
+            selectedExercises={selectedExercises}
             onSelectionChange={handleSelectionChange}
             loading={exercisesLoading}
             error={exercisesError}
@@ -252,15 +309,24 @@ export default function RepRangeDistribution() {
   return (
     <WidgetWrapper>
       <WidgetHeader title="Rep Range Distribution" isAccordion>
+        <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
           {/* For this widget we intentionally restrict to rep-based exercises only */}
           <ExerciseFilter
-            allExercises={repBasedExercises}
-            selectedExercises={sanitizedSelectedExercises}
+            allExercises={filteredRepBasedExercises}
+            selectedExercises={selectedExercises}
             onSelectionChange={handleSelectionChange}
             loading={exercisesLoading}
             error={exercisesError}
             placeholder="Filter exercises..."
           />
+          <Button
+            variant={showRecentOnly ? "default" : "outline"}
+            size="sm"
+            onClick={handleToggleRecentOnly}
+          >
+            Recent Only
+          </Button>
+        </div>
       </WidgetHeader>
 
       <AccordionContent>

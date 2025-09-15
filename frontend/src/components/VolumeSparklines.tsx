@@ -1,14 +1,20 @@
 "use client";
 
+import { useState, useEffect, useMemo } from "react";
 import { useVolumeData } from "@/hooks/useVolumeData";
 import { LineChart, Line, ResponsiveContainer, Tooltip, YAxis } from "recharts";
 import { cn } from "@/lib/utils";
 import { useChartColors } from "@/hooks/useChartColors";
-import { ExerciseFilter } from "./exercise-filter";
+import { ExerciseFilter, getRecentExercises } from "./exercise-filter";
 import { useExerciseSelection } from "@/hooks/useExerciseSelection";
 import { WidgetWrapper } from "./WidgetWrapper";
 import { WidgetHeader } from "./WidgetHeader";
 import { AccordionContent } from "./ui/accordion";
+import { Button } from "./ui/button";
+import {
+  getVolumeSparklineLimit,
+  setVolumeSparklineLimit,
+} from "@/lib/localStorage";
 
 interface SparklineCardProps {
   exercise: string;
@@ -116,22 +122,88 @@ function SparklineCard({
 export default function VolumeSparklines() {
   const {
     allExercises,
-    selectedExercises,
-    setSelectedExercises,
+    selectedExercises: globalSelectedExercises,
+    setSelectedExercises: setGlobalSelectedExercises,
     loading: exercisesLoading,
     error: exercisesError,
   } = useExerciseSelection();
 
+  const [localSelectedExercises, setLocalSelectedExercises] = useState<
+    string[]
+  >([]);
+  const [showRecentOnly, setShowRecentOnly] = useState(false);
+  const [initialized, setInitialized] = useState(false);
+
+  const limit = getVolumeSparklineLimit();
+
+  // Initialize local selection with limited exercises
+  useEffect(() => {
+    if (
+      !initialized &&
+      allExercises.length > 0 &&
+      globalSelectedExercises.length > 0
+    ) {
+      // If more than 10 exercises are selected globally, limit to default
+      const limitedSelection =
+        globalSelectedExercises.length > 10
+          ? globalSelectedExercises.slice(0, limit)
+          : globalSelectedExercises;
+      setLocalSelectedExercises(limitedSelection);
+      setInitialized(true);
+    }
+  }, [allExercises, globalSelectedExercises, limit, initialized]);
+
+  // Get filtered exercise list based on recent filter (memoized)
+  const filteredAllExercises = useMemo(() => {
+    if (!showRecentOnly) return allExercises;
+    const recentExerciseNames = getRecentExercises(allExercises);
+    return allExercises.filter((ex) => recentExerciseNames.includes(ex.name));
+  }, [showRecentOnly, allExercises]);
+
+  // Memoize selected exercises to prevent render loops
+  const selectedExercises = useMemo(() => {
+    return showRecentOnly
+      ? filteredAllExercises.map((ex) => ex.name)
+      : localSelectedExercises;
+  }, [showRecentOnly, filteredAllExercises, localSelectedExercises]);
+
   const { data, loading, error } = useVolumeData(selectedExercises);
+
+  const handleToggleRecentOnly = () => {
+    setShowRecentOnly(!showRecentOnly);
+    if (!showRecentOnly) {
+      // When turning on recent filter, it will auto-select all recent exercises via selectedExercises logic
+      // No need to manually update selection here
+    } else {
+      // When turning off recent filter, reset to limited selection
+      if (globalSelectedExercises.length > limit) {
+        const limitedSelection = globalSelectedExercises.slice(0, limit);
+        setLocalSelectedExercises(limitedSelection);
+      } else {
+        setLocalSelectedExercises(globalSelectedExercises);
+      }
+    }
+  };
+
+  const handleSelectionChange = (newSelection: string[]) => {
+    if (showRecentOnly) {
+      // When in recent mode, update global selection but don't limit
+      setGlobalSelectedExercises(newSelection);
+    } else {
+      // When in normal mode, update both local and global
+      setLocalSelectedExercises(newSelection);
+      setGlobalSelectedExercises(newSelection);
+    }
+  };
 
   if (loading) {
     return (
       <WidgetWrapper>
-        <WidgetHeader title="Volume Sparklines">
+        <WidgetHeader title='Volume Sparklines'>
           <ExerciseFilter
-            allExercises={allExercises}
+            allExercises={filteredAllExercises}
             selectedExercises={selectedExercises}
-            onSelectionChange={setSelectedExercises}
+            onSelectionChange={handleSelectionChange}
             loading={exercisesLoading}
             error={exercisesError}
             placeholder='Filter exercises...'
@@ -155,11 +227,11 @@ export default function VolumeSparklines() {
   if (error) {
     return (
       <WidgetWrapper>
-        <WidgetHeader title="Volume Sparklines">
+        <WidgetHeader title='Volume Sparklines'>
           <ExerciseFilter
-            allExercises={allExercises}
+            allExercises={filteredAllExercises}
             selectedExercises={selectedExercises}
-            onSelectionChange={setSelectedExercises}
+            onSelectionChange={handleSelectionChange}
             loading={exercisesLoading}
             error={exercisesError}
             placeholder='Filter exercises...'
@@ -175,11 +247,11 @@ export default function VolumeSparklines() {
   if (data.length === 0) {
     return (
       <WidgetWrapper>
-        <WidgetHeader title="Volume Sparklines">
+        <WidgetHeader title='Volume Sparklines'>
           <ExerciseFilter
-            allExercises={allExercises}
+            allExercises={filteredAllExercises}
             selectedExercises={selectedExercises}
-            onSelectionChange={setSelectedExercises}
+            onSelectionChange={handleSelectionChange}
             loading={exercisesLoading}
             error={exercisesError}
             placeholder='Filter exercises...'
@@ -194,15 +266,27 @@ export default function VolumeSparklines() {
 
   return (
     <WidgetWrapper>
-      <WidgetHeader title="Volume Sparklines" isAccordion>
-        <ExerciseFilter
-          allExercises={allExercises}
-          selectedExercises={selectedExercises}
-          onSelectionChange={setSelectedExercises}
-          loading={exercisesLoading}
-          error={exercisesError}
-          placeholder='Filter exercises...'
-        />
+      <WidgetHeader
+        title='Volume Sparklines'
+        isAccordion
+      >
+        <div className='flex flex-col sm:flex-row gap-2 sm:items-center'>
+          <ExerciseFilter
+            allExercises={filteredAllExercises}
+            selectedExercises={selectedExercises}
+            onSelectionChange={handleSelectionChange}
+            loading={exercisesLoading}
+            error={exercisesError}
+            placeholder='Filter exercises...'
+          />
+          <Button
+            variant={showRecentOnly ? "default" : "outline"}
+            size='sm'
+            onClick={handleToggleRecentOnly}
+          >
+            Recent Only
+          </Button>
+        </div>
       </WidgetHeader>
 
       <AccordionContent>

@@ -34,6 +34,17 @@ interface ExerciseFilterProps {
   className?: string;
 }
 
+// Utility function to get recent exercises
+export function getRecentExercises(allExercises: ExerciseWithLastActivity[]): string[] {
+  const twoWeeksAgo = new Date();
+  twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+  const twoWeeksAgoStr = twoWeeksAgo.toISOString().split('T')[0];
+
+  return allExercises
+    .filter(exercise => exercise.lastActivityDate >= twoWeeksAgoStr)
+    .map(ex => ex.name);
+}
+
 export function ExerciseFilter({
   allExercises,
   selectedExercises,
@@ -78,10 +89,6 @@ export function ExerciseFilter({
     }
   }
 
-  const handleSelectRecent = () => {
-    const recentExercises = allExercises.filter(isRecentExercise);
-    onSelectionChange(recentExercises.map(ex => ex.name));
-  }
 
   if (loading) {
     return (
@@ -131,14 +138,6 @@ export function ExerciseFilter({
                   className="mr-2"
                 />
                 Select All
-              </CommandItem>
-              <CommandItem onSelect={handleSelectRecent}>
-                <Checkbox 
-                  checked={validSelectedExercises.length > 0 && 
-                    allExercises.filter(isRecentExercise).every(ex => validSelectedExercises.includes(ex.name))}
-                  className="mr-2"
-                />
-                Recent Only (2 weeks)
               </CommandItem>
               {validSelectedExercises.length > 0 && (
                 <CommandItem onSelect={handleClear}>

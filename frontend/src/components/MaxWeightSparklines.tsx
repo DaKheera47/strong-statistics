@@ -1,15 +1,18 @@
 'use client';
 
+import { useState, useEffect, useMemo } from 'react';
 import { useMaxWeightData } from '@/hooks/useMaxWeightData';
 import { LineChart, Line, ResponsiveContainer, Tooltip, YAxis } from 'recharts';
 import { cn } from '@/lib/utils';
 import { useChartColors } from '@/hooks/useChartColors';
-import { ExerciseFilter } from './exercise-filter';
+import { ExerciseFilter, getRecentExercises } from './exercise-filter';
 import { useExerciseSelection } from '@/hooks/useExerciseSelection';
 import { WidgetWrapper } from './WidgetWrapper';
 import { WidgetHeader } from './WidgetHeader';
 import { AccordionContent } from './ui/accordion';
+import { Button } from './ui/button';
 import { isLowerBetter, shouldDisplayDistance, getDistanceUnit } from '@/lib/exercise-config';
+import { getMaxWeightSparklineLimit } from '@/lib/localStorage';
 
 interface SparklineCardProps {
   exercise: string;
@@ -107,13 +110,73 @@ function SparklineCard({ exercise, data, latestValue, delta }: SparklineCardProp
 export default function MaxWeightSparklines() {
   const {
     allExercises,
-    selectedExercises,
-    setSelectedExercises,
+    selectedExercises: globalSelectedExercises,
+    setSelectedExercises: setGlobalSelectedExercises,
     loading: exercisesLoading,
     error: exercisesError
   } = useExerciseSelection();
-  
+
+  const [localSelectedExercises, setLocalSelectedExercises] = useState<string[]>([]);
+  const [showRecentOnly, setShowRecentOnly] = useState(true);
+  const [initialized, setInitialized] = useState(false);
+
+  const limit = getMaxWeightSparklineLimit();
+
+  // Initialize local selection with limited exercises
+  useEffect(() => {
+    if (!initialized && allExercises.length > 0 && globalSelectedExercises.length > 0) {
+      // If more than 10 exercises are selected globally, limit to default
+      const limitedSelection = globalSelectedExercises.length > 10
+        ? globalSelectedExercises.slice(0, limit)
+        : globalSelectedExercises;
+      setLocalSelectedExercises(limitedSelection);
+      setInitialized(true);
+    }
+  }, [allExercises, globalSelectedExercises, limit, initialized]);
+
+  // Get filtered exercise list based on recent filter (memoized)
+  const filteredAllExercises = useMemo(() => {
+    if (!showRecentOnly) return allExercises;
+    const recentExerciseNames = getRecentExercises(allExercises);
+    return allExercises.filter(ex => recentExerciseNames.includes(ex.name));
+  }, [showRecentOnly, allExercises]);
+
+  // Memoize selected exercises to prevent render loops
+  const selectedExercises = useMemo(() => {
+    return showRecentOnly
+      ? filteredAllExercises.map(ex => ex.name)
+      : localSelectedExercises;
+  }, [showRecentOnly, filteredAllExercises, localSelectedExercises]);
+
   const { data, loading, error } = useMaxWeightData(selectedExercises);
+
+
+  const handleToggleRecentOnly = () => {
+    setShowRecentOnly(!showRecentOnly);
+    if (!showRecentOnly) {
+      // When turning on recent filter, it will auto-select all recent exercises via selectedExercises logic
+      // No need to manually update selection here
+    } else {
+      // When turning off recent filter, reset to limited selection
+      if (globalSelectedExercises.length > limit) {
+        const limitedSelection = globalSelectedExercises.slice(0, limit);
+        setLocalSelectedExercises(limitedSelection);
+      } else {
+        setLocalSelectedExercises(globalSelectedExercises);
+      }
+    }
+  };
+
+  const handleSelectionChange = (newSelection: string[]) => {
+    if (showRecentOnly) {
+      // When in recent mode, update global selection but don't limit
+      setGlobalSelectedExercises(newSelection);
+    } else {
+      // When in normal mode, update both local and global
+      setLocalSelectedExercises(newSelection);
+      setGlobalSelectedExercises(newSelection);
+    }
+  };
 
   if (loading) {
     return (
@@ -122,7 +185,7 @@ export default function MaxWeightSparklines() {
           <ExerciseFilter
             allExercises={allExercises}
             selectedExercises={selectedExercises}
-            onSelectionChange={setSelectedExercises}
+            onSelectionChange={handleSelectionChange}
             loading={exercisesLoading}
             error={exercisesError}
             placeholder="Filter exercises..."
@@ -147,7 +210,7 @@ export default function MaxWeightSparklines() {
           <ExerciseFilter
             allExercises={allExercises}
             selectedExercises={selectedExercises}
-            onSelectionChange={setSelectedExercises}
+            onSelectionChange={handleSelectionChange}
             loading={exercisesLoading}
             error={exercisesError}
             placeholder="Filter exercises..."
@@ -167,7 +230,7 @@ export default function MaxWeightSparklines() {
           <ExerciseFilter
             allExercises={allExercises}
             selectedExercises={selectedExercises}
-            onSelectionChange={setSelectedExercises}
+            onSelectionChange={handleSelectionChange}
             loading={exercisesLoading}
             error={exercisesError}
             placeholder="Filter exercises..."
@@ -183,14 +246,23 @@ export default function MaxWeightSparklines() {
   return (
     <WidgetWrapper>
       <WidgetHeader title="Max Weight Sparklines" isAccordion>
-        <ExerciseFilter
-          allExercises={allExercises}
-          selectedExercises={selectedExercises}
-          onSelectionChange={setSelectedExercises}
-          loading={exercisesLoading}
-          error={exercisesError}
-          placeholder="Filter exercises..."
-        />
+        <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+          <ExerciseFilter
+            allExercises={allExercises}
+            selectedExercises={selectedExercises}
+            onSelectionChange={handleSelectionChange}
+            loading={exercisesLoading}
+            error={exercisesError}
+            placeholder="Filter exercises..."
+          />
+          <Button
+            variant={showRecentOnly ? "default" : "outline"}
+            size="sm"
+            onClick={handleToggleRecentOnly}
+          >
+            Recent Only
+          </Button>
+        </div>
       </WidgetHeader>
 
       <AccordionContent>
