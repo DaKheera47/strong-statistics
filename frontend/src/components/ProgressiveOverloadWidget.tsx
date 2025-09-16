@@ -32,6 +32,7 @@ import {
 import { Button } from "./ui/button";
 import { Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
 
 /* --- simple media query hook (client-only) --- */
 function useMediaQuery(query: string) {
@@ -49,6 +50,7 @@ function useMediaQuery(query: string) {
 export default function ProgressiveOverloadWidget() {
   const [selectedExercise, setSelectedExercise] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
+  const [mode, setMode] = useState<"maxWeight" | "volume">("maxWeight");
   const {
     allExercises,
     loading: exercisesLoading,
@@ -68,15 +70,33 @@ export default function ProgressiveOverloadWidget() {
 
   const isMobile = useMediaQuery("(max-width: 640px)");
 
+  const chartData = useMemo(() => {
+    if (!data) return [];
+
+    if (mode === "maxWeight") {
+      return data.maxWeight.map(point => ({
+        ...point,
+        current: point.maxWeight,
+        mode: "maxWeight" as const,
+      }));
+    }
+
+    return data.volume.map(point => ({
+      ...point,
+      current: point.volume,
+      mode: "volume" as const,
+    }));
+  }, [data, mode]);
+
   const yAxisDomain = useMemo(() => {
-    if (!data || data.data.length === 0) {
+    if (!chartData.length) {
       return undefined;
     }
 
     const values: number[] = [];
 
-    data.data.forEach(point => {
-      if (typeof point.maxWeight === "number") values.push(point.maxWeight);
+    chartData.forEach(point => {
+      if (typeof point.current === "number") values.push(point.current);
       if (typeof point.weekAgo === "number") values.push(point.weekAgo);
       if (typeof point.monthAgo === "number") values.push(point.monthAgo);
       if (typeof point.yearAgo === "number") values.push(point.yearAgo);
@@ -94,7 +114,12 @@ export default function ProgressiveOverloadWidget() {
     const upperBound = maxValue + padding;
 
     return [lowerBound, upperBound] as [number, number];
-  }, [data]);
+  }, [chartData]);
+
+  const yAxisLabel = mode === "maxWeight" ? "Max Weight (kg)" : "Total Volume (kg)";
+  const currentLineName = mode === "maxWeight" ? "Current" : "Current Volume";
+  const currentLegendLabel = mode === "maxWeight" ? "Current" : "Current Volume";
+  const hasChartData = chartData.length > 0;
 
   const chartContainerClasses = [
     "w-full p-3 sm:p-4 border rounded-lg bg-card hover:shadow-md transition-shadow flex flex-col",
@@ -103,6 +128,16 @@ export default function ProgressiveOverloadWidget() {
 
   const chartSkeleton = (
     <div className={chartContainerClasses}>
+      <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3 sm:mb-4 gap-3'>
+        <div className='space-y-2'>
+          <div className='h-3 w-20 rounded bg-muted/80 animate-pulse' />
+          <div className='h-3 w-28 rounded bg-muted/60 animate-pulse' />
+        </div>
+        <div className='flex items-center gap-2 sm:gap-3'>
+          <div className='h-7 w-24 rounded-full bg-muted animate-pulse' />
+          <div className='h-7 w-24 rounded-full bg-muted/70 animate-pulse' />
+        </div>
+      </div>
       <div className='flex-1 rounded-md bg-muted animate-pulse' />
       <div className='mt-2 sm:mt-3 flex flex-wrap items-center justify-center gap-3 sm:gap-6'>
         <div className='h-3 sm:h-4 w-20 sm:w-28 rounded-full bg-muted animate-pulse' />
@@ -234,7 +269,7 @@ export default function ProgressiveOverloadWidget() {
           </div>
         )}
 
-        {data && data.data.length === 0 && selectedExercise && !loading && (
+        {data && data.maxWeight.length === 0 && data.volume.length === 0 && selectedExercise && !loading && (
           <div className='h-96 flex items-center justify-center bg-muted/30 rounded-lg border-2 border-dashed border-muted-foreground/25'>
             <div className='text-center'>
               <p className='text-muted-foreground text-lg mb-2'>
@@ -247,15 +282,59 @@ export default function ProgressiveOverloadWidget() {
           </div>
         )}
 
-        {data && data.data.length > 0 && !loading && (
+        {selectedExercise && !loading && data && !hasChartData && (data.maxWeight.length > 0 || data.volume.length > 0) && (
+          <div className='h-96 flex items-center justify-center bg-muted/30 rounded-lg border-2 border-dashed border-muted-foreground/25'>
+            <div className='text-center'>
+              <p className='text-muted-foreground text-lg mb-2'>
+                {mode === "maxWeight" ? "No max weight data" : "No volume data"}
+              </p>
+              <p className='text-sm text-muted-foreground'>
+                Try switching the mode or pick another exercise
+              </p>
+            </div>
+          </div>
+        )}
+
+        {hasChartData && !loading && (
           <div className={chartContainerClasses}>
+            <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3 sm:mb-4 gap-3'>
+              <div>
+                <p className='text-xs uppercase tracking-wide text-muted-foreground font-semibold'>Mode</p>
+                <p className='text-sm text-muted-foreground'>Choose which metric to chart</p>
+              </div>
+              <RadioGroup
+                value={mode}
+                onValueChange={(value) => setMode((value as "maxWeight" | "volume"))}
+                className='flex flex-wrap items-center gap-4 sm:gap-6'
+                orientation='horizontal'
+              >
+                <div className='flex items-center gap-2'>
+                  <RadioGroupItem id='mode-max-weight' value='maxWeight' />
+                  <label
+                    htmlFor='mode-max-weight'
+                    className='text-sm font-medium leading-none text-foreground'
+                  >
+                    Max Weight
+                  </label>
+                </div>
+                <div className='flex items-center gap-2'>
+                  <RadioGroupItem id='mode-volume' value='volume' />
+                  <label
+                    htmlFor='mode-volume'
+                    className='text-sm font-medium leading-none text-foreground'
+                  >
+                    Volume
+                  </label>
+                </div>
+              </RadioGroup>
+            </div>
             <div className='flex-1'>
               <ResponsiveContainer
                 width='100%'
                 height='100%'
               >
                 <LineChart
-                  data={data.data}
+                  data={chartData}
                   margin={chartMargin}
                 >
                   <XAxis
@@ -291,7 +370,7 @@ export default function ProgressiveOverloadWidget() {
                     axisLine={{ stroke: "currentColor" }}
                     domain={yAxisDomain}
                     label={{
-                      value: "Max Weight (kg)",
+                      value: yAxisLabel,
                       angle: -90,
                       position: "insideLeft",
                       style: { textAnchor: "middle", fill: "currentColor" },
@@ -311,10 +390,14 @@ export default function ProgressiveOverloadWidget() {
                   <Tooltip
                     content={({ active, payload, label }) => {
                       if (active && payload && payload.length && selectedExercise) {
-                        const showDistance = shouldDisplayDistance(selectedExercise);
+                        const dataPoint = payload.find(p => p.dataKey === 'current')?.payload as
+                          | (typeof chartData)[number]
+                          | undefined;
+
+                        const showDistance =
+                          mode === "maxWeight" && shouldDisplayDistance(selectedExercise);
                         const distanceUnit = getDistanceUnit(selectedExercise);
-                        const dataPoint = payload.find(p => p.dataKey === 'maxWeight')?.payload;
-                        
+
                         return (
                           <div className='bg-popover p-2 sm:p-3 border rounded-lg shadow-lg min-w-40 sm:min-w-48'>
                             <p className='text-xs sm:text-sm font-medium mb-1 sm:mb-2 text-popover-foreground'>
@@ -327,14 +410,16 @@ export default function ProgressiveOverloadWidget() {
                                   })
                                 : "Unknown date"}
                             </p>
-                            {dataPoint && showDistance && (
+                            {mode === "maxWeight" && dataPoint && (
                               <p className='text-xs sm:text-sm text-muted-foreground mb-1'>
-                                Distance: {dataPoint.reps} {distanceUnit}
+                                {showDistance
+                                  ? `Distance: ${dataPoint.reps ?? 0} ${distanceUnit}`
+                                  : `Reps: ${dataPoint.reps ?? "-"}`}
                               </p>
                             )}
-                            {dataPoint && !showDistance && (
+                            {mode === "volume" && dataPoint && (
                               <p className='text-xs sm:text-sm text-muted-foreground mb-1'>
-                                Reps: {dataPoint.reps}
+                                Sets: {dataPoint.sets ?? "-"}
                               </p>
                             )}
                             {payload.map((entry, index) => (
@@ -358,7 +443,7 @@ export default function ProgressiveOverloadWidget() {
                   <Line
                     yAxisId='L'
                     type='monotone'
-                    dataKey='maxWeight'
+                    dataKey='current'
                     stroke={colors.primary}
                     strokeWidth={3}
                     dot={{ fill: colors.primary, r: isMobile ? 3 : 4 }}
@@ -368,7 +453,7 @@ export default function ProgressiveOverloadWidget() {
                       strokeWidth: 2,
                       fill: colors.background,
                     }}
-                    name='Current'
+                    name={currentLineName}
                   />
                   <Line
                     yAxisId='L'
@@ -420,14 +505,14 @@ export default function ProgressiveOverloadWidget() {
               />
               <LegendItem
                 label={isMobile ? "1W Ago" : "1 Week Ago"}
-                color='#34d399'
+                color={colors.secondary}
               />
               <LegendItem
                 label={isMobile ? "1Y Ago" : "1 Year Ago"}
                 color='#82ca9d'
               />
               <LegendItem
-                label='Current'
+                label={currentLegendLabel}
                 color={colors.primary}
                 thick
               />
