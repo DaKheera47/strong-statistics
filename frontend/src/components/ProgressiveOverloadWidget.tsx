@@ -17,12 +17,21 @@ import { WidgetHeader } from "./WidgetHeader";
 import { WidgetWrapper } from "./WidgetWrapper";
 import { AccordionContent } from "./ui/accordion";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "./ui/select";
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "./ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "./ui/popover";
+import { Button } from "./ui/button";
+import { Check, ChevronsUpDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 /* --- simple media query hook (client-only) --- */
 function useMediaQuery(query: string) {
@@ -39,6 +48,7 @@ function useMediaQuery(query: string) {
 
 export default function ProgressiveOverloadWidget() {
   const [selectedExercise, setSelectedExercise] = useState<string | null>(null);
+  const [open, setOpen] = useState(false);
   const {
     allExercises,
     loading: exercisesLoading,
@@ -80,11 +90,15 @@ export default function ProgressiveOverloadWidget() {
           isAccordion
         >
           <div className='flex items-center gap-3'>
-            <Select disabled>
-              <SelectTrigger className='w-48'>
-                <SelectValue placeholder='Error loading exercises' />
-              </SelectTrigger>
-            </Select>
+            <Button
+              variant="outline"
+              role="combobox"
+              disabled
+              className="w-80 justify-between"
+            >
+              Error loading exercises
+              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+            </Button>
           </div>
         </WidgetHeader>
         <AccordionContent>
@@ -109,24 +123,49 @@ export default function ProgressiveOverloadWidget() {
         isAccordion
       >
         <div className='flex items-center gap-3'>
-          <Select
-            value={selectedExercise || ""}
-            onValueChange={(value) => setSelectedExercise(value || null)}
-          >
-            <SelectTrigger className='w-48'>
-              <SelectValue placeholder='Select an exercise...' />
-            </SelectTrigger>
-            <SelectContent>
-              {allExercises.map((exercise) => (
-                <SelectItem
-                  key={exercise.name}
-                  value={exercise.name}
-                >
-                  {exercise.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                role="combobox"
+                aria-expanded={open}
+                className="w-80 justify-between"
+              >
+                {selectedExercise
+                  ? allExercises.find((exercise) => exercise.name === selectedExercise)?.name
+                  : "Select an exercise..."}
+                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80 p-0">
+              <Command>
+                <CommandInput placeholder="Search exercises..." />
+                <CommandList>
+                  <CommandEmpty>No exercise found.</CommandEmpty>
+                  <CommandGroup>
+                    {allExercises.map((exercise) => (
+                      <CommandItem
+                        key={exercise.name}
+                        value={exercise.name}
+                        onSelect={(currentValue) => {
+                          setSelectedExercise(currentValue === selectedExercise ? null : currentValue);
+                          setOpen(false);
+                        }}
+                      >
+                        <Check
+                          className={cn(
+                            "mr-2 h-4 w-4",
+                            selectedExercise === exercise.name ? "opacity-100" : "opacity-0"
+                          )}
+                        />
+                        {exercise.name}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
         </div>
       </WidgetHeader>
 
