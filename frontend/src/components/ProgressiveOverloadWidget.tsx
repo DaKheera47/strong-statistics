@@ -4,7 +4,7 @@ import { useChartColors } from "@/hooks/useChartColors";
 import { useExerciseSelection } from "@/hooks/useExerciseSelection";
 import { useProgressiveOverloadData } from "@/hooks/useProgressiveOverloadData";
 import { shouldDisplayDistance, getDistanceUnit } from "@/lib/exercise-config";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Line,
   LineChart,
@@ -17,12 +17,21 @@ import { WidgetHeader } from "./WidgetHeader";
 import { WidgetWrapper } from "./WidgetWrapper";
 import { AccordionContent } from "./ui/accordion";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "./ui/select";
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "./ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "./ui/popover";
+import { Button } from "./ui/button";
+import { Check, ChevronsUpDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 /* --- simple media query hook (client-only) --- */
 function useMediaQuery(query: string) {
@@ -39,16 +48,70 @@ function useMediaQuery(query: string) {
 
 export default function ProgressiveOverloadWidget() {
   const [selectedExercise, setSelectedExercise] = useState<string | null>(null);
+  const [open, setOpen] = useState(false);
   const {
     allExercises,
     loading: exercisesLoading,
     error: exercisesError,
   } = useExerciseSelection();
 
+  // Select a random exercise on load
+  useEffect(() => {
+    if (!exercisesLoading && !exercisesError && allExercises.length > 0 && !selectedExercise) {
+      const randomIndex = Math.floor(Math.random() * allExercises.length);
+      setSelectedExercise(allExercises[randomIndex].name);
+    }
+  }, [allExercises, exercisesLoading, exercisesError, selectedExercise]);
+
   const { data, loading, error } = useProgressiveOverloadData(selectedExercise);
   const colors = useChartColors();
 
   const isMobile = useMediaQuery("(max-width: 640px)");
+
+  const yAxisDomain = useMemo(() => {
+    if (!data || data.data.length === 0) {
+      return undefined;
+    }
+
+    const values: number[] = [];
+
+    data.data.forEach(point => {
+      if (typeof point.maxWeight === "number") values.push(point.maxWeight);
+      if (typeof point.weekAgo === "number") values.push(point.weekAgo);
+      if (typeof point.monthAgo === "number") values.push(point.monthAgo);
+      if (typeof point.yearAgo === "number") values.push(point.yearAgo);
+    });
+
+    if (values.length === 0) {
+      return undefined;
+    }
+
+    const minValue = Math.min(...values);
+    const maxValue = Math.max(...values);
+    const range = maxValue - minValue;
+    const padding = range === 0 ? Math.max(minValue * 0.1, 2) : range * 0.1;
+    const lowerBound = Math.max(0, minValue - padding);
+    const upperBound = maxValue + padding;
+
+    return [lowerBound, upperBound] as [number, number];
+  }, [data]);
+
+  const chartContainerClasses = [
+    "w-full p-3 sm:p-4 border rounded-lg bg-card hover:shadow-md transition-shadow flex flex-col",
+    "h-[68vw] min-h-[300px] sm:h-[40vw] sm:min-h-[280px]",
+  ].join(" ");
+
+  const chartSkeleton = (
+    <div className={chartContainerClasses}>
+      <div className='flex-1 rounded-md bg-muted animate-pulse' />
+      <div className='mt-2 sm:mt-3 flex flex-wrap items-center justify-center gap-3 sm:gap-6'>
+        <div className='h-3 sm:h-4 w-20 sm:w-28 rounded-full bg-muted animate-pulse' />
+        <div className='h-3 sm:h-4 w-20 sm:w-28 rounded-full bg-muted/80 animate-pulse' />
+        <div className='h-3 sm:h-4 w-20 sm:w-28 rounded-full bg-muted/60 animate-pulse' />
+        <div className='h-3 sm:h-4 w-20 sm:w-28 rounded-full bg-muted/40 animate-pulse' />
+      </div>
+    </div>
+  );
 
   if (exercisesLoading) {
     return (
@@ -57,9 +120,7 @@ export default function ProgressiveOverloadWidget() {
           title='Progressive Overload'
           isAccordion
         />
-        <AccordionContent>
-          <div className='h-96 bg-muted animate-pulse rounded-lg' />
-        </AccordionContent>
+        <AccordionContent>{chartSkeleton}</AccordionContent>
       </WidgetWrapper>
     );
   }
@@ -72,11 +133,15 @@ export default function ProgressiveOverloadWidget() {
           isAccordion
         >
           <div className='flex items-center gap-3'>
-            <Select disabled>
-              <SelectTrigger className='w-48'>
-                <SelectValue placeholder='Error loading exercises' />
-              </SelectTrigger>
-            </Select>
+            <Button
+              variant="outline"
+              role="combobox"
+              disabled
+              className="w-80 justify-between"
+            >
+              Error loading exercises
+              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+            </Button>
           </div>
         </WidgetHeader>
         <AccordionContent>
@@ -101,29 +166,54 @@ export default function ProgressiveOverloadWidget() {
         isAccordion
       >
         <div className='flex items-center gap-3'>
-          <Select
-            value={selectedExercise || ""}
-            onValueChange={(value) => setSelectedExercise(value || null)}
-          >
-            <SelectTrigger className='w-48'>
-              <SelectValue placeholder='Select an exercise...' />
-            </SelectTrigger>
-            <SelectContent>
-              {allExercises.map((exercise) => (
-                <SelectItem
-                  key={exercise.name}
-                  value={exercise.name}
-                >
-                  {exercise.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                role="combobox"
+                aria-expanded={open}
+                className="w-80 justify-between"
+              >
+                {selectedExercise
+                  ? allExercises.find((exercise) => exercise.name === selectedExercise)?.name
+                  : "Select an exercise..."}
+                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80 p-0">
+              <Command>
+                <CommandInput placeholder="Search exercises..." />
+                <CommandList>
+                  <CommandEmpty>No exercise found.</CommandEmpty>
+                  <CommandGroup>
+                    {allExercises.map((exercise) => (
+                      <CommandItem
+                        key={exercise.name}
+                        value={exercise.name}
+                        onSelect={(currentValue) => {
+                          setSelectedExercise(currentValue === selectedExercise ? null : currentValue);
+                          setOpen(false);
+                        }}
+                      >
+                        <Check
+                          className={cn(
+                            "mr-2 h-4 w-4",
+                            selectedExercise === exercise.name ? "opacity-100" : "opacity-0"
+                          )}
+                        />
+                        {exercise.name}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
         </div>
       </WidgetHeader>
 
       <AccordionContent>
-        {loading && <div className='h-96 bg-muted animate-pulse rounded-lg' />}
+        {loading && chartSkeleton}
 
         {error && (
           <div className='text-destructive bg-destructive/10 p-4 rounded-lg'>
@@ -158,13 +248,7 @@ export default function ProgressiveOverloadWidget() {
         )}
 
         {data && data.data.length > 0 && !loading && (
-          <div
-            className={[
-              // Taller on phones, shorter on larger screens
-              "w-full p-3 sm:p-4 border rounded-lg bg-card hover:shadow-md transition-shadow flex flex-col",
-              "h-[68vw] min-h-[300px] sm:h-[40vw] sm:min-h-[280px]",
-            ].join(" ")}
-          >
+          <div className={chartContainerClasses}>
             <div className='flex-1'>
               <ResponsiveContainer
                 width='100%'
@@ -205,6 +289,7 @@ export default function ProgressiveOverloadWidget() {
                     }}
                     tickLine={{ stroke: "currentColor" }}
                     axisLine={{ stroke: "currentColor" }}
+                    domain={yAxisDomain}
                     label={{
                       value: "Max Weight (kg)",
                       angle: -90,
@@ -220,6 +305,7 @@ export default function ProgressiveOverloadWidget() {
                     width={yAxisW}
                     tick={false}
                     axisLine={false}
+                    domain={yAxisDomain}
                   />
 
                   <Tooltip
