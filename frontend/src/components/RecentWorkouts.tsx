@@ -23,7 +23,6 @@ interface VolumeSparklineData {
   sets: number;
 }
 
-
 // WorkoutDetailData is now imported from WorkoutDetailModal
 
 interface WorkoutCardProps {
@@ -51,7 +50,6 @@ function formatDuration(minutes: number | null): string {
   }
   return `${mins}m`;
 }
-
 
 function WorkoutCard({
   workout,
@@ -93,7 +91,7 @@ function WorkoutCard({
             {dayName}, {date}
           </p>
         </div>
-        <div className='text-blue-400'>
+        <div className='text-purple-500'>
           <svg
             width='24'
             height='24'
@@ -269,7 +267,8 @@ export default function RecentWorkouts() {
         try {
           const sparklineResponse = await fetch("/api/volume-sparklines");
           if (sparklineResponse.ok) {
-            const sparklineData: VolumeSparklineData[] = await sparklineResponse.json();
+            const sparklineData: VolumeSparklineData[] =
+              await sparklineResponse.json();
             setSparklineData(sparklineData);
           }
         } catch (err) {
