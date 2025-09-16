@@ -2,7 +2,11 @@
 
 import { useChartColors } from "@/hooks/useChartColors";
 import { useExerciseSelection } from "@/hooks/useExerciseSelection";
-import { useProgressiveOverloadData } from "@/hooks/useProgressiveOverloadData";
+import {
+  ProgressiveOverloadDataPoint,
+  ProgressiveVolumeDataPoint,
+  useProgressiveOverloadData,
+} from "@/hooks/useProgressiveOverloadData";
 import { shouldDisplayDistance, getDistanceUnit } from "@/lib/exercise-config";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -70,7 +74,11 @@ export default function ProgressiveOverloadWidget() {
 
   const isMobile = useMediaQuery("(max-width: 640px)");
 
-  const chartData = useMemo(() => {
+  type ChartDataPoint =
+    | (ProgressiveOverloadDataPoint & { current: number; mode: "maxWeight" })
+    | (ProgressiveVolumeDataPoint & { current: number; mode: "volume" });
+
+  const chartData = useMemo<ChartDataPoint[]>(() => {
     if (!data) return [];
 
     if (mode === "maxWeight") {
@@ -390,12 +398,12 @@ export default function ProgressiveOverloadWidget() {
                   <Tooltip
                     content={({ active, payload, label }) => {
                       if (active && payload && payload.length && selectedExercise) {
-                        const dataPoint = payload.find(p => p.dataKey === 'current')?.payload as
-                          | (typeof chartData)[number]
-                          | undefined;
+                        const dataPoint = payload.find(p => p.dataKey === 'current')?.payload as ChartDataPoint | undefined;
 
+                        const isMaxWeightPoint = dataPoint?.mode === "maxWeight";
+                        const isVolumePoint = dataPoint?.mode === "volume";
                         const showDistance =
-                          mode === "maxWeight" && shouldDisplayDistance(selectedExercise);
+                          isMaxWeightPoint && shouldDisplayDistance(selectedExercise);
                         const distanceUnit = getDistanceUnit(selectedExercise);
 
                         return (
@@ -410,14 +418,14 @@ export default function ProgressiveOverloadWidget() {
                                   })
                                 : "Unknown date"}
                             </p>
-                            {mode === "maxWeight" && dataPoint && (
+                            {isMaxWeightPoint && dataPoint && (
                               <p className='text-xs sm:text-sm text-muted-foreground mb-1'>
                                 {showDistance
                                   ? `Distance: ${dataPoint.reps ?? 0} ${distanceUnit}`
                                   : `Reps: ${dataPoint.reps ?? "-"}`}
                               </p>
                             )}
-                            {mode === "volume" && dataPoint && (
+                            {isVolumePoint && dataPoint && (
                               <p className='text-xs sm:text-sm text-muted-foreground mb-1'>
                                 Sets: {dataPoint.sets ?? "-"}
                               </p>
