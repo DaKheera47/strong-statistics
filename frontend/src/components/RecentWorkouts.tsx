@@ -16,6 +16,14 @@ interface RecentWorkoutData {
   prs: number;
 }
 
+interface VolumeSparklineData {
+  exercise: string;
+  date: string;
+  volume: number;
+  sets: number;
+}
+
+
 // WorkoutDetailData is now imported from WorkoutDetailModal
 
 interface WorkoutCardProps {
@@ -43,6 +51,7 @@ function formatDuration(minutes: number | null): string {
   }
   return `${mins}m`;
 }
+
 
 function WorkoutCard({
   workout,
@@ -211,6 +220,7 @@ export default function RecentWorkouts() {
   const [workoutDetails, setWorkoutDetails] = useState<
     Map<string, WorkoutDetailData>
   >(new Map());
+  const [sparklineData, setSparklineData] = useState<VolumeSparklineData[]>([]);
   const [selectedWorkout, setSelectedWorkout] =
     useState<WorkoutDetailData | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -254,6 +264,17 @@ export default function RecentWorkouts() {
         }
 
         setWorkoutDetails(detailsMap);
+
+        // Fetch sparkline data
+        try {
+          const sparklineResponse = await fetch("/api/volume-sparklines");
+          if (sparklineResponse.ok) {
+            const sparklineData: VolumeSparklineData[] = await sparklineResponse.json();
+            setSparklineData(sparklineData);
+          }
+        } catch (err) {
+          console.error("Failed to fetch sparkline data:", err);
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : "An error occurred");
       } finally {
@@ -290,8 +311,12 @@ export default function RecentWorkouts() {
   if (loading) {
     return (
       <WidgetWrapper>
-        <WidgetHeader title='Recent Workouts' isAccordion={true} />
-        <AccordionContent className="space-y-4">
+        <WidgetHeader
+          title='Recent Workouts'
+          isAccordion={true}
+        />
+
+        <AccordionContent className='space-y-4'>
           <div className='grid grid-cols-1 lg:grid-cols-2 gap-4'>
             {[...Array(4)].map((_, i) => (
               <div
@@ -327,8 +352,11 @@ export default function RecentWorkouts() {
   if (error) {
     return (
       <WidgetWrapper>
-        <WidgetHeader title='Recent Workouts' isAccordion={true} />
-        <AccordionContent className="space-y-4">
+        <WidgetHeader
+          title='Recent Workouts'
+          isAccordion={true}
+        />
+        <AccordionContent className='space-y-4'>
           <div className='bg-card rounded-lg p-6 border border-border text-center'>
             <p className='text-muted-foreground'>
               Failed to load recent workouts: {error}
@@ -342,8 +370,11 @@ export default function RecentWorkouts() {
   if (workouts.length === 0) {
     return (
       <WidgetWrapper>
-        <WidgetHeader title='Recent Workouts' isAccordion={true} />
-        <AccordionContent className="space-y-4">
+        <WidgetHeader
+          title='Recent Workouts'
+          isAccordion={true}
+        />
+        <AccordionContent className='space-y-4'>
           <div className='bg-card rounded-lg p-6 border border-border text-center'>
             <p className='text-muted-foreground'>No recent workouts found</p>
           </div>
@@ -355,9 +386,12 @@ export default function RecentWorkouts() {
   return (
     <>
       <WidgetWrapper>
-        <WidgetHeader title='Recent Workouts' isAccordion={true} />
-        <AccordionContent className="space-y-4">
-          <div className='grid grid-cols-1 lg:grid-cols-2 gap-4'>
+        <WidgetHeader
+          title='Recent Workouts'
+          isAccordion={true}
+        />
+        <AccordionContent className='space-y-4'>
+          <div className='grid grid-cols-1 gap-4'>
             {workouts.map((workout) => {
               const key = `${workout.date}-${workout.workout_name}`;
               const detail = workoutDetails.get(key);
@@ -382,6 +416,7 @@ export default function RecentWorkouts() {
         onClose={setIsModalOpen}
         workout={selectedWorkout}
         isLoading={detailLoading}
+        sparklineData={sparklineData}
       />
     </>
   );
