@@ -7,7 +7,7 @@ from typing import Optional
 
 import pandas as pd
 
-from ..db import get_conn, set_meta
+from ..db import get_conn, set_meta, build_dedupe_keys_for_frame
 
 HEVY_EXPECTED_COLUMNS = [
     "title",
@@ -41,7 +41,7 @@ HEVY_NORMALIZED_COLUMNS = [
 
 
 def _parse_hevy_dt(s: str) -> Optional[str]:
-    """Parse Hevy timestamps like '14 Sep 2025, 17:41' -> 'YYYY-MM-DDTHH:MM:SS'."""
+    """Parse Hevy timestamps like '14 Sep 2025, 17:41' -> 'YYYY-%m-%dT%H:%M:%S'."""
     if pd.isna(s):
         return None
     s = str(s).strip()
@@ -53,7 +53,7 @@ def _parse_hevy_dt(s: str) -> Optional[str]:
         return dt.strftime("%Y-%m-%dT%H:%M:%S")
     except ValueError:
         pass
-    # A few fallbacks
+    # Fallbacks
     for fmt in ("%Y-%m-%d %H:%M:%S", "%m/%d/%Y %H:%M", "%m/%d/%Y", "%Y-%m-%d"):
         try:
             dt = datetime.strptime(s, fmt)
@@ -83,7 +83,7 @@ def normalize_hevy_df(df: pd.DataFrame) -> pd.DataFrame:
     # Date (use workout start_time like Strong "Date")
     df["date"] = df["start_time"].map(_parse_hevy_dt)
 
-    # Workout name is the "title" (e.g., "Lower // Ramp // Strength // 1")
+    # Workout name is the "title"
     df["workout_name"] = df["title"].astype(str)
 
     # Workout duration in minutes (same for all rows in the workout)
@@ -118,33 +118,48 @@ def upsert_hevy_sets(normalized: pd.DataFrame) -> int:
     if normalized.empty:
         return 0
 
-    rows = [
-        (
-            r.date,
-            r.workout_name,
-            float(r.duration_min) if r.duration_min is not None else None,
-            r.exercise,
-            int(r.set_order) if r.set_order is not None else None,
-            float(r.weight) if r.weight is not None else None,
-            float(r.reps) if r.reps is not None else None,
-            float(r.distance) if r.distance is not None else None,
-            float(r.seconds) if r.seconds is not None else None,
+    # Compute dedupe keys with the same multiset algorithm
+    dedupe_keys = build_dedupe_keys_for_frame(
+        normalized[
+            [
+                "date",
+                "workout_name",
+                "exercise",
+                "weight",
+                "reps",
+                "distance",
+                "seconds",
+            ]
+        ]
+    )
+
+    rows = []
+    for r, k in zip(normalized.itertuples(index=False), dedupe_keys.tolist()):
+        rows.append(
+            (
+                r.date,
+                r.workout_name,
+                float(r.duration_min) if r.duration_min is not None else None,
+                r.exercise,
+                int(r.set_order) if r.set_order is not None else None,
+                float(r.weight) if r.weight is not None else None,
+                float(r.reps) if r.reps is not None else None,
+                float(r.distance) if r.distance is not None else None,
+                float(r.seconds) if r.seconds is not None else None,
+                k,
+            )
         )
-        for r in normalized.itertuples(index=False)
-    ]
 
     with get_conn() as conn:
         cur = conn.executemany(
             """
             INSERT OR IGNORE INTO sets
-            (date, workout_name, duration_min, exercise, set_order, weight, reps, distance, seconds)
-            VALUES (?,?,?,?,?,?,?,?,?)
+            (date, workout_name, duration_min, exercise, set_order, weight, reps, distance, seconds, dedupe_key)
+            VALUES (?,?,?,?,?,?,?,?,?,?)
             """,
             rows,
         )
         conn.commit()
-        # SQLite's executemany rowcount is not reliable for "OR IGNORE".
-        # We'll compute inserted in process_hevy_csv via count before/after.
         return cur.rowcount
 
 

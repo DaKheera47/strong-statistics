@@ -3,22 +3,21 @@
 from __future__ import annotations
 from pathlib import Path
 import pandas as pd
-import re
 from datetime import datetime, timezone
-from ..db import get_conn, set_meta
+from ..db import get_conn, set_meta, build_dedupe_keys_for_frame
 
 DATE_COL = "Date"
 EXPECTED_COLUMNS = [
     "Date",
     "Workout Name",
-    "Duration",
+    "Duration (sec)",
     "Exercise Name",
     "Set Order",
-    "Weight",
+    "Weight (kg)",
     "Reps",
-    "Distance",
-    "Seconds",
     "RPE",
+    "Distance (meters)",
+    "Seconds",
 ]
 
 NORMALIZED_COLUMNS = [
@@ -33,18 +32,9 @@ NORMALIZED_COLUMNS = [
     "seconds",
 ]
 
-DURATION_RE = re.compile(r"^(?P<mins>\d+)(m)?$")
-
 
 def normalize_df(df: pd.DataFrame) -> pd.DataFrame:
-    """Normalize raw Strong CSV DataFrame to schema columns.
-
-    - Validates expected columns presence (subset check).
-    - Parses Date into ISO string (naive) preserving order.
-    - Extracts integer minutes from Duration like '35m'.
-    - Renames columns & selects standardized subset.
-    - Coerces numeric columns to floats (NaNs allowed).
-    """
+    """Normalize raw Strong CSV DataFrame to schema columns."""
     missing = [c for c in EXPECTED_COLUMNS if c not in df.columns]
     if missing:
         raise ValueError(f"Missing columns: {missing}")
@@ -60,19 +50,17 @@ def normalize_df(df: pd.DataFrame) -> pd.DataFrame:
 
     df["date"] = df[DATE_COL].map(parse_dt)
 
-    # Duration minutes
-    def parse_duration(s):
+    # Duration minutes - convert from seconds to minutes
+    def parse_duration_sec(s):
         if pd.isna(s):
             return None
-        s = str(s).strip()
-        if not s:
+        try:
+            seconds = float(s)
+            return seconds / 60.0
+        except (ValueError, TypeError):
             return None
-        m = DURATION_RE.match(s)
-        if m:
-            return float(m.group("mins"))
-        return None
 
-    df["duration_min"] = df["Duration"].map(parse_duration)
+    df["duration_min"] = df["Duration (sec)"].map(parse_duration_sec)
 
     df["workout_name"] = (
         df["Workout Name"].astype(str).where(~df["Workout Name"].isna(), None)
@@ -81,9 +69,9 @@ def normalize_df(df: pd.DataFrame) -> pd.DataFrame:
 
     numeric_map = {
         "Set Order": "set_order",
-        "Weight": "weight",
+        "Weight (kg)": "weight",
         "Reps": "reps",
-        "Distance": "distance",
+        "Distance (meters)": "distance",
         "Seconds": "seconds",
     }
     for src, dst in numeric_map.items():
@@ -94,41 +82,53 @@ def normalize_df(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def upsert_sets(normalized: pd.DataFrame) -> int:
-    """Insert normalized rows into DB using INSERT OR IGNORE.
-
-    Returns number of newly inserted rows.
-    """
+    """Insert normalized rows using OR IGNORE with a multiset-based dedupe_key."""
     if normalized.empty:
         return 0
 
-    rows = [
-        (
-            r.date,
-            r.workout_name,
-            r.duration_min,
-            r.exercise,
-            int(r.set_order) if pd.notna(r.set_order) else None,
-            r.weight,
-            r.reps,
-            r.distance,
-            r.seconds,
+    # Compute dedupe keys using stable multiset algorithm
+    dedupe_keys = build_dedupe_keys_for_frame(
+        normalized[
+            [
+                "date",
+                "workout_name",
+                "exercise",
+                "weight",
+                "reps",
+                "distance",
+                "seconds",
+            ]
+        ]
+    )
+
+    rows = []
+    for r, k in zip(normalized.itertuples(index=False), dedupe_keys.tolist()):
+        rows.append(
+            (
+                r.date,
+                r.workout_name,
+                r.duration_min,
+                r.exercise,
+                int(r.set_order) if pd.notna(r.set_order) else None,
+                r.weight if pd.notna(r.weight) else None,
+                r.reps if pd.notna(r.reps) else None,
+                r.distance if pd.notna(r.distance) else None,
+                r.seconds if pd.notna(r.seconds) else None,
+                k,
+            )
         )
-        for r in normalized.itertuples(index=False)
-    ]
 
     with get_conn() as conn:
         cur = conn.executemany(
             """
             INSERT OR IGNORE INTO sets
-            (date, workout_name, duration_min, exercise, set_order, weight, reps, distance, seconds)
-            VALUES (?,?,?,?,?,?,?,?,?)
+            (date, workout_name, duration_min, exercise, set_order, weight, reps, distance, seconds, dedupe_key)
+            VALUES (?,?,?,?,?,?,?,?,?,?)
             """,
             rows,
         )
         conn.commit()
-        return (
-            cur.rowcount
-        )  # number attempted; not exact inserted (SQLite sets to # of executions). We'll compute inserted via changes().
+        return cur.rowcount
 
 
 def count_sets() -> int:
@@ -139,21 +139,7 @@ def count_sets() -> int:
 
 def process_strong_csv(csv_path: Path) -> int:
     """Process Strong app CSV file and insert into database."""
-    import pandas as pd
-
-    df = pd.read_csv(csv_path)
-
-    # Convert "Duration" like "35m" or "1h 3m" -> integer minutes
-    if "Duration" in df.columns:
-        s = df["Duration"].astype("string").str.lower().str.strip()
-        hrs = pd.to_numeric(s.str.extract(r"(\d+)\s*h", expand=False), errors="coerce")
-        mins = pd.to_numeric(s.str.extract(r"(\d+)\s*m", expand=False), errors="coerce")
-
-        total_min = (hrs.fillna(0) * 60 + mins.fillna(0)).astype("Int64")
-        # if neither h nor m was present, keep it null
-        total_min[hrs.isna() & mins.isna()] = pd.NA
-
-        df["Duration"] = total_min
+    df = pd.read_csv(csv_path, sep=None, engine="python")
 
     normalized = normalize_df(df)
     before = count_sets()
