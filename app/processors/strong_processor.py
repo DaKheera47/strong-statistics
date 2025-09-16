@@ -4,7 +4,7 @@ from __future__ import annotations
 from pathlib import Path
 import pandas as pd
 from datetime import datetime, timezone
-from ..db import get_conn, set_meta
+from ..db import get_conn, set_meta, build_dedupe_keys_for_frame
 
 DATE_COL = "Date"
 EXPECTED_COLUMNS = [
@@ -34,14 +34,7 @@ NORMALIZED_COLUMNS = [
 
 
 def normalize_df(df: pd.DataFrame) -> pd.DataFrame:
-    """Normalize raw Strong CSV DataFrame to schema columns.
-
-    - Validates expected columns presence (subset check).
-    - Parses Date into ISO string (naive) preserving order.
-    - Converts Duration (sec) to duration_min by dividing by 60.
-    - Renames columns & selects standardized subset.
-    - Coerces numeric columns to floats (NaNs allowed).
-    """
+    """Normalize raw Strong CSV DataFrame to schema columns."""
     missing = [c for c in EXPECTED_COLUMNS if c not in df.columns]
     if missing:
         raise ValueError(f"Missing columns: {missing}")
@@ -89,41 +82,53 @@ def normalize_df(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def upsert_sets(normalized: pd.DataFrame) -> int:
-    """Insert normalized rows into DB using INSERT OR IGNORE.
-
-    Returns number of newly inserted rows.
-    """
+    """Insert normalized rows using OR IGNORE with a multiset-based dedupe_key."""
     if normalized.empty:
         return 0
 
-    rows = [
-        (
-            r.date,
-            r.workout_name,
-            r.duration_min,
-            r.exercise,
-            int(r.set_order) if pd.notna(r.set_order) else None,
-            r.weight,
-            r.reps,
-            r.distance,
-            r.seconds,
+    # Compute dedupe keys using stable multiset algorithm
+    dedupe_keys = build_dedupe_keys_for_frame(
+        normalized[
+            [
+                "date",
+                "workout_name",
+                "exercise",
+                "weight",
+                "reps",
+                "distance",
+                "seconds",
+            ]
+        ]
+    )
+
+    rows = []
+    for r, k in zip(normalized.itertuples(index=False), dedupe_keys.tolist()):
+        rows.append(
+            (
+                r.date,
+                r.workout_name,
+                r.duration_min,
+                r.exercise,
+                int(r.set_order) if pd.notna(r.set_order) else None,
+                r.weight if pd.notna(r.weight) else None,
+                r.reps if pd.notna(r.reps) else None,
+                r.distance if pd.notna(r.distance) else None,
+                r.seconds if pd.notna(r.seconds) else None,
+                k,
+            )
         )
-        for r in normalized.itertuples(index=False)
-    ]
 
     with get_conn() as conn:
         cur = conn.executemany(
             """
             INSERT OR IGNORE INTO sets
-            (date, workout_name, duration_min, exercise, set_order, weight, reps, distance, seconds)
-            VALUES (?,?,?,?,?,?,?,?,?)
+            (date, workout_name, duration_min, exercise, set_order, weight, reps, distance, seconds, dedupe_key)
+            VALUES (?,?,?,?,?,?,?,?,?,?)
             """,
             rows,
         )
         conn.commit()
-        return (
-            cur.rowcount
-        )  # number attempted; not exact inserted (SQLite sets to # of executions). We'll compute inserted via changes().
+        return cur.rowcount
 
 
 def count_sets() -> int:
@@ -134,8 +139,6 @@ def count_sets() -> int:
 
 def process_strong_csv(csv_path: Path) -> int:
     """Process Strong app CSV file and insert into database."""
-    import pandas as pd
-
     df = pd.read_csv(csv_path, sep=None, engine="python")
 
     normalized = normalize_df(df)
