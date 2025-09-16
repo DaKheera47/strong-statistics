@@ -6,7 +6,8 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { RecentWorkoutData } from "../api/recent-workouts/route";
-import WorkoutDetailModal, { WorkoutDetailData } from "@/components/WorkoutDetailModal";
+import { WorkoutDetailData } from "@/components/WorkoutDetailModal";
+import WorkoutDetailModalWithSparklines from "@/components/WorkoutDetailModalWithSparklines";
 
 export default function WorkoutsPage() {
   const [workouts, setWorkouts] = useState<RecentWorkoutData[]>([]);
@@ -136,7 +137,7 @@ export default function WorkoutsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {workouts.map((workout, index) => (
+                  {workouts.map((workout) => (
                     <tr
                       key={`${workout.date}-${workout.workout_name}`}
                       className='border-b hover:bg-muted/30 cursor-pointer transition-colors'
@@ -188,7 +189,7 @@ export default function WorkoutsPage() {
         </main>
       </div>
 
-      <WorkoutDetailModal
+      <WorkoutDetailModalWithSparklines
         isOpen={isModalOpen}
         onClose={setIsModalOpen}
         workout={selectedWorkout}

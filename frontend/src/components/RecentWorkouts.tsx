@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import { WidgetHeader } from "./WidgetHeader";
 import { WidgetWrapper } from "./WidgetWrapper";
 import { AccordionContent } from "./ui/accordion";
-import WorkoutDetailModal, { WorkoutDetailData } from "./WorkoutDetailModal";
+import { WorkoutDetailData } from "./WorkoutDetailModal";
+import WorkoutDetailModalWithSparklines from "./WorkoutDetailModalWithSparklines";
 
 interface RecentWorkoutData {
   date: string;
@@ -410,12 +411,11 @@ export default function RecentWorkouts() {
         </AccordionContent>
       </WidgetWrapper>
 
-      <WorkoutDetailModal
+      <WorkoutDetailModalWithSparklines
         isOpen={isModalOpen}
         onClose={setIsModalOpen}
         workout={selectedWorkout}
         isLoading={detailLoading}
-        sparklineData={sparklineData}
       />
     </>
   );
