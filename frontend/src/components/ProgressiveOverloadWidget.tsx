@@ -45,6 +45,14 @@ export default function ProgressiveOverloadWidget() {
     error: exercisesError,
   } = useExerciseSelection();
 
+  // Select a random exercise on load
+  useEffect(() => {
+    if (!exercisesLoading && !exercisesError && allExercises.length > 0 && !selectedExercise) {
+      const randomIndex = Math.floor(Math.random() * allExercises.length);
+      setSelectedExercise(allExercises[randomIndex].name);
+    }
+  }, [allExercises, exercisesLoading, exercisesError, selectedExercise]);
+
   const { data, loading, error } = useProgressiveOverloadData(selectedExercise);
   const colors = useChartColors();
 
