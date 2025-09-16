@@ -76,6 +76,7 @@ export const metadata: Metadata = {
   verification: {
     google: "verification-code-here",
   },
+  themeColor: "#0A0A0A",
 };
 
 export default function RootLayout({
@@ -89,6 +90,8 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <head>
+        <meta name='theme-color' content='#0A0A0A' />
+        <meta name='apple-mobile-web-app-status-bar-style' content='#0A0A0A' />
         <Script
           src='https://umami.dakheera47.com/script.js'
           data-website-id='ac4af018-5e53-408a-9f7a-8102a6618065'
