@@ -1,8 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
 import { cn } from "@/lib/utils";
 import { SparklineCard } from "./SparklineCard";
+import { Button } from "./ui/button";
+import { Check, Link2 } from "lucide-react";
 
 export interface WorkoutDetailData {
   date: string;
@@ -72,6 +75,26 @@ export default function WorkoutDetailModal({
   isLoading,
   sparklineData = [],
 }: WorkoutDetailModalProps) {
+  const [copied, setCopied] = useState(false);
+
+  const shareUrl =
+    typeof window !== "undefined" && workout
+      ? `${window.location.origin}/workouts?date=${workout.date}&workout=${encodeURIComponent(
+          workout.workout_name
+        )}`
+      : "";
+
+  const handleCopy = async () => {
+    if (!shareUrl) return;
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch (e) {
+      console.error("Failed to copy share link", e);
+    }
+  };
+
   return (
     <Dialog
       open={isOpen}
@@ -79,9 +102,27 @@ export default function WorkoutDetailModal({
     >
       <DialogContent className='w-[95vw] sm:w-[90vw] md:w-[85vw] lg:max-w-6xl max-h-[80vh] overflow-hidden bg-background flex flex-col'>
         <DialogHeader className='sticky top-0 z-10 bg-background w-[95%] border-b border-border pb-4'>
-          <DialogTitle className='text-xl font-bold w-fit'>
-            {workout?.workout_name}
-          </DialogTitle>
+          <div className='flex items-center justify-between gap-3'>
+            <DialogTitle className='text-xl font-bold w-fit'>
+              {workout?.workout_name}
+            </DialogTitle>
+            {workout && (
+              <Button
+                variant='ghost'
+                size='sm'
+                onClick={handleCopy}
+                className='h-8 px-2'
+                aria-label='Copy share link'
+                title='Copy share link'
+              >
+                {copied ? (
+                  <Check className='h-4 w-4 text-green-500' />
+                ) : (
+                  <Link2 className='h-4 w-4' />
+                )}
+              </Button>
+            )}
+          </div>
           <div className='text-sm text-muted-foreground flex flex-col items-start sm:flex-row sm:items-center gap-1 sm:gap-4'>
             <span>{formatDateForModal(workout?.date || "")}</span>
             {workout?.duration_minutes && (

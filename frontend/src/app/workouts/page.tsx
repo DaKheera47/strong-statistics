@@ -8,12 +8,22 @@ import Link from "next/link";
 import { RecentWorkoutData } from "../api/recent-workouts/route";
 import { WorkoutDetailData } from "@/components/WorkoutDetailModal";
 import WorkoutDetailModalWithSparklines from "@/components/WorkoutDetailModalWithSparklines";
+import { parseAsString, useQueryState } from "nuqs";
 
 export default function WorkoutsPage() {
   const [workouts, setWorkouts] = useState<RecentWorkoutData[]>([]);
   const [selectedWorkout, setSelectedWorkout] =
     useState<WorkoutDetailData | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  // Modal open state and selection are driven by URL query params via nuqs
+  const [workoutDate, setWorkoutDate] = useQueryState(
+    "date",
+    parseAsString.withDefault("")
+  );
+  const [workoutName, setWorkoutName] = useQueryState(
+    "workout",
+    parseAsString.withDefault("")
+  );
+  const isModalOpen = Boolean(workoutDate && workoutName);
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
 
@@ -33,23 +43,38 @@ export default function WorkoutsPage() {
     }
   };
 
-  const fetchWorkoutDetail = async (date: string, workoutName: string) => {
+  const fetchWorkoutDetail = async (date: string, workout_name: string) => {
     setDetailLoading(true);
     try {
       const response = await fetch(
         `/api/recent-workouts?date=${date}&workout_name=${encodeURIComponent(
-          workoutName
+          workout_name
         )}`
       );
       const data = await response.json();
       setSelectedWorkout(data);
-      setIsModalOpen(true);
+      // Reflect in URL
+      setWorkoutDate(date);
+      setWorkoutName(workout_name);
     } catch (error) {
       console.error("Error fetching workout detail:", error);
     } finally {
       setDetailLoading(false);
     }
   };
+
+  // When query params change (e.g., direct link), fetch details accordingly
+  useEffect(() => {
+    const shouldFetch = workoutDate && workoutName && (!selectedWorkout || selectedWorkout.date !== workoutDate || selectedWorkout.workout_name !== workoutName);
+    if (shouldFetch) {
+      fetchWorkoutDetail(workoutDate, workoutName);
+    }
+    // If cleared, close modal and clear selection
+    if (!workoutDate || !workoutName) {
+      setSelectedWorkout(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workoutDate, workoutName]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -191,7 +216,13 @@ export default function WorkoutsPage() {
 
       <WorkoutDetailModalWithSparklines
         isOpen={isModalOpen}
-        onClose={setIsModalOpen}
+        onClose={(open) => {
+          if (!open) {
+            // Remove query params to close modal
+            setWorkoutDate(null);
+            setWorkoutName(null);
+          }
+        }}
         workout={selectedWorkout}
         isLoading={detailLoading}
       />
