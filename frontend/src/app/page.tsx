@@ -15,8 +15,8 @@ export default function Home() {
   return (
     <div className='min-h-screen bg-background'>
       <div className='py-8'>
-        <header className='mb-8'>
-          <div className='flex justify-between items-start mb-4'>
+        <header className='mb-8 w-full'>
+          <div className='flex justify-between items-center mb-4 flex-wrap gap-4'>
             <div>
               <h1 className='text-3xl font-bold text-foreground mb-2'>
                 Strong Statistics
@@ -26,6 +26,9 @@ export default function Home() {
               </p>
             </div>
             <div className='flex items-center gap-4'>
+              <Link href='/ingest'>
+                <Button variant='outline'>Ingest CSV</Button>
+              </Link>
               <Link href='/workouts'>
                 <Button variant='outline'>All Workouts</Button>
               </Link>
