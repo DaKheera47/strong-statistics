@@ -5,6 +5,11 @@
 		reverse_proxy api:8000
 	}
 
+	# Send /preview to FastAPI
+	handle /preview {
+		reverse_proxy api:8000
+	}
+
 	# Health also goes to FastAPI
 	handle /health {
 		reverse_proxy api:8000
