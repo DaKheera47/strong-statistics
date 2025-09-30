@@ -15,6 +15,13 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Accordion,
   AccordionContent,
   AccordionItem,
@@ -51,73 +58,10 @@ interface DialogState {
   details?: string;
 }
 
-const PREVIEW_ROW_LIMIT = 25;
-const API_BASE = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "").replace(
+const API_BASE = (process.env.NEXT_PUBLIC_API_URL ?? "").replace(
   /\/$/,
   ""
 );
-
-function parseCsv(text: string, limit: number): CsvPreview {
-  const rows: string[][] = [];
-  let cell = "";
-  let row: string[] = [];
-  let insideQuotes = false;
-
-  for (let i = 0; i < text.length; i += 1) {
-    const char = text[i];
-
-    if (char === '"') {
-      const nextChar = text[i + 1];
-      if (insideQuotes && nextChar === '"') {
-        cell += '"';
-        i += 1;
-      } else {
-        insideQuotes = !insideQuotes;
-      }
-    } else if (char === "," && !insideQuotes) {
-      row.push(cell);
-      cell = "";
-    } else if ((char === "\n" || char === "\r") && !insideQuotes) {
-      if (char === "\r" && text[i + 1] === "\n") {
-        i += 1;
-      }
-      row.push(cell);
-      rows.push(row);
-      row = [];
-      cell = "";
-    } else {
-      cell += char;
-    }
-  }
-
-  if (cell.length > 0 || row.length > 0) {
-    row.push(cell);
-    rows.push(row);
-  }
-
-  if (rows.length > 0) {
-    const lastRow = rows[rows.length - 1];
-    if (lastRow.every((value) => value === "")) {
-      rows.pop();
-    }
-  }
-
-  if (rows.length === 0) {
-    return { headers: [], rows: [], totalRows: 0 };
-  }
-
-  const [rawHeader, ...dataRows] = rows;
-  const headers = rawHeader.map((header, index) =>
-    index === 0 ? header.replace(/^\ufeff/, "").trim() : header.trim()
-  );
-  const previewRows = dataRows.slice(0, limit);
-
-  return {
-    headers,
-    rows: previewRows,
-    totalRows: dataRows.length,
-  };
-}
 
 function formatBytes(size: number): string {
   if (Number.isNaN(size) || size <= 0) {
@@ -144,8 +88,12 @@ export default function IngestPage() {
   const [dialogState, setDialogState] = useState<DialogState | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [fileInputKey, setFileInputKey] = useState(0);
+  const [rowLimit, setRowLimit] = useState<number>(25);
   const [ingestEndpoint, setIngestEndpoint] = useState<string>(
     API_BASE ? `${API_BASE}/ingest` : "/ingest"
+  );
+  const [previewEndpoint, setPreviewEndpoint] = useState<string>(
+    API_BASE ? `${API_BASE}/preview` : "/preview"
   );
 
   useEffect(() => {
@@ -158,6 +106,7 @@ export default function IngestPage() {
   useEffect(() => {
     if (!API_BASE) {
       setIngestEndpoint(`${window.location.origin}/ingest`);
+      setPreviewEndpoint(`${window.location.origin}/preview`);
     }
   }, []);
 
@@ -192,8 +141,38 @@ export default function IngestPage() {
 
     setIsParsing(true);
     try {
-      const text = await file.text();
-      const parsed = parseCsv(text, PREVIEW_ROW_LIMIT);
+      // Send file to backend for parsing
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await fetch(`${previewEndpoint}?limit=${rowLimit}`, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const contentType = response.headers.get("content-type") ?? "";
+        const isJson = contentType.includes("application/json");
+
+        let errorMessage = response.statusText;
+        if (isJson) {
+          const errorBody = (await response.json().catch(() => null)) as
+            | { detail?: string }
+            | null;
+          if (errorBody?.detail) {
+            errorMessage = errorBody.detail;
+          }
+        } else {
+          const text = await response.text().catch(() => "");
+          if (text) {
+            errorMessage = text.slice(0, 200);
+          }
+        }
+        throw new Error(errorMessage || "Failed to parse CSV");
+      }
+
+      const parsed = (await response.json()) as CsvPreview;
+
       if (!parsed.headers.length) {
         setParseError("Could not detect any header rows in this CSV file.");
       } else if (!parsed.totalRows) {
@@ -215,6 +194,52 @@ export default function IngestPage() {
     setPreview(null);
     setParseError(null);
     setFileInputKey((key) => key + 1);
+  };
+
+  const refetchPreview = async (newLimit: number) => {
+    if (!selectedFile) return;
+
+    setIsParsing(true);
+    setRowLimit(newLimit);
+    try {
+      const formData = new FormData();
+      formData.append("file", selectedFile);
+
+      const response = await fetch(`${previewEndpoint}?limit=${newLimit}`, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const contentType = response.headers.get("content-type") ?? "";
+        const isJson = contentType.includes("application/json");
+
+        let errorMessage = response.statusText;
+        if (isJson) {
+          const errorBody = (await response.json().catch(() => null)) as
+            | { detail?: string }
+            | null;
+          if (errorBody?.detail) {
+            errorMessage = errorBody.detail;
+          }
+        } else {
+          const text = await response.text().catch(() => "");
+          if (text) {
+            errorMessage = text.slice(0, 200);
+          }
+        }
+        throw new Error(errorMessage || "Failed to parse CSV");
+      }
+
+      const parsed = (await response.json()) as CsvPreview;
+      setPreview(parsed);
+    } catch (error) {
+      setParseError(
+        error instanceof Error ? error.message : "Failed to read file"
+      );
+    } finally {
+      setIsParsing(false);
+    }
   };
 
   const handleIngest = async () => {
@@ -271,10 +296,16 @@ export default function IngestPage() {
           typeof result?.rows === "number" &&
           typeof result?.stored === "string"
         ) {
+          const description = result.rows === 0
+            ? "No new rows added. All rows were already in the database."
+            : result.rows === 1
+            ? "1 new row added."
+            : `${result.rows} new rows added.`;
+
           setDialogState({
             status: "success",
             title: "Upload complete",
-            description: `${result.rows} rows ingested successfully.`,
+            description,
             details: `Stored as ${result.stored}`,
           });
         } else {
@@ -401,8 +432,7 @@ export default function IngestPage() {
                   <Loader2 className='size-4 animate-spin' />
                   <AlertTitle>Parsing preview</AlertTitle>
                   <AlertDescription>
-                    Reading the first {PREVIEW_ROW_LIMIT} rows from the CSV
-                    export.
+                    Reading rows from the CSV export.
                   </AlertDescription>
                 </Alert>
               )}
@@ -420,7 +450,7 @@ export default function IngestPage() {
                   <CheckCircle2 className='size-4' />
                   <AlertTitle>Preview ready</AlertTitle>
                   <AlertDescription>
-                    Showing the first {preview.rows.length} of{" "}
+                    Showing {preview.rows.length} of{" "}
                     {preview.totalRows} sets detected from the export.
                   </AlertDescription>
                 </Alert>
@@ -449,16 +479,39 @@ export default function IngestPage() {
           {preview && !parseError && !isParsing && (
             <Card>
               <CardHeader>
-                <CardTitle>Preview</CardTitle>
-                <CardDescription>
-                  Inspect columns and the first few sets before committing them
-                  to the database.
-                </CardDescription>
+                <div className='flex items-start justify-between'>
+                  <div>
+                    <CardTitle>Preview</CardTitle>
+                    <CardDescription>
+                      Inspect columns and sets before committing them to the database.
+                    </CardDescription>
+                  </div>
+                  <div className='flex items-center gap-2'>
+                    <Label htmlFor='row-limit' className='text-sm text-muted-foreground whitespace-nowrap'>
+                      Rows:
+                    </Label>
+                    <Select
+                      value={String(rowLimit)}
+                      onValueChange={(value) => refetchPreview(Number(value))}
+                    >
+                      <SelectTrigger id='row-limit' className='w-20'>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value='10'>10</SelectItem>
+                        <SelectItem value='25'>25</SelectItem>
+                        <SelectItem value='50'>50</SelectItem>
+                        <SelectItem value='100'>100</SelectItem>
+                        <SelectItem value='250'>250</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
               </CardHeader>
               <CardContent>
                 <Accordion
                   type='multiple'
-                  defaultValue={["overview", "rows"]}
+                  defaultValue={["overview", "columns", "rows"]}
                 >
                   <AccordionItem value='overview'>
                     <AccordionTrigger>File overview</AccordionTrigger>

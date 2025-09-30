@@ -107,6 +107,121 @@ if ICON_PATH.exists():
 init_db()
 
 
+@app.post("/preview")
+async def preview(
+    request: Request, file: UploadFile | None = File(None), limit: int = Query(25)
+):
+    """Preview a CSV file before ingestion.
+
+    Returns headers and a preview of rows for display in the UI.
+    This endpoint does not require authentication and does not save any data.
+    Uses the exact same validation and parsing logic as /ingest.
+    """
+    import pandas as pd
+    import tempfile
+
+    # Determine content type & obtain raw bytes (multipart or raw body) - SAME AS /ingest
+    if file is not None:
+        content_type = file.content_type or ""
+        raw = await file.read()
+        mode = "multipart"
+    else:
+        content_type = request.headers.get("content-type", "")
+        raw = await request.body()
+        mode = "raw"
+
+    # SAME validation as /ingest
+    if content_type not in (
+        "text/csv",
+        "application/vnd.ms-excel",
+        "application/octet-stream",
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail=f"unsupported content type: {content_type} (mode={mode})",
+        )
+
+    if not raw:
+        raise HTTPException(status_code=400, detail="empty body")
+
+    # Size guard - SAME as /ingest
+    size_mb = len(raw) / (1024 * 1024)
+    if size_mb > MAX_UPLOAD_MB:
+        raise HTTPException(status_code=400, detail="file too large")
+
+    # Validate file constraints - SAME as /ingest
+    try:
+        validate_file_constraints(raw, content_type)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    # Get configured import type - SAME as /ingest
+    import_type = get_enabled_import_type()
+    if not import_type:
+        raise HTTPException(
+            status_code=500,
+            detail="No import type is enabled in configuration"
+        )
+
+    # Check for format mismatch - SAME as /ingest
+    header_line = raw.splitlines()[0].decode(errors="ignore") if raw else ""
+    detected_format = detect_format_mismatch(header_line, import_type)
+
+    if detected_format:
+        raise HTTPException(
+            status_code=400,
+            detail=f"CSV header looks like {detected_format} format, but configuration is set to {import_type}. "
+                   f"Please check your config.yml file and enable the correct import type."
+        )
+
+    # Write to temporary file and parse with pandas - SAME as processor does
+    try:
+        with tempfile.NamedTemporaryFile(mode='wb', suffix='.csv', delete=False) as tmp:
+            tmp.write(raw)
+            tmp_path = tmp.name
+
+        # Use EXACT same pandas parsing as the processor
+        df = pd.read_csv(tmp_path, sep=None, engine="python")
+
+        # Clean up temp file
+        Path(tmp_path).unlink()
+
+        # Get headers
+        headers = df.columns.tolist()
+
+        # Get preview rows (use provided limit)
+        preview_rows = df.head(limit).values.tolist()
+
+        # Convert NaN to None and ensure proper JSON serialization
+        def clean_cell(cell):
+            if pd.isna(cell):
+                return None
+            # Convert numpy types to native Python types
+            if hasattr(cell, 'item'):
+                return cell.item()
+            return cell
+
+        preview_rows = [
+            [clean_cell(cell) for cell in row]
+            for row in preview_rows
+        ]
+
+        total_rows = len(df)
+
+        return {
+            "headers": headers,
+            "rows": preview_rows,
+            "totalRows": total_rows
+        }
+
+    except Exception as e:
+        logger.exception("failed to preview CSV")
+        raise HTTPException(
+            status_code=400,
+            detail=f"Failed to parse CSV: {str(e)}"
+        )
+
+
 @app.post("/ingest")
 async def ingest(
     request: Request, token: str = Query(""), file: UploadFile | None = File(None)
