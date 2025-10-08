@@ -1,6 +1,7 @@
 import_types:
   strong:
     enabled: true
+    header_validation: "Date,Workout Name,Duration,Exercise Name,Set Order,Weight,Reps,Distance,Seconds,RPE"
     processor_module: "app.processors.strong_processor"
     processor_function: "process_strong_csv"
 

@@ -1,167 +1,251 @@
-"Workout #";"Date";"Workout Name";"Duration (sec)";"Exercise Name";"Set Order";"Weight (kg)";"Reps";"RPE";"Distance (meters)";"Seconds";"Notes";"Workout Notes"
-"1";"2024-11-28 17:36:08";"B";"2134";"Bent Over Row (Barbell)";"1";"10.0";"16";"";"";"";"";""
-"1";"2024-11-28 17:36:08";"B";"2134";"Bent Over Row (Barbell)";"2";"10.0";"17";"";"";"";"";""
-"1";"2024-11-28 17:36:08";"B";"2134";"Bent Over Row (Barbell)";"3";"10.0";"13";"";"";"";"";""
-"1";"2024-11-28 17:36:08";"B";"2134";"Bicep Curl (Barbell)";"1";"10.0";"10";"";"";"";"";""
-"1";"2024-11-28 17:36:08";"B";"2134";"Bicep Curl (Barbell)";"2";"10.0";"8";"";"";"";"";""
-"1";"2024-11-28 17:36:08";"B";"2134";"Bicep Curl (Barbell)";"3";"10.0";"13";"";"";"";"";""
-"1";"2024-11-28 17:36:08";"B";"2134";"Lat Pulldown (Machine)";"1";"15.0";"15";"";"";"";"";""
-"1";"2024-11-28 17:36:08";"B";"2134";"Lat Pulldown (Machine)";"2";"15.0";"13";"";"";"";"";""
-"1";"2024-11-28 17:36:08";"B";"2134";"Lat Pulldown (Machine)";"3";"15.0";"10";"";"";"";"";""
-"1";"2024-11-28 17:36:08";"B";"2134";"Lat Pulldown (Machine)";"4";"10.0";"20";"";"";"";"";""
-"2";"2025-08-19 13:47:15";"Midday Workout";"1834";"Leg Press";"1";"0.0";"10";"";"";"";"";""
-"2";"2025-08-19 13:47:15";"Midday Workout";"1834";"Leg Press";"2";"0.0";"10";"";"";"";"";""
-"2";"2025-08-19 13:47:15";"Midday Workout";"1834";"Leg Press";"3";"0.0";"10";"";"";"";"";""
-"2";"2025-08-19 13:47:15";"Midday Workout";"1834";"Leg Press";"4";"";"";"";"";"";"";""
-"2";"2025-08-19 13:47:15";"Midday Workout";"1834";"Chest Press (Machine)";"1";"11.0";"10";"";"";"";"";""
-"2";"2025-08-19 13:47:15";"Midday Workout";"1834";"Chest Press (Machine)";"2";"11.0";"8";"";"";"";"";""
-"2";"2025-08-19 13:47:15";"Midday Workout";"1834";"Chest Press (Machine)";"3";"11.0";"10";"";"";"";"";""
-"2";"2025-08-19 13:47:15";"Midday Workout";"1834";"Leg Extension (Machine)";"1";"0.0";"10";"";"";"";"";""
-"2";"2025-08-19 13:47:15";"Midday Workout";"1834";"Leg Extension (Machine)";"2";"5.0";"5";"";"";"";"";""
-"2";"2025-08-19 13:47:15";"Midday Workout";"1834";"Leg Extension (Machine)";"3";"5.0";"5";"";"";"";"";""
-"2";"2025-08-19 13:47:15";"Midday Workout";"1834";"Seated Row (Cable)";"1";"11.0";"10";"";"";"";"";""
-"2";"2025-08-19 13:47:15";"Midday Workout";"1834";"Seated Row (Cable)";"2";"11.0";"10";"";"";"";"";""
-"2";"2025-08-19 13:47:15";"Midday Workout";"1834";"Seated Row (Cable)";"3";"11.0";"10";"";"";"";"";""
-"3";"2025-08-22 12:02:37";"Midday Workout";"2474";"Lat Pulldown (Machine)";"1";"15.0";"7";"";"";"";"";""
-"3";"2025-08-22 12:02:37";"Midday Workout";"2474";"Lat Pulldown (Machine)";"2";"10.0";"10";"";"";"";"";""
-"3";"2025-08-22 12:02:37";"Midday Workout";"2474";"Lat Pulldown (Machine)";"3";"";"";"";"";"";"";""
-"3";"2025-08-22 12:02:37";"Midday Workout";"2474";"Lat Pulldown (Machine)";"4";"15.0";"10";"";"";"";"";""
-"3";"2025-08-22 12:02:37";"Midday Workout";"2474";"Shoulder Press (Machine)";"1";"9.0";"8";"";"";"";"";""
-"3";"2025-08-22 12:02:37";"Midday Workout";"2474";"Shoulder Press (Machine)";"2";"9.0";"10";"";"";"";"";""
-"3";"2025-08-22 12:02:37";"Midday Workout";"2474";"Shoulder Press (Machine)";"3";"9.0";"6";"";"";"";"";""
-"3";"2025-08-22 12:02:37";"Midday Workout";"2474";"Seated Row (Cable)";"1";"17.0";"10";"";"";"";"";""
-"3";"2025-08-22 12:02:37";"Midday Workout";"2474";"Seated Row (Cable)";"2";"11.0";"12";"";"";"";"";""
-"3";"2025-08-22 12:02:37";"Midday Workout";"2474";"Seated Row (Cable)";"3";"17.0";"10";"";"";"";"";""
-"3";"2025-08-22 12:02:37";"Midday Workout";"2474";"Pec Deck (Machine)";"1";"18.0";"10";"";"";"";"";""
-"3";"2025-08-22 12:02:37";"Midday Workout";"2474";"Pec Deck (Machine)";"2";"18.0";"10";"";"";"";"";""
-"3";"2025-08-22 12:02:37";"Midday Workout";"2474";"Pec Deck (Machine)";"3";"18.0";"10";"";"";"";"";""
-"3";"2025-08-22 12:02:37";"Midday Workout";"2474";"Squat (Dumbbell)";"1";"8.0";"8";"";"";"";"";""
-"3";"2025-08-22 12:02:37";"Midday Workout";"2474";"Squat (Dumbbell)";"2";"4.0";"10";"";"";"";"";""
-"3";"2025-08-22 12:02:37";"Midday Workout";"2474";"Squat (Dumbbell)";"3";"8.0";"8";"";"";"";"";""
-"3";"2025-08-22 12:02:37";"Midday Workout";"2474";"Bicep Curl (Dumbbell)";"1";"4.0";"10";"";"";"";"";""
-"4";"2025-08-26 13:27:10";"Tuesdays";"2131";"Leg Press";"1";"0.0";"10";"";"";"";"";""
-"4";"2025-08-26 13:27:10";"Tuesdays";"2131";"Leg Press";"2";"0.0";"10";"";"";"";"";""
-"4";"2025-08-26 13:27:10";"Tuesdays";"2131";"Leg Press";"3";"0.0";"10";"";"";"";"";""
-"4";"2025-08-26 13:27:10";"Tuesdays";"2131";"Chest Press (Machine)";"1";"18.0";"10";"";"";"";"";""
-"4";"2025-08-26 13:27:10";"Tuesdays";"2131";"Chest Press (Machine)";"2";"18.0";"10";"";"";"";"";""
-"4";"2025-08-26 13:27:10";"Tuesdays";"2131";"Chest Press (Machine)";"3";"11.0";"10";"";"";"";"";""
-"4";"2025-08-26 13:27:10";"Tuesdays";"2131";"Seated Row (Cable)";"1";"17.0";"10";"";"";"";"";""
-"4";"2025-08-26 13:27:10";"Tuesdays";"2131";"Seated Row (Cable)";"2";"23.0";"10";"";"";"";"";""
-"4";"2025-08-26 13:27:10";"Tuesdays";"2131";"Seated Row (Cable)";"3";"23.0";"10";"";"";"";"";""
-"4";"2025-08-26 13:27:10";"Tuesdays";"2131";"Glute Kickback (Machine)";"1";"5.0";"10";"";"";"";"";""
-"4";"2025-08-26 13:27:10";"Tuesdays";"2131";"Glute Kickback (Machine)";"2";"5.0";"7";"";"";"";"";""
-"5";"2025-08-29 13:15:19";"Fridays";"2429";"Seated Row (Cable)";"1";"23.0";"12";"";"";"";"";""
-"5";"2025-08-29 13:15:19";"Fridays";"2429";"Seated Row (Cable)";"2";"23.0";"12";"";"";"";"";""
-"5";"2025-08-29 13:15:19";"Fridays";"2429";"Seated Row (Cable)";"3";"23.0";"12";"";"";"";"";""
-"5";"2025-08-29 13:15:19";"Fridays";"2429";"Pec Deck (Machine)";"1";"23.0";"10";"";"";"";"";""
-"5";"2025-08-29 13:15:19";"Fridays";"2429";"Pec Deck (Machine)";"2";"23.0";"10";"";"";"";"";""
-"5";"2025-08-29 13:15:19";"Fridays";"2429";"Pec Deck (Machine)";"3";"18.0";"10";"";"";"";"";""
-"5";"2025-08-29 13:15:19";"Fridays";"2429";"Squat (Dumbbell)";"1";"10.0";"10";"";"";"";"";""
-"5";"2025-08-29 13:15:19";"Fridays";"2429";"Squat (Dumbbell)";"2";"10.0";"10";"";"";"";"";""
-"5";"2025-08-29 13:15:19";"Fridays";"2429";"Squat (Dumbbell)";"3";"10.0";"10";"";"";"";"";""
-"5";"2025-08-29 13:15:19";"Fridays";"2429";"Bicep Curl (Dumbbell)";"1";"4.0";"10";"";"";"";"";""
-"5";"2025-08-29 13:15:19";"Fridays";"2429";"Bicep Curl (Dumbbell)";"2";"4.0";"7";"";"";"";"";""
-"5";"2025-08-29 13:15:19";"Fridays";"2429";"Bicep Curl (Dumbbell)";"3";"4.0";"10";"";"";"";"";""
-"5";"2025-08-29 13:15:19";"Fridays";"2429";"Lat Pulldown (Cable)";"1";"23.0";"10";"";"";"";"";""
-"5";"2025-08-29 13:15:19";"Fridays";"2429";"Lat Pulldown (Cable)";"2";"23.0";"10";"";"";"";"";""
-"5";"2025-08-29 13:15:19";"Fridays";"2429";"Lat Pulldown (Cable)";"3";"23.0";"10";"";"";"";"";""
-"6";"2025-09-02 13:19:12";"Tuesdays";"2545";"Chest Press (Machine)";"1";"18.0";"10";"";"";"";"";""
-"6";"2025-09-02 13:19:12";"Tuesdays";"2545";"Chest Press (Machine)";"2";"18.0";"10";"";"";"";"";""
-"6";"2025-09-02 13:19:12";"Tuesdays";"2545";"Chest Press (Machine)";"3";"18.0";"10";"";"";"";"";""
-"6";"2025-09-02 13:19:12";"Tuesdays";"2545";"Seated Row (Cable)";"1";"29.0";"10";"";"";"";"";""
-"6";"2025-09-02 13:19:12";"Tuesdays";"2545";"Seated Row (Cable)";"2";"29.0";"10";"";"";"";"";""
-"6";"2025-09-02 13:19:12";"Tuesdays";"2545";"Seated Row (Cable)";"3";"29.0";"10";"";"";"";"";""
-"6";"2025-09-02 13:19:12";"Tuesdays";"2545";"Leg Extension (Machine)";"1";"5.0";"10";"";"";"";"";""
-"6";"2025-09-02 13:19:12";"Tuesdays";"2545";"Leg Extension (Machine)";"2";"5.0";"10";"";"";"";"";""
-"6";"2025-09-02 13:19:12";"Tuesdays";"2545";"Leg Extension (Machine)";"3";"5.0";"10";"";"";"";"";""
-"6";"2025-09-02 13:19:12";"Tuesdays";"2545";"Seated Leg Curl (Machine)";"1";"18.0";"10";"";"";"";"";""
-"6";"2025-09-02 13:19:12";"Tuesdays";"2545";"Seated Leg Curl (Machine)";"2";"18.0";"10";"";"";"";"";""
-"6";"2025-09-02 13:19:12";"Tuesdays";"2545";"Seated Leg Curl (Machine)";"3";"18.0";"10";"";"";"";"";""
-"7";"2025-09-05 12:37:47";"Fridays";"4757";"Pull Up (Assisted)";"1";"12.900000000000034";"10";"";"";"";"";""
-"7";"2025-09-05 12:37:47";"Fridays";"4757";"Pull Up (Assisted)";"2";"12.900000000000034";"10";"";"";"";"";""
-"7";"2025-09-05 12:37:47";"Fridays";"4757";"Lat Pulldown (Cable)";"1";"";"";"";"";"";"";""
-"7";"2025-09-05 12:37:47";"Fridays";"4757";"Lat Pulldown (Cable)";"2";"25.0";"14";"";"";"";"";""
-"7";"2025-09-05 12:37:47";"Fridays";"4757";"Lat Pulldown (Cable)";"3";"25.0";"14";"";"";"";"";""
-"7";"2025-09-05 12:37:47";"Fridays";"4757";"Lat Pulldown (Cable)";"4";"25.0";"14";"";"";"";"";""
-"7";"2025-09-05 12:37:47";"Fridays";"4757";"Seated Row (Cable)";"1";"29.0";"10";"";"";"";"";""
-"7";"2025-09-05 12:37:47";"Fridays";"4757";"Seated Row (Cable)";"2";"29.0";"9";"";"";"";"";""
-"7";"2025-09-05 12:37:47";"Fridays";"4757";"Seated Row (Cable)";"3";"29.0";"10";"";"";"";"";""
-"7";"2025-09-05 12:37:47";"Fridays";"4757";"Pec Deck (Machine)";"1";"25.0";"12";"";"";"";"";""
-"7";"2025-09-05 12:37:47";"Fridays";"4757";"Pec Deck (Machine)";"2";"25.0";"9";"";"";"";"";""
-"7";"2025-09-05 12:37:47";"Fridays";"4757";"Pec Deck (Machine)";"3";"25.0";"7";"";"";"";"";""
-"7";"2025-09-05 12:37:47";"Fridays";"4757";"Triceps Extension (Cable)";"1";"5.7";"10";"";"";"";"";""
-"7";"2025-09-05 12:37:47";"Fridays";"4757";"Triceps Extension (Cable)";"2";"5.7";"12";"";"";"";"";""
-"7";"2025-09-05 12:37:47";"Fridays";"4757";"Triceps Extension (Cable)";"3";"5.7";"12";"";"";"";"";""
-"7";"2025-09-05 12:37:47";"Fridays";"4757";"Squat (Dumbbell)";"1";"12.0";"12";"";"";"";"";""
-"7";"2025-09-05 12:37:47";"Fridays";"4757";"Squat (Dumbbell)";"2";"";"";"";"";"";"";""
-"7";"2025-09-05 12:37:47";"Fridays";"4757";"Squat (Dumbbell)";"3";"12.0";"12";"";"";"";"";""
-"7";"2025-09-05 12:37:47";"Fridays";"4757";"Bicep Curl (Dumbbell)";"1";"5.0";"5";"";"";"";"";""
-"7";"2025-09-05 12:37:47";"Fridays";"4757";"Bicep Curl (Dumbbell)";"2";"5.0";"6";"";"";"";"";""
-"7";"2025-09-05 12:37:47";"Fridays";"4757";"Squat (Barbell)";"1";"30.0";"6";"";"";"";"";""
-"7";"2025-09-05 12:37:47";"Fridays";"4757";"Squat (Barbell)";"2";"30.0";"7";"";"";"";"";""
-"7";"2025-09-05 12:37:47";"Fridays";"4757";"Squat (Barbell)";"3";"20.0";"10";"";"";"";"";""
-"8";"2025-09-09 13:12:12";"Tuesdays";"3910";"Chest Press (Machine)";"1";"18.0";"12";"";"";"";"";""
-"8";"2025-09-09 13:12:12";"Tuesdays";"3910";"Chest Press (Machine)";"2";"25.0";"6";"";"";"";"";""
-"8";"2025-09-09 13:12:12";"Tuesdays";"3910";"Chest Press (Machine)";"3";"25.0";"4";"";"";"";"";""
-"8";"2025-09-09 13:12:12";"Tuesdays";"3910";"Shoulder Press (Machine)";"1";"9.0";"7";"";"";"";"";""
-"8";"2025-09-09 13:12:12";"Tuesdays";"3910";"Shoulder Press (Machine)";"2";"9.0";"7";"";"";"";"";""
-"8";"2025-09-09 13:12:12";"Tuesdays";"3910";"Shoulder Press (Machine)";"3";"9.0";"8";"";"";"";"";""
-"8";"2025-09-09 13:12:12";"Tuesdays";"3910";"Pec Deck (Machine)";"1";"25.0";"7";"";"";"";"";""
-"8";"2025-09-09 13:12:12";"Tuesdays";"3910";"Pec Deck (Machine)";"2";"18.0";"10";"";"";"";"";""
-"8";"2025-09-09 13:12:12";"Tuesdays";"3910";"Pec Deck (Machine)";"3";"25.0";"8";"";"";"";"";""
-"8";"2025-09-09 13:12:12";"Tuesdays";"3910";"Seated Row (Cable)";"1";"29.0";"10";"";"";"";"";""
-"8";"2025-09-09 13:12:12";"Tuesdays";"3910";"Seated Row (Cable)";"2";"29.0";"12";"";"";"";"";""
-"8";"2025-09-09 13:12:12";"Tuesdays";"3910";"Seated Row (Cable)";"3";"29.0";"12";"";"";"";"";""
-"8";"2025-09-09 13:12:12";"Tuesdays";"3910";"Triceps Extension (Cable)";"1";"5.7";"6";"";"";"";"";""
-"8";"2025-09-09 13:12:12";"Tuesdays";"3910";"Triceps Extension (Cable)";"2";"5.7";"6";"";"";"";"";""
-"8";"2025-09-09 13:12:12";"Tuesdays";"3910";"Triceps Extension (Cable)";"3";"5.7";"12";"";"";"";"";""
-"8";"2025-09-09 13:12:12";"Tuesdays";"3910";"Pull Up (Assisted)";"1";"15.799999999999997";"4";"";"";"";"";""
-"8";"2025-09-09 13:12:12";"Tuesdays";"3910";"Pull Up (Assisted)";"2";"11.799999999999997";"5";"";"";"";"";""
-"8";"2025-09-09 13:12:12";"Tuesdays";"3910";"Pull Up (Assisted)";"3";"15.799999999999997";"6";"";"";"";"";""
-"8";"2025-09-09 13:12:12";"Tuesdays";"3910";"Bicep Curl (Dumbbell)";"1";"4.0";"5";"";"";"";"";""
-"8";"2025-09-09 13:12:12";"Tuesdays";"3910";"Bicep Curl (Dumbbell)";"2";"4.0";"8";"";"";"";"";""
-"8";"2025-09-09 13:12:12";"Tuesdays";"3910";"Bicep Curl (Dumbbell)";"3";"";"";"";"";"";"";""
-"8";"2025-09-09 13:12:12";"Tuesdays";"3910";"Bicep Curl (Barbell)";"1";"";"";"";"";"";"";""
-"8";"2025-09-09 13:12:12";"Tuesdays";"3910";"Bicep Curl (Barbell)";"2";"10.0";"6";"";"";"";"";""
-"8";"2025-09-09 13:12:12";"Tuesdays";"3910";"Bicep Curl (Barbell)";"3";"";"";"";"";"";"";""
-"9";"2025-09-11 18:16:11";"Fridays";"3712";"Squat (Barbell)";"1";"30.0";"10";"";"";"";"";""
-"9";"2025-09-11 18:16:11";"Fridays";"3712";"Squat (Barbell)";"2";"30.0";"7";"";"";"";"";""
-"9";"2025-09-11 18:16:11";"Fridays";"3712";"Squat (Barbell)";"3";"30.0";"10";"";"";"";"";""
-"9";"2025-09-11 18:16:11";"Fridays";"3712";"Squat (Barbell)";"4";"20.0";"5";"";"";"";"";""
-"9";"2025-09-11 18:16:11";"Fridays";"3712";"Leg Press";"1";"10.0";"10";"";"";"";"";""
-"9";"2025-09-11 18:16:11";"Fridays";"3712";"Leg Press";"2";"0.0";"5";"";"";"";"";""
-"9";"2025-09-11 18:16:11";"Fridays";"3712";"Leg Press";"3";"10.0";"10";"";"";"";"";""
-"9";"2025-09-11 18:16:11";"Fridays";"3712";"Leg Extension (Machine)";"1";"5.0";"10";"";"";"";"";""
-"9";"2025-09-11 18:16:11";"Fridays";"3712";"Leg Extension (Machine)";"2";"5.0";"10";"";"";"";"";""
-"9";"2025-09-11 18:16:11";"Fridays";"3712";"Leg Extension (Machine)";"3";"5.0";"10";"";"";"";"";""
-"9";"2025-09-11 18:16:11";"Fridays";"3712";"Seated Leg Curl (Machine)";"1";"25.0";"12";"";"";"";"";""
-"9";"2025-09-11 18:16:11";"Fridays";"3712";"Seated Leg Curl (Machine)";"2";"25.0";"12";"";"";"";"";""
-"9";"2025-09-11 18:16:11";"Fridays";"3712";"Seated Leg Curl (Machine)";"3";"18.0";"10";"";"";"";"";""
-"9";"2025-09-11 18:16:11";"Fridays";"3712";"Calf Press on Seated Leg Press";"1";"39.0";"10";"";"";"";"";""
-"9";"2025-09-11 18:16:11";"Fridays";"3712";"Calf Press on Seated Leg Press";"2";"39.0";"10";"";"";"";"";""
-"9";"2025-09-11 18:16:11";"Fridays";"3712";"Calf Press on Seated Leg Press";"3";"39.0";"10";"";"";"";"";""
-"9";"2025-09-11 18:16:11";"Fridays";"3712";"Kettlebell Carry";"1";"12.0";"60";"";"";"";"";""
-"9";"2025-09-11 18:16:11";"Fridays";"3712";"Kettlebell Carry";"2";"12.0";"60";"";"";"";"";""
-"10";"2025-09-15 19:24:40";"Tuesdays";"4105";"Shoulder Press (Machine)";"1";"9.0";"12";"";"";"";"";""
-"10";"2025-09-15 19:24:40";"Tuesdays";"4105";"Shoulder Press (Machine)";"2";"9.0";"15";"";"";"";"";""
-"10";"2025-09-15 19:24:40";"Tuesdays";"4105";"Shoulder Press (Machine)";"3";"9.0";"14";"";"";"";"";""
-"10";"2025-09-15 19:24:40";"Tuesdays";"4105";"Chest Press (Machine)";"1";"18.0";"10";"";"";"";"";""
-"10";"2025-09-15 19:24:40";"Tuesdays";"4105";"Chest Press (Machine)";"2";"18.0";"9";"";"";"";"";""
-"10";"2025-09-15 19:24:40";"Tuesdays";"4105";"Chest Press (Machine)";"3";"18.0";"12";"";"";"";"";""
-"10";"2025-09-15 19:24:40";"Tuesdays";"4105";"Bicep Curl (Barbell)";"1";"15.0";"6";"";"";"";"";""
-"10";"2025-09-15 19:24:40";"Tuesdays";"4105";"Bicep Curl (Barbell)";"2";"10.0";"15";"";"";"";"";""
-"10";"2025-09-15 19:24:40";"Tuesdays";"4105";"Bicep Curl (Barbell)";"3";"15.0";"6";"";"";"";"";""
-"10";"2025-09-15 19:24:40";"Tuesdays";"4105";"Seated Row (Cable)";"1";"29.0";"12";"";"";"";"";""
-"10";"2025-09-15 19:24:40";"Tuesdays";"4105";"Seated Row (Cable)";"2";"29.0";"12";"";"";"";"";""
-"10";"2025-09-15 19:24:40";"Tuesdays";"4105";"Seated Row (Cable)";"3";"29.0";"12";"";"";"";"";""
-"10";"2025-09-15 19:24:40";"Tuesdays";"4105";"Lat Pulldown (Cable)";"1";"32.0";"10";"";"";"";"";""
-"10";"2025-09-15 19:24:40";"Tuesdays";"4105";"Lat Pulldown (Cable)";"2";"32.0";"10";"";"";"";"";""
-"10";"2025-09-15 19:24:40";"Tuesdays";"4105";"Lat Pulldown (Cable)";"3";"32.0";"10";"";"";"";"";""
-"10";"2025-09-15 19:24:40";"Tuesdays";"4105";"Triceps Extension (Cable)";"1";"5.7";"15";"";"";"";"";""
-"10";"2025-09-15 19:24:40";"Tuesdays";"4105";"Triceps Extension (Cable)";"2";"5.7";"12";"";"";"";"";""
-"10";"2025-09-15 19:24:40";"Tuesdays";"4105";"Triceps Extension (Cable)";"3";"5.7";"11";"";"";"";"";""
-"10";"2025-09-15 19:24:40";"Tuesdays";"4105";"Kettlebell Carry";"1";"12.0";"60";"";"";"";"";""
-"10";"2025-09-15 19:24:40";"Tuesdays";"4105";"Kettlebell Carry";"2";"12.0";"60";"";"";"";"";""
-"10";"2025-09-15 19:24:40";"Tuesdays";"4105";"Pec Deck (Machine)";"1";"25.0";"8";"";"";"";"";""
-"10";"2025-09-15 19:24:40";"Tuesdays";"4105";"Pec Deck (Machine)";"2";"25.0";"10";"";"";"";"";""
-"10";"2025-09-15 19:24:40";"Tuesdays";"4105";"Pec Deck (Machine)";"3";"25.0";"12";"";"";"";"";""
+Date,Workout Name,Duration,Exercise Name,Set Order,Weight,Reps,Distance,Seconds,RPE
+2024-11-28 17:36:08,"B",35m,"Bent Over Row (Barbell)",1,10.0,13.0,0,0.0,
+2024-11-28 17:36:08,"B",35m,"Bent Over Row (Barbell)",2,10.0,16.0,0,0.0,
+2024-11-28 17:36:08,"B",35m,"Bent Over Row (Barbell)",3,10.0,17.0,0,0.0,
+2024-11-28 17:36:08,"B",35m,"Bicep Curl (Barbell)",1,10.0,13.0,0,0.0,
+2024-11-28 17:36:08,"B",35m,"Bicep Curl (Barbell)",2,10.0,10.0,0,0.0,
+2024-11-28 17:36:08,"B",35m,"Bicep Curl (Barbell)",3,10.0,8.0,0,0.0,
+2024-11-28 17:36:08,"B",35m,"Lat Pulldown (Machine)",1,10.0,20.0,0,0.0,
+2024-11-28 17:36:08,"B",35m,"Lat Pulldown (Machine)",2,15.0,15.0,0,0.0,
+2024-11-28 17:36:08,"B",35m,"Lat Pulldown (Machine)",3,15.0,13.0,0,0.0,
+2024-11-28 17:36:08,"B",35m,"Lat Pulldown (Machine)",4,15.0,10.0,0,0.0,
+2025-08-19 13:47:15,"Midday Workout",30m,"Leg Press",1,0.0,10.0,0,0.0,
+2025-08-19 13:47:15,"Midday Workout",30m,"Leg Press",2,0.0,10.0,0,0.0,
+2025-08-19 13:47:15,"Midday Workout",30m,"Leg Press",3,0.0,10.0,0,0.0,
+2025-08-19 13:47:15,"Midday Workout",30m,"Chest Press (Machine)",1,11.0,10.0,0,0.0,
+2025-08-19 13:47:15,"Midday Workout",30m,"Chest Press (Machine)",2,11.0,10.0,0,0.0,
+2025-08-19 13:47:15,"Midday Workout",30m,"Chest Press (Machine)",3,11.0,8.0,0,0.0,
+2025-08-19 13:47:15,"Midday Workout",30m,"Leg Extension (Machine)",1,5.0,5.0,0,0.0,
+2025-08-19 13:47:15,"Midday Workout",30m,"Leg Extension (Machine)",2,5.0,5.0,0,0.0,
+2025-08-19 13:47:15,"Midday Workout",30m,"Leg Extension (Machine)",3,0.0,10.0,0,0.0,
+2025-08-19 13:47:15,"Midday Workout",30m,"Seated Row (Cable)",1,11.0,10.0,0,0.0,
+2025-08-19 13:47:15,"Midday Workout",30m,"Seated Row (Cable)",2,11.0,10.0,0,0.0,
+2025-08-19 13:47:15,"Midday Workout",30m,"Seated Row (Cable)",3,11.0,10.0,0,0.0,
+2025-08-22 12:02:37,"Midday Workout",41m,"Lat Pulldown (Machine)",1,10.0,10.0,0,0.0,
+2025-08-22 12:02:37,"Midday Workout",41m,"Lat Pulldown (Machine)",2,15.0,7.0,0,0.0,
+2025-08-22 12:02:37,"Midday Workout",41m,"Lat Pulldown (Machine)",3,15.0,10.0,0,0.0,
+2025-08-22 12:02:37,"Midday Workout",41m,"Shoulder Press (Machine)",1,9.0,10.0,0,0.0,
+2025-08-22 12:02:37,"Midday Workout",41m,"Shoulder Press (Machine)",2,9.0,8.0,0,0.0,
+2025-08-22 12:02:37,"Midday Workout",41m,"Shoulder Press (Machine)",3,9.0,6.0,0,0.0,
+2025-08-22 12:02:37,"Midday Workout",41m,"Seated Row (Cable)",1,11.0,12.0,0,0.0,
+2025-08-22 12:02:37,"Midday Workout",41m,"Seated Row (Cable)",2,17.0,10.0,0,0.0,
+2025-08-22 12:02:37,"Midday Workout",41m,"Seated Row (Cable)",3,17.0,10.0,0,0.0,
+2025-08-22 12:02:37,"Midday Workout",41m,"Pec Deck (Machine)",1,18.0,10.0,0,0.0,
+2025-08-22 12:02:37,"Midday Workout",41m,"Pec Deck (Machine)",2,18.0,10.0,0,0.0,
+2025-08-22 12:02:37,"Midday Workout",41m,"Pec Deck (Machine)",3,18.0,10.0,0,0.0,
+2025-08-22 12:02:37,"Midday Workout",41m,"Squat (Dumbbell)",1,4.0,10.0,0,0.0,
+2025-08-22 12:02:37,"Midday Workout",41m,"Squat (Dumbbell)",2,8.0,8.0,0,0.0,
+2025-08-22 12:02:37,"Midday Workout",41m,"Squat (Dumbbell)",3,8.0,8.0,0,0.0,
+2025-08-22 12:02:37,"Midday Workout",41m,"Bicep Curl (Dumbbell)",1,4.0,10.0,0,0.0,
+2025-08-26 13:27:10,"Tuesdays",35m,"Leg Press",1,0.0,10.0,0,0.0,
+2025-08-26 13:27:10,"Tuesdays",35m,"Leg Press",2,0.0,10.0,0,0.0,
+2025-08-26 13:27:10,"Tuesdays",35m,"Leg Press",3,0.0,10.0,0,0.0,
+2025-08-26 13:27:10,"Tuesdays",35m,"Chest Press (Machine)",1,11.0,10.0,0,0.0,
+2025-08-26 13:27:10,"Tuesdays",35m,"Chest Press (Machine)",2,18.0,10.0,0,0.0,
+2025-08-26 13:27:10,"Tuesdays",35m,"Chest Press (Machine)",3,18.0,10.0,0,0.0,
+2025-08-26 13:27:10,"Tuesdays",35m,"Seated Row (Cable)",1,17.0,10.0,0,0.0,
+2025-08-26 13:27:10,"Tuesdays",35m,"Seated Row (Cable)",2,23.0,10.0,0,0.0,
+2025-08-26 13:27:10,"Tuesdays",35m,"Seated Row (Cable)",3,23.0,10.0,0,0.0,
+2025-08-26 13:27:10,"Tuesdays",35m,"Glute Kickback (Machine)",1,5.0,10.0,0,0.0,
+2025-08-26 13:27:10,"Tuesdays",35m,"Glute Kickback (Machine)",2,5.0,7.0,0,0.0,
+2025-08-29 13:15:19,"Fridays",40m,"Seated Row (Cable)",1,23.0,12.0,0,0.0,
+2025-08-29 13:15:19,"Fridays",40m,"Seated Row (Cable)",2,23.0,12.0,0,0.0,
+2025-08-29 13:15:19,"Fridays",40m,"Seated Row (Cable)",3,23.0,12.0,0,0.0,
+2025-08-29 13:15:19,"Fridays",40m,"Pec Deck (Machine)",1,18.0,10.0,0,0.0,
+2025-08-29 13:15:19,"Fridays",40m,"Pec Deck (Machine)",2,23.0,10.0,0,0.0,
+2025-08-29 13:15:19,"Fridays",40m,"Pec Deck (Machine)",3,23.0,10.0,0,0.0,
+2025-08-29 13:15:19,"Fridays",40m,"Squat (Dumbbell)",1,10.0,10.0,0,0.0,
+2025-08-29 13:15:19,"Fridays",40m,"Squat (Dumbbell)",2,10.0,10.0,0,0.0,
+2025-08-29 13:15:19,"Fridays",40m,"Squat (Dumbbell)",3,10.0,10.0,0,0.0,
+2025-08-29 13:15:19,"Fridays",40m,"Bicep Curl (Dumbbell)",1,4.0,10.0,0,0.0,
+2025-08-29 13:15:19,"Fridays",40m,"Bicep Curl (Dumbbell)",2,4.0,10.0,0,0.0,
+2025-08-29 13:15:19,"Fridays",40m,"Bicep Curl (Dumbbell)",3,4.0,7.0,0,0.0,
+2025-08-29 13:15:19,"Fridays",40m,"Lat Pulldown (Cable)",1,23.0,10.0,0,0.0,
+2025-08-29 13:15:19,"Fridays",40m,"Lat Pulldown (Cable)",2,23.0,10.0,0,0.0,
+2025-08-29 13:15:19,"Fridays",40m,"Lat Pulldown (Cable)",3,23.0,10.0,0,0.0,
+2025-09-02 13:19:12,"Tuesdays",42m,"Chest Press (Machine)",1,18.0,10.0,0,0.0,
+2025-09-02 13:19:12,"Tuesdays",42m,"Chest Press (Machine)",2,18.0,10.0,0,0.0,
+2025-09-02 13:19:12,"Tuesdays",42m,"Chest Press (Machine)",3,18.0,10.0,0,0.0,
+2025-09-02 13:19:12,"Tuesdays",42m,"Seated Row (Cable)",1,29.0,10.0,0,0.0,
+2025-09-02 13:19:12,"Tuesdays",42m,"Seated Row (Cable)",2,29.0,10.0,0,0.0,
+2025-09-02 13:19:12,"Tuesdays",42m,"Seated Row (Cable)",3,29.0,10.0,0,0.0,
+2025-09-02 13:19:12,"Tuesdays",42m,"Leg Extension (Machine)",1,5.0,10.0,0,0.0,
+2025-09-02 13:19:12,"Tuesdays",42m,"Leg Extension (Machine)",2,5.0,10.0,0,0.0,
+2025-09-02 13:19:12,"Tuesdays",42m,"Leg Extension (Machine)",3,5.0,10.0,0,0.0,
+2025-09-02 13:19:12,"Tuesdays",42m,"Seated Leg Curl (Machine)",1,18.0,10.0,0,0.0,
+2025-09-02 13:19:12,"Tuesdays",42m,"Seated Leg Curl (Machine)",2,18.0,10.0,0,0.0,
+2025-09-02 13:19:12,"Tuesdays",42m,"Seated Leg Curl (Machine)",3,18.0,10.0,0,0.0,
+2025-09-05 12:37:47,"Fridays",1h 19m,"Pull Up (Assisted)",1,77.0,10.0,0,0.0,
+2025-09-05 12:37:47,"Fridays",1h 19m,"Pull Up (Assisted)",2,77.0,10.0,0,0.0,
+2025-09-05 12:37:47,"Fridays",1h 19m,"Lat Pulldown (Cable)",1,25.0,14.0,0,0.0,
+2025-09-05 12:37:47,"Fridays",1h 19m,"Lat Pulldown (Cable)",2,25.0,14.0,0,0.0,
+2025-09-05 12:37:47,"Fridays",1h 19m,"Lat Pulldown (Cable)",3,25.0,14.0,0,0.0,
+2025-09-05 12:37:47,"Fridays",1h 19m,"Seated Row (Cable)",1,29.0,10.0,0,0.0,
+2025-09-05 12:37:47,"Fridays",1h 19m,"Seated Row (Cable)",2,29.0,10.0,0,0.0,
+2025-09-05 12:37:47,"Fridays",1h 19m,"Seated Row (Cable)",3,29.0,9.0,0,0.0,
+2025-09-05 12:37:47,"Fridays",1h 19m,"Pec Deck (Machine)",1,25.0,12.0,0,0.0,
+2025-09-05 12:37:47,"Fridays",1h 19m,"Pec Deck (Machine)",2,25.0,9.0,0,0.0,
+2025-09-05 12:37:47,"Fridays",1h 19m,"Pec Deck (Machine)",3,25.0,7.0,0,0.0,
+2025-09-05 12:37:47,"Fridays",1h 19m,"Triceps Extension (Cable)",1,5.7,10.0,0,0.0,
+2025-09-05 12:37:47,"Fridays",1h 19m,"Triceps Extension (Cable)",2,5.7,12.0,0,0.0,
+2025-09-05 12:37:47,"Fridays",1h 19m,"Triceps Extension (Cable)",3,5.7,12.0,0,0.0,
+2025-09-05 12:37:47,"Fridays",1h 19m,"Squat (Dumbbell)",1,12.0,12.0,0,0.0,
+2025-09-05 12:37:47,"Fridays",1h 19m,"Squat (Dumbbell)",2,12.0,12.0,0,0.0,
+2025-09-05 12:37:47,"Fridays",1h 19m,"Bicep Curl (Dumbbell)",1,5.0,6.0,0,0.0,
+2025-09-05 12:37:47,"Fridays",1h 19m,"Bicep Curl (Dumbbell)",2,5.0,5.0,0,0.0,
+2025-09-05 12:37:47,"Fridays",1h 19m,"Squat (Barbell)",1,20.0,10.0,0,0.0,
+2025-09-05 12:37:47,"Fridays",1h 19m,"Squat (Barbell)",2,30.0,6.0,0,0.0,
+2025-09-05 12:37:47,"Fridays",1h 19m,"Squat (Barbell)",3,30.0,7.0,0,0.0,
+2025-09-09 13:12:12,"Tuesdays",1h 5m,"Chest Press (Machine)",1,18.0,12.0,0,0.0,
+2025-09-09 13:12:12,"Tuesdays",1h 5m,"Chest Press (Machine)",2,25.0,6.0,0,0.0,
+2025-09-09 13:12:12,"Tuesdays",1h 5m,"Chest Press (Machine)",3,25.0,4.0,0,0.0,
+2025-09-09 13:12:12,"Tuesdays",1h 5m,"Shoulder Press (Machine)",1,9.0,8.0,0,0.0,
+2025-09-09 13:12:12,"Tuesdays",1h 5m,"Shoulder Press (Machine)",2,9.0,7.0,0,0.0,
+2025-09-09 13:12:12,"Tuesdays",1h 5m,"Shoulder Press (Machine)",3,9.0,7.0,0,0.0,
+2025-09-09 13:12:12,"Tuesdays",1h 5m,"Pec Deck (Machine)",1,18.0,10.0,0,0.0,
+2025-09-09 13:12:12,"Tuesdays",1h 5m,"Pec Deck (Machine)",2,25.0,8.0,0,0.0,
+2025-09-09 13:12:12,"Tuesdays",1h 5m,"Pec Deck (Machine)",3,25.0,7.0,0,0.0,
+2025-09-09 13:12:12,"Tuesdays",1h 5m,"Seated Row (Cable)",1,29.0,12.0,0,0.0,
+2025-09-09 13:12:12,"Tuesdays",1h 5m,"Seated Row (Cable)",2,29.0,12.0,0,0.0,
+2025-09-09 13:12:12,"Tuesdays",1h 5m,"Seated Row (Cable)",3,29.0,10.0,0,0.0,
+2025-09-09 13:12:12,"Tuesdays",1h 5m,"Triceps Extension (Cable)",1,5.7,12.0,0,0.0,
+2025-09-09 13:12:12,"Tuesdays",1h 5m,"Triceps Extension (Cable)",2,5.7,6.0,0,0.0,
+2025-09-09 13:12:12,"Tuesdays",1h 5m,"Triceps Extension (Cable)",3,5.7,6.0,0,0.0,
+2025-09-09 13:12:12,"Tuesdays",1h 5m,"Pull Up (Assisted)",1,73.0,6.0,0,0.0,
+2025-09-09 13:12:12,"Tuesdays",1h 5m,"Pull Up (Assisted)",2,73.0,4.0,0,0.0,
+2025-09-09 13:12:12,"Tuesdays",1h 5m,"Pull Up (Assisted)",3,77.0,5.0,0,0.0,
+2025-09-09 13:12:12,"Tuesdays",1h 5m,"Bicep Curl (Dumbbell)",1,4.0,8.0,0,0.0,
+2025-09-09 13:12:12,"Tuesdays",1h 5m,"Bicep Curl (Dumbbell)",2,4.0,5.0,0,0.0,
+2025-09-09 13:12:12,"Tuesdays",1h 5m,"Bicep Curl (Barbell)",1,10.0,6.0,0,0.0,
+2025-09-11 18:16:11,"Fridays",1h 1m,"Squat (Barbell)",1,20.0,5.0,0,0.0,
+2025-09-11 18:16:11,"Fridays",1h 1m,"Squat (Barbell)",2,30.0,10.0,0,0.0,
+2025-09-11 18:16:11,"Fridays",1h 1m,"Squat (Barbell)",3,30.0,10.0,0,0.0,
+2025-09-11 18:16:11,"Fridays",1h 1m,"Squat (Barbell)",4,30.0,7.0,0,0.0,
+2025-09-11 18:16:11,"Fridays",1h 1m,"Leg Press",1,0.0,5.0,0,0.0,
+2025-09-11 18:16:11,"Fridays",1h 1m,"Leg Press",2,10.0,10.0,0,0.0,
+2025-09-11 18:16:11,"Fridays",1h 1m,"Leg Press",3,10.0,10.0,0,0.0,
+2025-09-11 18:16:11,"Fridays",1h 1m,"Leg Extension (Machine)",1,5.0,10.0,0,0.0,
+2025-09-11 18:16:11,"Fridays",1h 1m,"Leg Extension (Machine)",2,5.0,10.0,0,0.0,
+2025-09-11 18:16:11,"Fridays",1h 1m,"Leg Extension (Machine)",3,5.0,10.0,0,0.0,
+2025-09-11 18:16:11,"Fridays",1h 1m,"Seated Leg Curl (Machine)",1,18.0,10.0,0,0.0,
+2025-09-11 18:16:11,"Fridays",1h 1m,"Seated Leg Curl (Machine)",2,25.0,12.0,0,0.0,
+2025-09-11 18:16:11,"Fridays",1h 1m,"Seated Leg Curl (Machine)",3,25.0,12.0,0,0.0,
+2025-09-11 18:16:11,"Fridays",1h 1m,"Calf Press on Seated Leg Press",1,39.0,10.0,0,0.0,
+2025-09-11 18:16:11,"Fridays",1h 1m,"Calf Press on Seated Leg Press",2,39.0,10.0,0,0.0,
+2025-09-11 18:16:11,"Fridays",1h 1m,"Calf Press on Seated Leg Press",3,39.0,10.0,0,0.0,
+2025-09-11 18:16:11,"Fridays",1h 1m,"Kettlebell Carry",1,12.0,60.0,0,0.0,
+2025-09-11 18:16:11,"Fridays",1h 1m,"Kettlebell Carry",2,12.0,60.0,0,0.0,
+2025-09-15 19:24:40,"Tuesdays",1h 8m,"Shoulder Press (Machine)",1,9.0,15.0,0,0.0,
+2025-09-15 19:24:40,"Tuesdays",1h 8m,"Shoulder Press (Machine)",2,9.0,12.0,0,0.0,
+2025-09-15 19:24:40,"Tuesdays",1h 8m,"Shoulder Press (Machine)",3,9.0,14.0,0,0.0,
+2025-09-15 19:24:40,"Tuesdays",1h 8m,"Chest Press (Machine)",1,18.0,12.0,0,0.0,
+2025-09-15 19:24:40,"Tuesdays",1h 8m,"Chest Press (Machine)",2,18.0,10.0,0,0.0,
+2025-09-15 19:24:40,"Tuesdays",1h 8m,"Chest Press (Machine)",3,18.0,9.0,0,0.0,
+2025-09-15 19:24:40,"Tuesdays",1h 8m,"Bicep Curl (Barbell)",1,10.0,15.0,0,0.0,
+2025-09-15 19:24:40,"Tuesdays",1h 8m,"Bicep Curl (Barbell)",2,15.0,6.0,0,0.0,
+2025-09-15 19:24:40,"Tuesdays",1h 8m,"Bicep Curl (Barbell)",3,15.0,6.0,0,0.0,
+2025-09-15 19:24:40,"Tuesdays",1h 8m,"Seated Row (Cable)",1,29.0,12.0,0,0.0,
+2025-09-15 19:24:40,"Tuesdays",1h 8m,"Seated Row (Cable)",2,29.0,12.0,0,0.0,
+2025-09-15 19:24:40,"Tuesdays",1h 8m,"Seated Row (Cable)",3,29.0,12.0,0,0.0,
+2025-09-15 19:24:40,"Tuesdays",1h 8m,"Lat Pulldown (Cable)",1,32.0,10.0,0,0.0,
+2025-09-15 19:24:40,"Tuesdays",1h 8m,"Lat Pulldown (Cable)",2,32.0,10.0,0,0.0,
+2025-09-15 19:24:40,"Tuesdays",1h 8m,"Lat Pulldown (Cable)",3,32.0,10.0,0,0.0,
+2025-09-15 19:24:40,"Tuesdays",1h 8m,"Triceps Extension (Cable)",1,5.7,15.0,0,0.0,
+2025-09-15 19:24:40,"Tuesdays",1h 8m,"Triceps Extension (Cable)",2,5.7,12.0,0,0.0,
+2025-09-15 19:24:40,"Tuesdays",1h 8m,"Triceps Extension (Cable)",3,5.7,11.0,0,0.0,
+2025-09-15 19:24:40,"Tuesdays",1h 8m,"Kettlebell Carry",1,12.0,60.0,0,0.0,
+2025-09-15 19:24:40,"Tuesdays",1h 8m,"Kettlebell Carry",2,12.0,60.0,0,0.0,
+2025-09-15 19:24:40,"Tuesdays",1h 8m,"Pec Deck (Machine)",1,25.0,12.0,0,0.0,
+2025-09-15 19:24:40,"Tuesdays",1h 8m,"Pec Deck (Machine)",2,25.0,10.0,0,0.0,
+2025-09-15 19:24:40,"Tuesdays",1h 8m,"Pec Deck (Machine)",3,25.0,8.0,0,0.0,
+2025-09-19 16:56:24,"Fridays",45m,"Leg Press",1,0.0,7.0,0,0.0,
+2025-09-19 16:56:24,"Fridays",45m,"Leg Press",2,20.0,12.0,0,0.0,
+2025-09-19 16:56:24,"Fridays",45m,"Leg Press",3,20.0,12.0,0,0.0,
+2025-09-19 16:56:24,"Fridays",45m,"Squat (Barbell)",1,40.0,7.0,0,0.0,
+2025-09-19 16:56:24,"Fridays",45m,"Squat (Barbell)",2,35.0,8.0,0,0.0,
+2025-09-19 16:56:24,"Fridays",45m,"Squat (Barbell)",3,35.0,8.0,0,0.0,
+2025-09-19 16:56:24,"Fridays",45m,"Leg Extension (Machine)",1,5.0,12.0,0,0.0,
+2025-09-19 16:56:24,"Fridays",45m,"Leg Extension (Machine)",2,5.0,10.0,0,0.0,
+2025-09-19 16:56:24,"Fridays",45m,"Leg Extension (Machine)",3,5.0,10.0,0,0.0,
+2025-09-19 16:56:24,"Fridays",45m,"Kettlebell Carry",1,12.0,90.0,0,0.0,
+2025-09-19 16:56:24,"Fridays",45m,"Kettlebell Carry",2,12.0,90.0,0,0.0,
+2025-09-19 16:56:24,"Fridays",45m,"Seated Leg Curl (Machine)",1,25.0,12.0,0,0.0,
+2025-09-19 16:56:24,"Fridays",45m,"Seated Leg Curl (Machine)",2,32.0,7.0,0,0.0,
+2025-09-19 16:56:24,"Fridays",45m,"Seated Leg Curl (Machine)",3,32.0,7.0,0,0.0,
+2025-09-23 14:24:12,"Tuesdays",1h 8m,"Chest Press (Machine)",1,18.0,12.0,0,0.0,
+2025-09-23 14:24:12,"Tuesdays",1h 8m,"Chest Press (Machine)",2,18.0,12.0,0,0.0,
+2025-09-23 14:24:12,"Tuesdays",1h 8m,"Chest Press (Machine)",3,18.0,12.0,0,0.0,
+2025-09-23 14:24:12,"Tuesdays",1h 8m,"Shoulder Press (Machine)",1,14.0,5.0,0,0.0,
+2025-09-23 14:24:12,"Tuesdays",1h 8m,"Shoulder Press (Machine)",2,9.0,7.0,0,0.0,
+2025-09-23 14:24:12,"Tuesdays",1h 8m,"Shoulder Press (Machine)",3,9.0,10.0,0,0.0,
+2025-09-23 14:24:12,"Tuesdays",1h 8m,"Seated Row (Cable)",1,35.0,10.0,0,0.0,
+2025-09-23 14:24:12,"Tuesdays",1h 8m,"Seated Row (Cable)",2,35.0,10.0,0,0.0,
+2025-09-23 14:24:12,"Tuesdays",1h 8m,"Seated Row (Cable)",3,35.0,9.0,0,0.0,
+2025-09-23 14:24:12,"Tuesdays",1h 8m,"Triceps Extension (Cable)",1,7.9,11.0,0,0.0,
+2025-09-23 14:24:12,"Tuesdays",1h 8m,"Triceps Extension (Cable)",2,7.9,5.0,0,0.0,
+2025-09-23 14:24:12,"Tuesdays",1h 8m,"Triceps Extension (Cable)",3,7.9,3.0,0,0.0,
+2025-09-23 14:24:12,"Tuesdays",1h 8m,"Lat Pulldown (Cable)",1,32.0,11.0,0,0.0,
+2025-09-23 14:24:12,"Tuesdays",1h 8m,"Lat Pulldown (Cable)",2,32.0,7.0,0,0.0,
+2025-09-23 14:24:12,"Tuesdays",1h 8m,"Lat Pulldown (Cable)",3,32.0,10.0,0,0.0,
+2025-09-23 14:24:12,"Tuesdays",1h 8m,"Bicep Curl (Barbell)",1,15.0,6.0,0,0.0,
+2025-09-23 14:24:12,"Tuesdays",1h 8m,"Bicep Curl (Barbell)",2,15.0,5.0,0,0.0,
+2025-09-23 14:24:12,"Tuesdays",1h 8m,"Bicep Curl (Barbell)",3,15.0,3.0,0,0.0,
+2025-09-23 14:24:12,"Tuesdays",1h 8m,"Pec Deck (Machine)",1,25.0,10.0,0,0.0,
+2025-09-23 14:24:12,"Tuesdays",1h 8m,"Pec Deck (Machine)",2,25.0,10.0,0,0.0,
+2025-09-23 14:24:12,"Tuesdays",1h 8m,"Pec Deck (Machine)",3,25.0,6.0,0,0.0,
+2025-09-29 17:28:10,"Tuesdays",1h 6m,"Bicep Curl (Barbell)",1,15.0,10.0,0,0.0,
+2025-09-29 17:28:10,"Tuesdays",1h 6m,"Bicep Curl (Barbell)",2,15.0,10.0,0,0.0,
+2025-09-29 17:28:10,"Tuesdays",1h 6m,"Bicep Curl (Barbell)",3,15.0,8.0,0,0.0,
+2025-09-29 17:28:10,"Tuesdays",1h 6m,"Seated Row (Cable)",1,35.0,9.0,0,0.0,
+2025-09-29 17:28:10,"Tuesdays",1h 6m,"Seated Row (Cable)",2,35.0,9.0,0,0.0,
+2025-09-29 17:28:10,"Tuesdays",1h 6m,"Seated Row (Cable)",3,35.0,8.0,0,0.0,
+2025-09-29 17:28:10,"Tuesdays",1h 6m,"Lat Pulldown (Cable)",1,32.0,9.0,0,0.0,
+2025-09-29 17:28:10,"Tuesdays",1h 6m,"Lat Pulldown (Cable)",2,32.0,9.0,0,0.0,
+2025-09-29 17:28:10,"Tuesdays",1h 6m,"Lat Pulldown (Cable)",3,32.0,6.0,0,0.0,
+2025-09-29 17:28:10,"Tuesdays",1h 6m,"Shoulder Press (Machine)",1,9.0,10.0,0,0.0,
+2025-09-29 17:28:10,"Tuesdays",1h 6m,"Shoulder Press (Machine)",2,14.0,10.0,0,0.0,
+2025-09-29 17:28:10,"Tuesdays",1h 6m,"Shoulder Press (Machine)",3,14.0,10.0,0,0.0,
+2025-09-29 17:28:10,"Tuesdays",1h 6m,"Triceps Extension (Cable)",1,7.9,9.0,0,0.0,
+2025-09-29 17:28:10,"Tuesdays",1h 6m,"Triceps Extension (Cable)",2,7.9,8.0,0,0.0,
+2025-09-29 17:28:10,"Tuesdays",1h 6m,"Triceps Extension (Cable)",3,7.9,9.0,0,0.0,
+2025-09-29 17:28:10,"Tuesdays",1h 6m,"Kettlebell Carry",1,16.0,60.0,0,0.0,
+2025-09-29 17:28:10,"Tuesdays",1h 6m,"Kettlebell Carry",2,16.0,60.0,0,0.0,
+2025-09-29 17:28:10,"Tuesdays",1h 6m,"Chest Press (Machine)",1,25.0,10.0,0,0.0,
+2025-09-29 17:28:10,"Tuesdays",1h 6m,"Chest Press (Machine)",2,25.0,7.0,0,0.0,
+2025-09-29 17:28:10,"Tuesdays",1h 6m,"Chest Press (Machine)",3,25.0,5.0,0,0.0,
+2025-10-02 09:51:53,"Tuesdays",50m,"Chest Press (Machine)",1,25.0,10.0,0,0.0,
+2025-10-02 09:51:53,"Tuesdays",50m,"Chest Press (Machine)",2,25.0,5.0,0,0.0,
+2025-10-02 09:51:53,"Tuesdays",50m,"Chest Press (Machine)",3,25.0,4.0,0,0.0,
+2025-10-02 09:51:53,"Tuesdays",50m,"Shoulder Press (Machine)",1,10.0,3.0,0,0.0,
+2025-10-02 09:51:53,"Tuesdays",50m,"Shoulder Press (Machine)",2,10.0,7.0,0,0.0,
+2025-10-02 09:51:53,"Tuesdays",50m,"Shoulder Press (Machine)",3,10.0,6.0,0,0.0,
+2025-10-02 09:51:53,"Tuesdays",50m,"Seated Row (Cable)",1,35.0,9.0,0,0.0,
+2025-10-02 09:51:53,"Tuesdays",50m,"Seated Row (Cable)",2,35.0,7.0,0,0.0,
+2025-10-02 09:51:53,"Tuesdays",50m,"Seated Row (Cable)",3,35.0,9.0,0,0.0,
+2025-10-02 09:51:53,"Tuesdays",50m,"Triceps Extension (Cable)",1,7.5,12.0,0,0.0,
+2025-10-02 09:51:53,"Tuesdays",50m,"Triceps Extension (Cable)",2,10.0,11.0,0,0.0,
+2025-10-02 09:51:53,"Tuesdays",50m,"Triceps Extension (Cable)",3,10.0,9.0,0,0.0,
+2025-10-02 09:51:53,"Tuesdays",50m,"Bicep Curl (Barbell)",1,15.0,9.0,0,0.0,
+2025-10-02 09:51:53,"Tuesdays",50m,"Bicep Curl (Barbell)",2,15.0,7.0,0,0.0,
+2025-10-02 09:51:53,"Tuesdays",50m,"Bicep Curl (Barbell)",3,15.0,5.0,0,0.0,
+2025-10-08 13:03:21,"Tuesdays",1h 15m,"Chest Press (Machine)",1,25.0,10.0,0,0.0,
+2025-10-08 13:03:21,"Tuesdays",1h 15m,"Chest Press (Machine)",2,25.0,10.0,0,0.0,
+2025-10-08 13:03:21,"Tuesdays",1h 15m,"Chest Press (Machine)",3,25.0,10.0,0,0.0,
+2025-10-08 13:03:21,"Tuesdays",1h 15m,"Pec Deck (Machine)",1,25.0,12.0,0,0.0,
+2025-10-08 13:03:21,"Tuesdays",1h 15m,"Pec Deck (Machine)",2,25.0,12.0,0,0.0,
+2025-10-08 13:03:21,"Tuesdays",1h 15m,"Pec Deck (Machine)",3,25.0,12.0,0,0.0,
+2025-10-08 13:03:21,"Tuesdays",1h 15m,"Bicep Curl (Barbell)",1,15.0,10.0,0,0.0,
+2025-10-08 13:03:21,"Tuesdays",1h 15m,"Bicep Curl (Barbell)",2,15.0,9.0,0,0.0,
+2025-10-08 13:03:21,"Tuesdays",1h 15m,"Bicep Curl (Barbell)",3,15.0,9.0,0,0.0,
+2025-10-08 13:03:21,"Tuesdays",1h 15m,"Seated Row (Cable)",1,35.0,10.0,0,0.0,
+2025-10-08 13:03:21,"Tuesdays",1h 15m,"Seated Row (Cable)",2,35.0,10.0,0,0.0,
+2025-10-08 13:03:21,"Tuesdays",1h 15m,"Seated Row (Cable)",3,35.0,11.0,0,0.0,
+2025-10-08 13:03:21,"Tuesdays",1h 15m,"Lat Pulldown (Cable)",1,32.0,10.0,0,0.0,
+2025-10-08 13:03:21,"Tuesdays",1h 15m,"Lat Pulldown (Cable)",2,32.0,12.0,0,0.0,
+2025-10-08 13:03:21,"Tuesdays",1h 15m,"Lat Pulldown (Cable)",3,32.0,12.0,0,0.0,
+2025-10-08 13:03:21,"Tuesdays",1h 15m,"Shoulder Press (Machine)",1,14.0,10.0,0,0.0,
+2025-10-08 13:03:21,"Tuesdays",1h 15m,"Shoulder Press (Machine)",2,14.0,8.0,0,0.0,
+2025-10-08 13:03:21,"Tuesdays",1h 15m,"Shoulder Press (Machine)",3,14.0,6.0,0,0.0,
+2025-10-08 13:03:21,"Tuesdays",1h 15m,"Triceps Extension (Cable)",1,10.2,7.0,0,0.0,
+2025-10-08 13:03:21,"Tuesdays",1h 15m,"Triceps Extension (Cable)",2,7.9,9.0,0,0.0,
+2025-10-08 13:03:21,"Tuesdays",1h 15m,"Triceps Extension (Cable)",3,7.9,8.0,0,0.0,

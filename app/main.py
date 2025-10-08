@@ -234,10 +234,16 @@ async def ingest(
     header_token = request.headers.get("X-Token", "")
     provided = token or header_token
     if not INGEST_TOKEN:
+        print("[INGEST ERROR] Server token not configured")
+        logger.error("Server token not configured")
         raise HTTPException(status_code=500, detail="server token not configured")
     if not provided:
+        print("[INGEST ERROR] Missing authentication token")
+        logger.error("Missing authentication token")
         raise HTTPException(status_code=401, detail="missing token")
     if provided != INGEST_TOKEN:
+        print("[INGEST ERROR] Invalid authentication token")
+        logger.error("Invalid authentication token")
         raise HTTPException(status_code=401, detail="invalid token")
 
     # Determine content type & obtain raw bytes (multipart or raw body)
@@ -255,28 +261,38 @@ async def ingest(
         "application/vnd.ms-excel",
         "application/octet-stream",
     ):
+        print(f"[INGEST ERROR] Unsupported content type: {content_type} (mode={mode})")
+        logger.error(f"Unsupported content type: {content_type} (mode={mode})")
         raise HTTPException(
             status_code=400,
             detail=f"unsupported content type: {content_type} (mode={mode})",
         )
 
     if not raw:
+        print("[INGEST ERROR] Empty request body")
+        logger.error("Empty request body")
         raise HTTPException(status_code=400, detail="empty body")
 
     # Size guard
     size_mb = len(raw) / (1024 * 1024)
     if size_mb > MAX_UPLOAD_MB:
+        print(f"[INGEST ERROR] File too large: {size_mb:.2f}MB (max: {MAX_UPLOAD_MB}MB)")
+        logger.error(f"File too large: {size_mb:.2f}MB (max: {MAX_UPLOAD_MB}MB)")
         raise HTTPException(status_code=400, detail="file too large")
 
     # Validate file constraints (size, content type)
     try:
         validate_file_constraints(raw, content_type)
     except ValueError as e:
+        print(f"[INGEST ERROR] File validation failed: {str(e)}")
+        logger.error(f"File validation failed: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
 
     # Get configured import type
     import_type = get_enabled_import_type()
     if not import_type:
+        print("[INGEST ERROR] No import type is enabled in configuration")
+        logger.error("No import type is enabled in configuration")
         raise HTTPException(
             status_code=500,
             detail="No import type is enabled in configuration"
@@ -287,6 +303,9 @@ async def ingest(
     detected_format = detect_format_mismatch(header_line, import_type)
 
     if detected_format:
+        error_msg = f"CSV header looks like {detected_format} format, but configuration is set to {import_type}"
+        print(f"[INGEST ERROR] Format mismatch: {error_msg}")
+        logger.error(f"Format mismatch: {error_msg}")
         raise HTTPException(
             status_code=400,
             detail=f"CSV header looks like {detected_format} format, but configuration is set to {import_type}. "
@@ -307,9 +326,11 @@ async def ingest(
         processor_function = get_processor_function(import_type)
         inserted = processor_function(dest)
     except Exception as e:
+        print(f"[INGEST ERROR] Failed ingest for {stored_name} (type: {import_type}): {str(e)}")
         logger.exception("failed ingest for %s (type: %s)", stored_name, import_type)
         raise HTTPException(status_code=500, detail=str(e))
 
+    print(f"[INGEST SUCCESS] Ingested {stored_name}: {inserted} rows inserted (type: {import_type})")
     logger.info(
         "ingested file=%s inserted_rows=%s mode=%s size_bytes=%s type=%s",
         stored_name,
