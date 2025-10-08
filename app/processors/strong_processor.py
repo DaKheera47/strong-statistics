@@ -55,20 +55,28 @@ def normalize_df(df: pd.DataFrame) -> pd.DataFrame:
         s = str(s).strip()
         if not s:
             return None
-        if "h" in s:
-            parts = s.split("h")
-            hours = int(parts[0].strip())
-            minutes = 0
-            if len(parts) > 1 and "m" in parts[1]:
-                minutes_part = parts[1].split("m")[0].strip()
-                if minutes_part:
-                    minutes = int(minutes_part)
-            return hours * 60 + minutes
-        elif "m" in s:
-            minutes_part = s.split("m")[0].strip()
-            if minutes_part:
-                return int(minutes_part)
-        return None
+        try:
+            if "h" in s:
+                parts = s.split("h")
+                hours_part = parts[0].strip()
+                if not hours_part.isdigit():
+                    return None
+                hours = int(hours_part)
+                minutes = 0
+                if len(parts) > 1 and "m" in parts[1]:
+                    minutes_part = parts[1].split("m")[0].strip()
+                    if minutes_part and minutes_part.isdigit():
+                        minutes = int(minutes_part)
+                return hours * 60 + minutes
+            elif "m" in s:
+                minutes_part = s.split("m")[0].strip()
+                if minutes_part and minutes_part.isdigit():
+                    return int(minutes_part)
+                else:
+                    return None
+            return None
+        except Exception:
+            return None
 
     df["duration_min"] = df["Duration"].map(parse_duration)
 
