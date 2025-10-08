@@ -50,20 +50,25 @@ def normalize_df(df: pd.DataFrame) -> pd.DataFrame:
 
     df["date"] = df[DATE_COL].map(parse_dt)
 
-    # Duration minutes - handle both old format (seconds) and new format (e.g., "35m")
-    def parse_duration(s):
-        if pd.isna(s):
+    # duration looks like "45m" or "1h 15m"
+    def parse_duration(s: str) -> float | None:
+        s = str(s).strip()
+        if not s:
             return None
-        try:
-            s_str = str(s).strip()
-            # New format: "35m" (minutes with 'm' suffix)
-            if s_str.endswith('m'):
-                return float(s_str[:-1])
-            # Old format: numeric seconds
-            seconds = float(s_str)
-            return seconds / 60.0
-        except (ValueError, TypeError):
-            return None
+        if "h" in s:
+            parts = s.split("h")
+            hours = int(parts[0].strip())
+            minutes = 0
+            if len(parts) > 1 and "m" in parts[1]:
+                minutes_part = parts[1].split("m")[0].strip()
+                if minutes_part:
+                    minutes = int(minutes_part)
+            return hours * 60 + minutes
+        elif "m" in s:
+            minutes_part = s.split("m")[0].strip()
+            if minutes_part:
+                return int(minutes_part)
+        return None
 
     df["duration_min"] = df["Duration"].map(parse_duration)
 
