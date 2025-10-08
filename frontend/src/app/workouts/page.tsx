@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,7 @@ import { WorkoutDetailData } from "@/components/WorkoutDetailModal";
 import WorkoutDetailModalWithSparklines from "@/components/WorkoutDetailModalWithSparklines";
 import { parseAsString, useQueryState } from "nuqs";
 
-export default function WorkoutsPage() {
+function WorkoutsContent() {
   const [workouts, setWorkouts] = useState<RecentWorkoutData[]>([]);
   const [selectedWorkout, setSelectedWorkout] =
     useState<WorkoutDetailData | null>(null);
@@ -227,5 +227,17 @@ export default function WorkoutsPage() {
         isLoading={detailLoading}
       />
     </div>
+  );
+}
+
+export default function WorkoutsPage() {
+  return (
+    <Suspense fallback={
+      <div className='min-h-screen bg-background flex items-center justify-center'>
+        <div className='text-muted-foreground'>Loading...</div>
+      </div>
+    }>
+      <WorkoutsContent />
+    </Suspense>
   );
 }
