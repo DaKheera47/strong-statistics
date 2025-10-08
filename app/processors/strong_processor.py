@@ -10,14 +10,14 @@ DATE_COL = "Date"
 EXPECTED_COLUMNS = [
     "Date",
     "Workout Name",
-    "Duration (sec)",
+    "Duration",
     "Exercise Name",
     "Set Order",
-    "Weight (kg)",
+    "Weight",
     "Reps",
-    "RPE",
-    "Distance (meters)",
+    "Distance",
     "Seconds",
+    "RPE",
 ]
 
 NORMALIZED_COLUMNS = [
@@ -50,17 +50,22 @@ def normalize_df(df: pd.DataFrame) -> pd.DataFrame:
 
     df["date"] = df[DATE_COL].map(parse_dt)
 
-    # Duration minutes - convert from seconds to minutes
-    def parse_duration_sec(s):
+    # Duration minutes - handle both old format (seconds) and new format (e.g., "35m")
+    def parse_duration(s):
         if pd.isna(s):
             return None
         try:
-            seconds = float(s)
+            s_str = str(s).strip()
+            # New format: "35m" (minutes with 'm' suffix)
+            if s_str.endswith('m'):
+                return float(s_str[:-1])
+            # Old format: numeric seconds
+            seconds = float(s_str)
             return seconds / 60.0
         except (ValueError, TypeError):
             return None
 
-    df["duration_min"] = df["Duration (sec)"].map(parse_duration_sec)
+    df["duration_min"] = df["Duration"].map(parse_duration)
 
     df["workout_name"] = (
         df["Workout Name"].astype(str).where(~df["Workout Name"].isna(), None)
@@ -69,9 +74,9 @@ def normalize_df(df: pd.DataFrame) -> pd.DataFrame:
 
     numeric_map = {
         "Set Order": "set_order",
-        "Weight (kg)": "weight",
+        "Weight": "weight",
         "Reps": "reps",
-        "Distance (meters)": "distance",
+        "Distance": "distance",
         "Seconds": "seconds",
     }
     for src, dst in numeric_map.items():
