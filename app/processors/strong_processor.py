@@ -51,7 +51,7 @@ def normalize_df(df: pd.DataFrame) -> pd.DataFrame:
     df["date"] = df[DATE_COL].map(parse_dt)
 
     # duration looks like "45m" or "1h 15m"
-    def parse_duration(s: str) -> float | None:
+    def parse_duration(s: str) -> int | None:
         s = str(s).strip()
         if not s:
             return None
