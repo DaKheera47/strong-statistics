@@ -1,10 +1,6 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
-
-import { ThemeToggle } from "@/components/theme-toggle";
-import { Button } from "@/components/ui/button";
-import Link from "next/link";
 import { RecentWorkoutData } from "../api/recent-workouts/route";
 import { WorkoutDetailData } from "@/components/WorkoutDetailModal";
 import WorkoutDetailModalWithSparklines from "@/components/WorkoutDetailModalWithSparklines";
@@ -116,25 +112,6 @@ function WorkoutsContent() {
   return (
     <div className='min-h-screen bg-background'>
       <div className='py-8'>
-        <header className='mb-8'>
-          <div className='flex justify-between items-start mb-4'>
-            <div>
-              <h1 className='text-3xl font-bold text-foreground mb-2'>
-                Recent Workouts
-              </h1>
-              <p className='text-muted-foreground'>
-                View and analyze your training history
-              </p>
-            </div>
-            <div className='flex items-center gap-4'>
-              <Link href='/'>
-                <Button variant='outline'>Back to Dashboard</Button>
-              </Link>
-              <ThemeToggle />
-            </div>
-          </div>
-        </header>
-
         <main>
           <div className='bg-card border rounded-lg overflow-hidden'>
             <div className='overflow-x-auto'>

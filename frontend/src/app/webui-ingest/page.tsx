@@ -36,10 +36,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { ThemeToggle } from "@/components/theme-toggle";
 import {
   AlertCircle,
-  ArrowLeft,
   CheckCircle2,
   Loader2,
   UploadCloud,
@@ -345,26 +343,6 @@ export default function IngestPage() {
   return (
     <div className='flex min-h-screen flex-col bg-background text-foreground [scrollbar-gutter:stable]'>
       <div className='flex-1 py-8'>
-        <header className='mb-8 w-full'>
-          <div className='flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between'>
-            <div>
-              <h1 className='text-3xl font-bold mb-2'>CSV Ingestion</h1>
-              <p className='text-muted-foreground max-w-xl'>
-                Preview your Strong export before sending it to the ingestion
-                API. We keep uploads local, just like the dashboard.
-              </p>
-            </div>
-            <div className='flex items-center gap-3'>
-              <Link href='/'>
-                <Button variant='outline'>
-                  <ArrowLeft className='size-4' /> Dashboard
-                </Button>
-              </Link>
-              <ThemeToggle />
-            </div>
-          </div>
-        </header>
-
         <div className='grid w-full gap-6'>
           <Card>
             <CardHeader>
