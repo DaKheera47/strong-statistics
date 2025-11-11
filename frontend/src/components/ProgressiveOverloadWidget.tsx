@@ -1,6 +1,7 @@
 "use client";
 
 import { useChartColors } from "@/hooks/useChartColors";
+import { getChartColors } from "@/lib/colors";
 import { useExerciseSelection } from "@/hooks/useExerciseSelection";
 import {
   ProgressiveOverloadDataPoint,
@@ -71,6 +72,7 @@ export default function ProgressiveOverloadWidget() {
 
   const { data, loading, error } = useProgressiveOverloadData(selectedExercise);
   const colors = useChartColors();
+  const chartColors = getChartColors();
 
   const isMobile = useMediaQuery("(max-width: 640px)");
 
@@ -467,10 +469,10 @@ export default function ProgressiveOverloadWidget() {
                     yAxisId='L'
                     type='monotone'
                     dataKey='weekAgo'
-                    stroke={colors.secondary}
+                    stroke={chartColors[1]}
                     strokeWidth={2}
                     strokeDasharray='8 4'
-                    dot={{ fill: colors.secondary, r: isMobile ? 2 : 3 }}
+                    dot={{ fill: chartColors[1], r: isMobile ? 2 : 3 }}
                     connectNulls={false}
                     name={isMobile ? "1W Ago" : "1 Week Ago"}
                   />
@@ -478,10 +480,10 @@ export default function ProgressiveOverloadWidget() {
                     yAxisId='L'
                     type='monotone'
                     dataKey='monthAgo'
-                    stroke='#8884d8'
+                    stroke={chartColors[2]}
                     strokeWidth={2}
                     strokeDasharray='12 6'
-                    dot={{ fill: "#8884d8", r: isMobile ? 2 : 3 }}
+                    dot={{ fill: chartColors[2], r: isMobile ? 2 : 3 }}
                     connectNulls={false}
                     name={isMobile ? "1M Ago" : "1 Month Ago"}
                   />
@@ -489,10 +491,10 @@ export default function ProgressiveOverloadWidget() {
                     yAxisId='L'
                     type='monotone'
                     dataKey='yearAgo'
-                    stroke='#82ca9d'
+                    stroke={chartColors[3]}
                     strokeWidth={2}
                     strokeDasharray='16 8'
-                    dot={{ fill: "#82ca9d", r: isMobile ? 2 : 3 }}
+                    dot={{ fill: chartColors[3], r: isMobile ? 2 : 3 }}
                     connectNulls={false}
                     name={isMobile ? "1Y Ago" : "1 Year Ago"}
                   />
@@ -509,15 +511,15 @@ export default function ProgressiveOverloadWidget() {
             >
               <LegendItem
                 label={isMobile ? "1M Ago" : "1 Month Ago"}
-                color='#8884d8'
+                color={chartColors[2]}
               />
               <LegendItem
                 label={isMobile ? "1W Ago" : "1 Week Ago"}
-                color={colors.secondary}
+                color={chartColors[1]}
               />
               <LegendItem
                 label={isMobile ? "1Y Ago" : "1 Year Ago"}
-                color='#82ca9d'
+                color={chartColors[3]}
               />
               <LegendItem
                 label={currentLegendLabel}

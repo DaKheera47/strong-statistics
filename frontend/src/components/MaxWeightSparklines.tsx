@@ -5,6 +5,7 @@ import { useMaxWeightData } from "@/hooks/useMaxWeightData";
 import { LineChart, Line, ResponsiveContainer, Tooltip, YAxis } from "recharts";
 import { cn } from "@/lib/utils";
 import { useChartColors } from "@/hooks/useChartColors";
+import { getChartColors } from "@/lib/colors";
 import { ExerciseFilter, getRecentExercises } from "./exercise-filter";
 import { useExerciseSelection } from "@/hooks/useExerciseSelection";
 import { WidgetWrapper } from "./WidgetWrapper";
@@ -37,6 +38,7 @@ function SparklineCard({
   delta,
 }: SparklineCardProps) {
   const colors = useChartColors();
+  const chartColors = getChartColors();
   const lowerIsBetter = isLowerBetter(exercise);
   const showDistance = shouldDisplayDistance(exercise);
   const distanceUnit = getDistanceUnit(exercise);
@@ -89,12 +91,12 @@ function SparklineCard({
             <Line
               type='monotone'
               dataKey='maxWeight'
-              stroke={colors.secondary}
+              stroke={chartColors[0]}
               strokeWidth={1.5}
-              dot={{ fill: colors.secondary, r: 2 }}
+              dot={{ fill: chartColors[0], r: 2 }}
               activeDot={{
                 r: 3,
-                stroke: colors.secondary,
+                stroke: chartColors[0],
                 strokeWidth: 2,
                 fill: colors.background,
               }}
