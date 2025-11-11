@@ -223,7 +223,6 @@ export default function RecentWorkouts() {
   const [workoutDetails, setWorkoutDetails] = useState<
     Map<string, WorkoutDetailData>
   >(new Map());
-  const [sparklineData, setSparklineData] = useState<VolumeSparklineData[]>([]);
   const [selectedWorkout, setSelectedWorkout] =
     useState<WorkoutDetailData | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -267,18 +266,6 @@ export default function RecentWorkouts() {
         }
 
         setWorkoutDetails(detailsMap);
-
-        // Fetch sparkline data
-        try {
-          const sparklineResponse = await fetch("/api/volume-sparklines");
-          if (sparklineResponse.ok) {
-            const sparklineData: VolumeSparklineData[] =
-              await sparklineResponse.json();
-            setSparklineData(sparklineData);
-          }
-        } catch (err) {
-          console.error("Failed to fetch sparkline data:", err);
-        }
       } catch (err) {
         setError(err instanceof Error ? err.message : "An error occurred");
       } finally {
@@ -395,7 +382,7 @@ export default function RecentWorkouts() {
           isAccordion={true}
         />
         <AccordionContent className='space-y-4'>
-          <div className='grid grid-cols-1 gap-4'>
+          <div className='grid grid-cols-1 lg:grid-cols-2 gap-4'>
             {workouts.map((workout) => {
               const key = `${workout.date}-${workout.workout_name}`;
               const detail = workoutDetails.get(key);

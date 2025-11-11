@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { DynamicThemeProvider } from "@/components/dynamic-theme-provider";
+import { Navbar } from "@/components/navbar";
 import Script from "next/script";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 
@@ -103,20 +104,14 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <ThemeProvider
-          attribute='class'
-          defaultTheme='system'
-          enableSystem
-          disableTransitionOnChange
-        >
-          <DynamicThemeProvider>
-            <NuqsAdapter>
-              <main className='container mx-auto px-4 max-w-7xl'>
-                {children}
-              </main>
-            </NuqsAdapter>
-          </DynamicThemeProvider>
-        </ThemeProvider>
+        <DynamicThemeProvider>
+          <NuqsAdapter>
+            <Navbar />
+            <main className='container mx-auto px-4 max-w-7xl'>
+              {children}
+            </main>
+          </NuqsAdapter>
+        </DynamicThemeProvider>
       </body>
     </html>
   );

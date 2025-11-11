@@ -18,6 +18,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 
 interface ExerciseWithLastActivity {
   name: string;
@@ -147,29 +148,47 @@ export function ExerciseFilter({
               )}
               {allExercises.map((exercise) => {
                 const isRecent = isRecentExercise(exercise);
+                const isDisabled = validSelectedExercises.includes(exercise.name) && validSelectedExercises.length <= 2;
                 return (
                   <CommandItem
                     key={exercise.name}
                     onSelect={() => handleSelect(exercise.name)}
                     className={cn(
-                      validSelectedExercises.includes(exercise.name) && validSelectedExercises.length <= 2 ?
-                        "opacity-75" : ""
+                      isDisabled ? "opacity-75" : ""
                     )}
                   >
-                    <Checkbox 
-                      checked={validSelectedExercises.includes(exercise.name)}
-                      disabled={validSelectedExercises.includes(exercise.name) && validSelectedExercises.length <= 2}
-                      className="mr-2"
-                    />
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="flex items-center">
+                          <Checkbox
+                            checked={validSelectedExercises.includes(exercise.name)}
+                            disabled={isDisabled}
+                            className="mr-2"
+                          />
+                        </div>
+                      </TooltipTrigger>
+                      {isDisabled && (
+                        <TooltipContent>
+                          Minimum 2 exercises required
+                        </TooltipContent>
+                      )}
+                    </Tooltip>
                     <span className={cn(
                       isRecent ? "text-foreground" : "text-muted-foreground"
                     )}>
                       {exercise.name}
                     </span>
                     {!isRecent && (
-                      <span className="ml-auto text-xs text-muted-foreground">
-                        inactive
-                      </span>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="ml-auto text-xs text-muted-foreground">
+                            inactive
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          No activity in the last 2 weeks
+                        </TooltipContent>
+                      </Tooltip>
                     )}
                   </CommandItem>
                 );

@@ -6,40 +6,12 @@ import RepRangeDistribution from "@/components/RepRangeDistribution";
 import ProgressiveOverloadWidget from "@/components/ProgressiveOverloadWidget";
 import SessionVolumeTrend from "@/components/SessionVolumeTrend";
 import RecentWorkouts from "@/components/RecentWorkouts";
-import { ThemeToggle } from "@/components/theme-toggle";
-import { Button } from "@/components/ui/button";
-import Link from "next/link";
 import { Accordion, AccordionItem } from "@/components/ui/accordion";
 
 export default function Home() {
   return (
     <div className='min-h-screen bg-background'>
       <div className='py-8'>
-        <header className='mb-8 w-full'>
-          <div className='flex justify-between items-center mb-4 flex-wrap gap-4'>
-            <div>
-              <h1 className='text-3xl font-bold text-foreground mb-2'>
-                Strong Statistics
-              </h1>
-              <p className='text-muted-foreground'>
-                Your training analytics dashboard
-              </p>
-            </div>
-            <div className='flex items-center gap-4'>
-              <Link href='/webui-ingest'>
-                <Button variant='outline'>Ingest CSV</Button>
-              </Link>
-              <Link href='/workouts'>
-                <Button variant='outline'>All Workouts</Button>
-              </Link>
-              <Link href='/settings'>
-                <Button variant='outline'>Settings</Button>
-              </Link>
-              <ThemeToggle />
-            </div>
-          </div>
-        </header>
-
         <main className='space-y-8'>
           <Accordion
             type='multiple'
