@@ -268,18 +268,35 @@ function generateChartColors(primary: OklchColor): string[] {
 }
 
 /**
- * Generate random vibrant colors for charts
+ * Generate random vibrant colors for charts with sufficient separation
  */
 export function generateRandomChartColors(): string[] {
   const colors: string[] = [];
+  
+  // Start with a random base hue
+  const baseHue = Math.random() * 360;
+  
+  // Space colors evenly around the color wheel (72 degrees apart for 5 colors)
+  // Add some variation (±15 degrees) to make it feel more random
+  const hueSpacing = 360 / 5; // 72 degrees
+  
   for (let i = 0; i < 5; i++) {
-    // Generate random hue (0-360), with good chroma and lightness for visibility
-    const hue = Math.random() * 360;
-    const chroma = 0.15 + Math.random() * 0.15; // 0.15 to 0.3
-    const lightness = 0.4 + Math.random() * 0.3; // 0.4 to 0.7
+    // Calculate base hue position with variation
+    const hueVariation = (Math.random() - 0.5) * 30; // ±15 degrees variation
+    const hue = (baseHue + i * hueSpacing + hueVariation) % 360;
+    
+    // Vary chroma and lightness for visual distinction while maintaining visibility
+    // Use different ranges for each color to ensure variety
+    const chromaVariation = 0.1 + (Math.sin(i * 1.2) * 0.1 + 0.1); // 0.1 to 0.3
+    const lightnessVariation = 0.45 + (Math.cos(i * 0.8) * 0.15); // 0.3 to 0.6
+    
+    const chroma = Math.max(0.12, Math.min(0.3, chromaVariation));
+    const lightness = Math.max(0.35, Math.min(0.75, lightnessVariation));
+    
     const color: OklchColor = { l: lightness, c: chroma, h: hue };
     colors.push(oklchToCss(color));
   }
+  
   return colors;
 }
 

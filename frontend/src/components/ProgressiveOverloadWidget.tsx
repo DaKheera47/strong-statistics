@@ -454,12 +454,12 @@ export default function ProgressiveOverloadWidget() {
                     yAxisId='L'
                     type='monotone'
                     dataKey='current'
-                    stroke={colors.primary}
+                    stroke={chartColors[0]}
                     strokeWidth={3}
-                    dot={{ fill: colors.primary, r: isMobile ? 3 : 4 }}
+                    dot={{ fill: chartColors[0], r: isMobile ? 3 : 4 }}
                     activeDot={{
                       r: isMobile ? 5 : 6,
-                      stroke: colors.primary,
+                      stroke: chartColors[0],
                       strokeWidth: 2,
                       fill: colors.background,
                     }}
@@ -523,7 +523,7 @@ export default function ProgressiveOverloadWidget() {
               />
               <LegendItem
                 label={currentLegendLabel}
-                color={colors.primary}
+                color={chartColors[0]}
                 thick
               />
             </div>
