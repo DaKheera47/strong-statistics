@@ -4,6 +4,7 @@ import { useMemo, useEffect, useState } from 'react';
 import { useRepRangeDistribution } from '@/hooks/useRepRangeDistribution';
 import { BarChart, Bar, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { useChartColors } from '@/hooks/useChartColors';
+import { getChartColors } from '@/lib/colors';
 import { ExerciseFilter, getRecentExercises } from './exercise-filter';
 import { useExerciseSelection } from '@/hooks/useExerciseSelection';
 import { WidgetWrapper } from './WidgetWrapper';
@@ -27,15 +28,16 @@ interface RepRangeCardProps {
 
 function RepRangeCard({ exercise, data }: RepRangeCardProps) {
   const colors = useChartColors();
+  const chartColors = getChartColors();
   const showDistance = shouldDisplayDistance(exercise);
   const distanceUnit = getDistanceUnit(exercise);
   
-  // Custom colors for each rep range (or distance range for kettlebell carries)
+  // Use chart colors for each rep range (or distance range for kettlebell carries)
   const repRangeColors = {
-    range_1_5: '#ef4444',      // Red - Heavy/Strength
-    range_6_12: '#3b82f6',     // Blue - Hypertrophy 
-    range_13_20: '#10b981',    // Green - Endurance
-    range_20_plus: '#f59e0b'   // Amber - High endurance
+    range_1_5: chartColors[4] || '#ef4444',      // Chart 5 - Heavy/Strength
+    range_6_12: chartColors[0] || '#3b82f6',     // Chart 1 - Hypertrophy 
+    range_13_20: chartColors[1] || '#10b981',    // Chart 2 - Endurance
+    range_20_plus: chartColors[3] || '#f59e0b'   // Chart 4 - High endurance
   };
 
   // Filter out days with no sets

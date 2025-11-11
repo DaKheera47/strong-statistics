@@ -13,6 +13,7 @@ import {
   CartesianGrid,
 } from "recharts";
 import { useChartColors } from "@/hooks/useChartColors";
+import { getChartColors } from "@/lib/colors";
 import { WidgetWrapper } from "./WidgetWrapper";
 import { WidgetHeader } from "./WidgetHeader";
 import { AccordionContent } from "./ui/accordion";
@@ -20,6 +21,7 @@ import { AccordionContent } from "./ui/accordion";
 export default function SessionVolumeTrend() {
   const { data, loading, error } = useSessionVolumeTrend();
   const colors = useChartColors();
+  const chartColors = getChartColors();
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -153,19 +155,19 @@ export default function SessionVolumeTrend() {
               />
               <Bar
                 dataKey='volume'
-                fill={colors.primary}
+                fill={chartColors[0]}
                 radius={[2, 2, 0, 0]}
                 opacity={0.8}
               />
               <Line
                 type='monotone'
                 dataKey='trendLine'
-                stroke={colors.secondary || "#ef4444"}
+                stroke={chartColors[1]}
                 strokeWidth={2}
                 dot={false}
                 activeDot={{
                   r: 4,
-                  stroke: colors.secondary || "#ef4444",
+                  stroke: chartColors[1],
                   strokeWidth: 2,
                   fill: colors.background,
                 }}

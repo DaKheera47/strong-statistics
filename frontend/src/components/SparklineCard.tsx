@@ -2,6 +2,7 @@
 
 import { LineChart, Line, ResponsiveContainer, Tooltip, YAxis } from "recharts";
 import { useChartColors } from "@/hooks/useChartColors";
+import { getChartColors } from "@/lib/colors";
 import { cn } from "@/lib/utils";
 
 interface SparklineCardProps {
@@ -22,6 +23,7 @@ export function SparklineCard({
   delta,
 }: SparklineCardProps) {
   const colors = useChartColors();
+  const chartColors = getChartColors();
   const deltaColor =
     delta > 0
       ? "text-green-600 dark:text-green-400"
@@ -68,12 +70,12 @@ export function SparklineCard({
             <Line
               type='monotone'
               dataKey='volume'
-              stroke={colors.primary}
+              stroke={chartColors[0]}
               strokeWidth={1.5}
-              dot={{ fill: colors.primary, r: 2 }}
+              dot={{ fill: chartColors[0], r: 2 }}
               activeDot={{
                 r: 3,
-                stroke: colors.primary,
+                stroke: chartColors[0],
                 strokeWidth: 2,
                 fill: colors.background,
               }}

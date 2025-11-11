@@ -35,8 +35,15 @@ export function useThemeColors() {
     const savedPalette = getThemeColors();
     const savedCustomChartColors = getCustomChartColors();
 
-    if (savedCustomChartColors) {
+    if (savedCustomChartColors && savedCustomChartColors.length === 5) {
       setCustomChartColorsState(savedCustomChartColors);
+      // Apply chart colors immediately to CSS variables
+      if (typeof window !== "undefined") {
+        const root = document.documentElement;
+        savedCustomChartColors.forEach((color, index) => {
+          root.style.setProperty(`--chart-${index + 1}`, color);
+        });
+      }
     }
 
     if (savedPrimary && savedPalette) {
@@ -149,8 +156,23 @@ export function useThemeColors() {
 
   // Apply colors when palette, custom chart colors, or theme changes
   useEffect(() => {
-    if (isLoaded && colorPalette) {
+    if (!isLoaded) return;
+
+    if (colorPalette) {
       applyColorsToCSS(colorPalette);
+    } else if (customChartColors && customChartColors.length === 5) {
+      // Apply chart colors even if no theme palette exists
+      // Apply to both light and dark mode (chart colors work for both)
+      const root = document.documentElement;
+      customChartColors.forEach((color, index) => {
+        root.style.setProperty(`--chart-${index + 1}`, color);
+      });
+    } else {
+      // Clear custom chart colors to use defaults
+      const root = document.documentElement;
+      for (let i = 1; i <= 5; i++) {
+        root.style.removeProperty(`--chart-${i}`);
+      }
     }
   }, [colorPalette, customChartColors, resolvedTheme, isLoaded, applyColorsToCSS]);
 
