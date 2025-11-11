@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { getChartColors } from "@/lib/colors";
 import { WidgetHeader } from "./WidgetHeader";
 import { WidgetWrapper } from "./WidgetWrapper";
 import { AccordionContent } from "./ui/accordion";
@@ -59,6 +60,8 @@ function WorkoutCard({
 }: WorkoutCardProps) {
   const { dayName, date } = formatDate(workout.date);
   const duration = formatDuration(workout.duration_minutes);
+  const chartColors = getChartColors();
+  const iconColor = chartColors[0] || "#8b5cf6";
 
   // Get exercises with their set counts and best sets
   const exercisesWithSets =
@@ -92,13 +95,14 @@ function WorkoutCard({
             {dayName}, {date}
           </p>
         </div>
-        <div className='text-purple-500'>
+        <div>
           <svg
             width='24'
             height='24'
             viewBox='0 0 24 24'
             fill='none'
             className='inline'
+            style={{ color: iconColor }}
           >
             <circle
               cx='12'
