@@ -1,5 +1,47 @@
 "use client"
 
+import { oklchToHex, hexToOklch, OklchColor } from "./theme-colors";
+
+/**
+ * Parse OKLCH CSS string to OKLCH object
+ */
+function parseOklch(oklchString: string): OklchColor | null {
+  const match = oklchString.match(/oklch\(([\d.]+)\s+([\d.]+)\s+([\d.]+)\)/);
+  if (!match) return null;
+  return {
+    l: parseFloat(match[1]),
+    c: parseFloat(match[2]),
+    h: parseFloat(match[3]),
+  };
+}
+
+/**
+ * Convert OKLCH CSS string to hex color
+ */
+export function oklchCssToHex(oklchString: string): string {
+  const oklch = parseOklch(oklchString);
+  if (!oklch) {
+    // Fallback: try to use browser's computed color
+    if (typeof window !== "undefined") {
+      const div = document.createElement("div");
+      div.style.color = oklchString;
+      document.body.appendChild(div);
+      const computed = window.getComputedStyle(div).color;
+      document.body.removeChild(div);
+      // Convert rgb() to hex
+      const rgbMatch = computed.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+      if (rgbMatch) {
+        const r = parseInt(rgbMatch[1]).toString(16).padStart(2, "0");
+        const g = parseInt(rgbMatch[2]).toString(16).padStart(2, "0");
+        const b = parseInt(rgbMatch[3]).toString(16).padStart(2, "0");
+        return `#${r}${g}${b}`;
+      }
+    }
+    return "#000000";
+  }
+  return oklchToHex(oklch);
+}
+
 /**
  * Get chart colors from CSS variables (supports custom theme colors)
  * Returns an array of 5 chart colors that can be used for data visualization

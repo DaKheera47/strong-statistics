@@ -7,9 +7,14 @@ import {
   setPrimaryColor,
   getThemeColors,
   setThemeColors,
+  getCustomChartColors,
+  setCustomChartColors,
 } from "@/lib/localStorage";
 import {
   generateThemePalette,
+  generateRandomChartColors,
+  hexToOklch,
+  oklchToCss,
   ThemeColorPalette,
 } from "@/lib/theme-colors";
 
@@ -21,12 +26,18 @@ export function useThemeColors() {
   const { theme, resolvedTheme } = useTheme();
   const [primaryColor, setPrimaryColorState] = useState<string | null>(null);
   const [colorPalette, setColorPaletteState] = useState<ThemeColorPalette | null>(null);
+  const [customChartColors, setCustomChartColorsState] = useState<string[] | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
 
   // Load colors from localStorage on mount
   useEffect(() => {
     const savedPrimary = getPrimaryColor();
     const savedPalette = getThemeColors();
+    const savedCustomChartColors = getCustomChartColors();
+
+    if (savedCustomChartColors) {
+      setCustomChartColorsState(savedCustomChartColors);
+    }
 
     if (savedPrimary && savedPalette) {
       setPrimaryColorState(savedPrimary);
@@ -92,6 +103,15 @@ export function useThemeColors() {
       const isDark = resolvedTheme === "dark";
       const modePalette = isDark ? palette.dark : palette.light;
 
+      // Use custom chart colors if set, otherwise use palette colors
+      const chartColors = customChartColors || [
+        modePalette.chart1,
+        modePalette.chart2,
+        modePalette.chart3,
+        modePalette.chart4,
+        modePalette.chart5,
+      ];
+
       // Apply light mode colors (base)
       root.style.setProperty("--primary", palette.light.primary);
       root.style.setProperty("--primary-foreground", palette.light.primaryForeground);
@@ -101,11 +121,11 @@ export function useThemeColors() {
       root.style.setProperty("--accent-foreground", palette.light.accentForeground);
       root.style.setProperty("--muted", palette.light.muted);
       root.style.setProperty("--muted-foreground", palette.light.mutedForeground);
-      root.style.setProperty("--chart-1", palette.light.chart1);
-      root.style.setProperty("--chart-2", palette.light.chart2);
-      root.style.setProperty("--chart-3", palette.light.chart3);
-      root.style.setProperty("--chart-4", palette.light.chart4);
-      root.style.setProperty("--chart-5", palette.light.chart5);
+      root.style.setProperty("--chart-1", chartColors[0] || palette.light.chart1);
+      root.style.setProperty("--chart-2", chartColors[1] || palette.light.chart2);
+      root.style.setProperty("--chart-3", chartColors[2] || palette.light.chart3);
+      root.style.setProperty("--chart-4", chartColors[3] || palette.light.chart4);
+      root.style.setProperty("--chart-5", chartColors[4] || palette.light.chart5);
 
       // Apply dark mode colors if dark mode is active
       if (isDark) {
@@ -117,22 +137,22 @@ export function useThemeColors() {
         root.style.setProperty("--accent-foreground", modePalette.accentForeground);
         root.style.setProperty("--muted", modePalette.muted);
         root.style.setProperty("--muted-foreground", modePalette.mutedForeground);
-        root.style.setProperty("--chart-1", modePalette.chart1);
-        root.style.setProperty("--chart-2", modePalette.chart2);
-        root.style.setProperty("--chart-3", modePalette.chart3);
-        root.style.setProperty("--chart-4", modePalette.chart4);
-        root.style.setProperty("--chart-5", modePalette.chart5);
+        root.style.setProperty("--chart-1", chartColors[0] || modePalette.chart1);
+        root.style.setProperty("--chart-2", chartColors[1] || modePalette.chart2);
+        root.style.setProperty("--chart-3", chartColors[2] || modePalette.chart3);
+        root.style.setProperty("--chart-4", chartColors[3] || modePalette.chart4);
+        root.style.setProperty("--chart-5", chartColors[4] || modePalette.chart5);
       }
     },
-    [resolvedTheme]
+    [resolvedTheme, customChartColors]
   );
 
-  // Apply colors when palette or theme changes
+  // Apply colors when palette, custom chart colors, or theme changes
   useEffect(() => {
     if (isLoaded && colorPalette) {
       applyColorsToCSS(colorPalette);
     }
-  }, [colorPalette, resolvedTheme, isLoaded, applyColorsToCSS]);
+  }, [colorPalette, customChartColors, resolvedTheme, isLoaded, applyColorsToCSS]);
 
   // Update primary color and regenerate palette
   const updatePrimaryColor = useCallback((hexColor: string) => {
@@ -191,12 +211,41 @@ export function useThemeColors() {
     }
   }, []);
 
+  // Update individual chart color (accepts hex, converts to OKLCH for storage)
+  const updateChartColor = useCallback((index: number, hexColor: string) => {
+    try {
+      const oklch = hexToOklch(hexColor);
+      const oklchCss = oklchToCss(oklch);
+      const newColors = customChartColors ? [...customChartColors] : Array(5).fill("");
+      newColors[index] = oklchCss;
+      setCustomChartColorsState(newColors);
+      setCustomChartColors(newColors);
+    } catch (error) {
+      console.error("Failed to update chart color:", error);
+    }
+  }, [customChartColors]);
+
+  // Set random chart colors
+  const setRandomChartColors = useCallback(() => {
+    const randomColors = generateRandomChartColors();
+    setCustomChartColorsState(randomColors);
+    setCustomChartColors(randomColors);
+  }, []);
+
+  // Reset chart colors to use generated ones
+  const resetChartColors = useCallback(() => {
+    setCustomChartColorsState(null);
+    setCustomChartColors(null);
+  }, []);
+
   // Reset to default colors
   const resetColors = useCallback(() => {
     setPrimaryColorState(null);
     setColorPaletteState(null);
+    setCustomChartColorsState(null);
     setPrimaryColor(null);
     setThemeColors(null);
+    setCustomChartColors(null);
 
     // Remove CSS variables to fall back to defaults
     if (typeof window !== "undefined") {
@@ -220,8 +269,12 @@ export function useThemeColors() {
   return {
     primaryColor,
     colorPalette,
+    customChartColors,
     isLoaded,
     updatePrimaryColor,
+    updateChartColor,
+    setRandomChartColors,
+    resetChartColors,
     resetColors,
   };
 }

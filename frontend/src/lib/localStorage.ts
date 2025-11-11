@@ -12,6 +12,7 @@ export const STORAGE_KEYS = {
   REP_RANGE_DISTRIBUTION_LIMIT: `${KEY_PREFIX}rep-range-distribution-limit`,
   THEME_COLORS: `${KEY_PREFIX}theme-colors`,
   PRIMARY_COLOR: `${KEY_PREFIX}primary-color`,
+  CUSTOM_CHART_COLORS: `${KEY_PREFIX}custom-chart-colors`,
 } as const;
 
 // Default limits
@@ -146,5 +147,23 @@ export function setThemeColors(colors: Record<string, string> | null): void {
     removeFromStorage(STORAGE_KEYS.THEME_COLORS);
   } else {
     setInStorage(STORAGE_KEYS.THEME_COLORS, colors);
+  }
+}
+
+/**
+ * Get custom chart colors from localStorage
+ */
+export function getCustomChartColors(): string[] | null {
+  return getFromStorage<string[] | null>(STORAGE_KEYS.CUSTOM_CHART_COLORS, null);
+}
+
+/**
+ * Set custom chart colors in localStorage
+ */
+export function setCustomChartColors(colors: string[] | null): void {
+  if (colors === null) {
+    removeFromStorage(STORAGE_KEYS.CUSTOM_CHART_COLORS);
+  } else {
+    setInStorage(STORAGE_KEYS.CUSTOM_CHART_COLORS, colors);
   }
 }

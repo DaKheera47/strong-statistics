@@ -268,6 +268,22 @@ function generateChartColors(primary: OklchColor): string[] {
 }
 
 /**
+ * Generate random vibrant colors for charts
+ */
+export function generateRandomChartColors(): string[] {
+  const colors: string[] = [];
+  for (let i = 0; i < 5; i++) {
+    // Generate random hue (0-360), with good chroma and lightness for visibility
+    const hue = Math.random() * 360;
+    const chroma = 0.15 + Math.random() * 0.15; // 0.15 to 0.3
+    const lightness = 0.4 + Math.random() * 0.3; // 0.4 to 0.7
+    const color: OklchColor = { l: lightness, c: chroma, h: hue };
+    colors.push(oklchToCss(color));
+  }
+  return colors;
+}
+
+/**
  * Generate a complete theme color palette from a primary color
  */
 export function generateThemePalette(primaryHex: string): ThemeColorPalette {
