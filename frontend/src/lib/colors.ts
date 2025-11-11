@@ -1,6 +1,6 @@
 "use client"
 
-import { oklchToHex, hexToOklch, OklchColor } from "./theme-colors";
+import { oklchToHex, OklchColor } from "./theme-colors";
 
 /**
  * Parse OKLCH CSS string to OKLCH object

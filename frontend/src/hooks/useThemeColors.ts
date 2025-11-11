@@ -23,7 +23,7 @@ import {
  * Handles loading from localStorage, generating color palettes, and applying to CSS variables
  */
 export function useThemeColors() {
-  const { theme, resolvedTheme } = useTheme();
+  const { resolvedTheme } = useTheme();
   const [primaryColor, setPrimaryColorState] = useState<string | null>(null);
   const [colorPalette, setColorPaletteState] = useState<ThemeColorPalette | null>(null);
   const [customChartColors, setCustomChartColorsState] = useState<string[] | null>(null);

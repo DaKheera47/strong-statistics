@@ -1,6 +1,5 @@
 "use client"
 
-import { useEffect } from "react";
 import { useThemeColors } from "@/hooks/useThemeColors";
 
 /**
@@ -8,13 +7,8 @@ import { useThemeColors } from "@/hooks/useThemeColors";
  * to CSS variables. Works alongside ThemeProvider for dark/light mode.
  */
 export function DynamicThemeProvider({ children }: { children: React.ReactNode }) {
-  const { isLoaded } = useThemeColors();
-
-  // Ensure colors are applied before rendering children
-  useEffect(() => {
-    // Colors are applied automatically by useThemeColors hook
-    // This component just ensures the hook is initialized
-  }, []);
+  // Initialize the hook to ensure colors are applied
+  useThemeColors();
 
   return <>{children}</>;
 }

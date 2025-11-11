@@ -8,7 +8,7 @@ import { useEffect, useState } from 'react'
  * Returns primary, secondary, and background colors that respect the current theme
  */
 export function useChartColors() {
-  const { theme, resolvedTheme } = useTheme()
+  const { resolvedTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
   const [colors, setColors] = useState({
     primary: '#3b82f6',

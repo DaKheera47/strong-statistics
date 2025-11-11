@@ -13,7 +13,6 @@ import { WidgetHeader } from "./WidgetHeader";
 import { AccordionContent } from "./ui/accordion";
 import { Button } from "./ui/button";
 import {
-  isLowerBetter,
   shouldDisplayDistance,
   getDistanceUnit,
 } from "@/lib/exercise-config";
@@ -39,7 +38,6 @@ function SparklineCard({
 }: SparklineCardProps) {
   const colors = useChartColors();
   const chartColors = getChartColors();
-  const lowerIsBetter = isLowerBetter(exercise);
   const showDistance = shouldDisplayDistance(exercise);
   const distanceUnit = getDistanceUnit(exercise);
 

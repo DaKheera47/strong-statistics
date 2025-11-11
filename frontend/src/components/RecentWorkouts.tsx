@@ -18,13 +18,6 @@ interface RecentWorkoutData {
   prs: number;
 }
 
-interface VolumeSparklineData {
-  exercise: string;
-  date: string;
-  volume: number;
-  sets: number;
-}
-
 // WorkoutDetailData is now imported from WorkoutDetailModal
 
 interface WorkoutCardProps {
@@ -223,7 +216,6 @@ export default function RecentWorkouts() {
   const [workoutDetails, setWorkoutDetails] = useState<
     Map<string, WorkoutDetailData>
   >(new Map());
-  const [sparklineData, setSparklineData] = useState<VolumeSparklineData[]>([]);
   const [selectedWorkout, setSelectedWorkout] =
     useState<WorkoutDetailData | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -268,17 +260,6 @@ export default function RecentWorkouts() {
 
         setWorkoutDetails(detailsMap);
 
-        // Fetch sparkline data
-        try {
-          const sparklineResponse = await fetch("/api/volume-sparklines");
-          if (sparklineResponse.ok) {
-            const sparklineData: VolumeSparklineData[] =
-              await sparklineResponse.json();
-            setSparklineData(sparklineData);
-          }
-        } catch (err) {
-          console.error("Failed to fetch sparkline data:", err);
-        }
       } catch (err) {
         setError(err instanceof Error ? err.message : "An error occurred");
       } finally {

@@ -2,7 +2,6 @@
 
 import { useSessionVolumeTrend } from "@/hooks/useSessionVolumeTrend";
 import {
-  BarChart,
   Bar,
   Line,
   ComposedChart,
