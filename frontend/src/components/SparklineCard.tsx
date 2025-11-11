@@ -1,8 +1,7 @@
 "use client";
 
 import { LineChart, Line, ResponsiveContainer, Tooltip, YAxis } from "recharts";
-import { useChartColors } from "@/hooks/useChartColors";
-import { getChartColors } from "@/lib/colors";
+import { useChartColors, useChartColorsArray } from "@/hooks/useChartColors";
 import { cn } from "@/lib/utils";
 
 interface SparklineCardProps {
@@ -23,7 +22,7 @@ export function SparklineCard({
   delta,
 }: SparklineCardProps) {
   const colors = useChartColors();
-  const chartColors = getChartColors();
+  const chartColors = useChartColorsArray();
   const deltaColor =
     delta > 0
       ? "text-green-600 dark:text-green-400"

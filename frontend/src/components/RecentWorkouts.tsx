@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getChartColors } from "@/lib/colors";
+import { useChartColorsArray } from "@/hooks/useChartColors";
 import { WidgetHeader } from "./WidgetHeader";
 import { WidgetWrapper } from "./WidgetWrapper";
 import { AccordionContent } from "./ui/accordion";
@@ -53,7 +53,7 @@ function WorkoutCard({
 }: WorkoutCardProps) {
   const { dayName, date } = formatDate(workout.date);
   const duration = formatDuration(workout.duration_minutes);
-  const chartColors = getChartColors();
+  const chartColors = useChartColorsArray();
   const iconColor = chartColors[0] || "#8b5cf6";
 
   // Get exercises with their set counts and best sets

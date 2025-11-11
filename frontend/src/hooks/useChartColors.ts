@@ -1,7 +1,8 @@
 "use client"
 
 import { useTheme } from 'next-themes'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
+import { getChartColors } from '@/lib/colors'
 
 /**
  * Hook to get chart colors from CSS variables (supports custom theme colors)
@@ -47,4 +48,32 @@ export function useChartColors() {
   }
 
   return colors
+}
+
+/**
+ * Hook to get chart colors array from CSS variables (memoized)
+ * Returns an array of 5 chart colors that can be used for data visualization
+ * This hook memoizes the result and only re-reads when theme changes
+ */
+export function useChartColorsArray(): string[] {
+  const { resolvedTheme } = useTheme()
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  return useMemo(() => {
+    if (!mounted) {
+      // SSR fallback
+      return [
+        '#3b82f6', // chart-1
+        '#10b981', // chart-2
+        '#8b5cf6', // chart-3
+        '#f59e0b', // chart-4
+        '#ef4444', // chart-5
+      ]
+    }
+    return getChartColors()
+  }, [mounted, resolvedTheme])
 }

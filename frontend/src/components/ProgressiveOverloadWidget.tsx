@@ -1,7 +1,6 @@
 "use client";
 
-import { useChartColors } from "@/hooks/useChartColors";
-import { getChartColors } from "@/lib/colors";
+import { useChartColors, useChartColorsArray } from "@/hooks/useChartColors";
 import { useExerciseSelection } from "@/hooks/useExerciseSelection";
 import {
   ProgressiveOverloadDataPoint,
@@ -72,7 +71,7 @@ export default function ProgressiveOverloadWidget() {
 
   const { data, loading, error } = useProgressiveOverloadData(selectedExercise);
   const colors = useChartColors();
-  const chartColors = getChartColors();
+  const chartColors = useChartColorsArray();
 
   const isMobile = useMediaQuery("(max-width: 640px)");
 
