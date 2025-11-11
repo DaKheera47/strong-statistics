@@ -3,8 +3,7 @@
 import { useMemo, useEffect, useState } from 'react';
 import { useRepRangeDistribution } from '@/hooks/useRepRangeDistribution';
 import { BarChart, Bar, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { useChartColors } from '@/hooks/useChartColors';
-import { getChartColors } from '@/lib/colors';
+import { useChartColorsArray } from '@/hooks/useChartColors';
 import { ExerciseFilter, getRecentExercises } from './exercise-filter';
 import { useExerciseSelection } from '@/hooks/useExerciseSelection';
 import { WidgetWrapper } from './WidgetWrapper';
@@ -27,8 +26,7 @@ interface RepRangeCardProps {
 }
 
 function RepRangeCard({ exercise, data }: RepRangeCardProps) {
-  const colors = useChartColors();
-  const chartColors = getChartColors();
+  const chartColors = useChartColorsArray();
   const showDistance = shouldDisplayDistance(exercise);
   const distanceUnit = getDistanceUnit(exercise);
   

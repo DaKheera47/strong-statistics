@@ -2,7 +2,6 @@ export const runtime = "nodejs";
 
 import { NextResponse } from "next/server";
 import { DatabaseSync } from "node:sqlite";
-import path from "path";
 
 export interface ExerciseWithLastActivity {
   name: string;

@@ -104,14 +104,21 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <DynamicThemeProvider>
-          <NuqsAdapter>
-            <Navbar />
-            <main className='container mx-auto px-4 max-w-7xl'>
-              {children}
-            </main>
-          </NuqsAdapter>
-        </DynamicThemeProvider>
+        <ThemeProvider
+          attribute='class'
+          defaultTheme='system'
+          enableSystem
+          disableTransitionOnChange
+        >
+          <DynamicThemeProvider>
+            <NuqsAdapter>
+              <Navbar />
+              <main className='container mx-auto px-4 max-w-7xl pt-28'>
+                {children}
+              </main>
+            </NuqsAdapter>
+          </DynamicThemeProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

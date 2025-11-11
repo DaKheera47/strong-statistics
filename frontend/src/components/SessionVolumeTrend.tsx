@@ -2,7 +2,6 @@
 
 import { useSessionVolumeTrend } from "@/hooks/useSessionVolumeTrend";
 import {
-  BarChart,
   Bar,
   Line,
   ComposedChart,
@@ -12,8 +11,7 @@ import {
   YAxis,
   CartesianGrid,
 } from "recharts";
-import { useChartColors } from "@/hooks/useChartColors";
-import { getChartColors } from "@/lib/colors";
+import { useChartColors, useChartColorsArray } from "@/hooks/useChartColors";
 import { WidgetWrapper } from "./WidgetWrapper";
 import { WidgetHeader } from "./WidgetHeader";
 import { AccordionContent } from "./ui/accordion";
@@ -21,7 +19,7 @@ import { AccordionContent } from "./ui/accordion";
 export default function SessionVolumeTrend() {
   const { data, loading, error } = useSessionVolumeTrend();
   const colors = useChartColors();
-  const chartColors = getChartColors();
+  const chartColors = useChartColorsArray();
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);

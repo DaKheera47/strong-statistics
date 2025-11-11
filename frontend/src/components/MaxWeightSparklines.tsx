@@ -4,8 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useMaxWeightData } from "@/hooks/useMaxWeightData";
 import { LineChart, Line, ResponsiveContainer, Tooltip, YAxis } from "recharts";
 import { cn } from "@/lib/utils";
-import { useChartColors } from "@/hooks/useChartColors";
-import { getChartColors } from "@/lib/colors";
+import { useChartColors, useChartColorsArray } from "@/hooks/useChartColors";
 import { ExerciseFilter, getRecentExercises } from "./exercise-filter";
 import { useExerciseSelection } from "@/hooks/useExerciseSelection";
 import { WidgetWrapper } from "./WidgetWrapper";
@@ -13,7 +12,6 @@ import { WidgetHeader } from "./WidgetHeader";
 import { AccordionContent } from "./ui/accordion";
 import { Button } from "./ui/button";
 import {
-  isLowerBetter,
   shouldDisplayDistance,
   getDistanceUnit,
 } from "@/lib/exercise-config";
@@ -38,8 +36,7 @@ function SparklineCard({
   delta,
 }: SparklineCardProps) {
   const colors = useChartColors();
-  const chartColors = getChartColors();
-  const lowerIsBetter = isLowerBetter(exercise);
+  const chartColors = useChartColorsArray();
   const showDistance = shouldDisplayDistance(exercise);
   const distanceUnit = getDistanceUnit(exercise);
 
