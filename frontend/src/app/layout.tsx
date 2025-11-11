@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
+import { DynamicThemeProvider } from "@/components/dynamic-theme-provider";
 import Script from "next/script";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 
@@ -108,11 +109,13 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <NuqsAdapter>
-            <main className='container mx-auto px-4 max-w-7xl'>
-              {children}
-            </main>
-          </NuqsAdapter>
+          <DynamicThemeProvider>
+            <NuqsAdapter>
+              <main className='container mx-auto px-4 max-w-7xl'>
+                {children}
+              </main>
+            </NuqsAdapter>
+          </DynamicThemeProvider>
         </ThemeProvider>
       </body>
     </html>

@@ -1,6 +1,44 @@
 "use client"
 
-export function getChartColors() {
+/**
+ * Get chart colors from CSS variables (supports custom theme colors)
+ * Returns an array of 5 chart colors that can be used for data visualization
+ */
+export function getChartColors(): string[] {
+  if (typeof window === 'undefined') {
+    return [
+      '#3b82f6', // chart-1
+      '#10b981', // chart-2
+      '#8b5cf6', // chart-3
+      '#f59e0b', // chart-4
+      '#ef4444', // chart-5
+    ];
+  }
+
+  const computedStyle = getComputedStyle(document.documentElement);
+  
+  // Get chart colors from CSS variables (these are set by custom theme or defaults)
+  const chart1 = computedStyle.getPropertyValue('--chart-1').trim();
+  const chart2 = computedStyle.getPropertyValue('--chart-2').trim();
+  const chart3 = computedStyle.getPropertyValue('--chart-3').trim();
+  const chart4 = computedStyle.getPropertyValue('--chart-4').trim();
+  const chart5 = computedStyle.getPropertyValue('--chart-5').trim();
+  
+  // Return chart colors (already in OKLCH format from CSS, or fallback to defaults)
+  return [
+    chart1 || 'oklch(0.646 0.222 41.116)',
+    chart2 || 'oklch(0.6 0.118 184.704)',
+    chart3 || 'oklch(0.398 0.07 227.392)',
+    chart4 || 'oklch(0.828 0.189 84.429)',
+    chart5 || 'oklch(0.769 0.188 70.08)',
+  ];
+}
+
+/**
+ * Get primary and background colors from CSS variables
+ * @deprecated Use getChartColors() for chart colors, or access CSS variables directly
+ */
+export function getPrimaryAndBackground() {
   if (typeof window === 'undefined') {
     return {
       primary: '#0f172a',
@@ -14,9 +52,9 @@ export function getChartColors() {
   const primary = computedStyle.getPropertyValue('--primary').trim()
   const background = computedStyle.getPropertyValue('--background').trim()
   
-  // Convert OKLCH to hex if needed, or return fallback colors
+  // Return colors (already in OKLCH format from CSS, or fallback)
   return {
-    primary: primary ? `hsl(${primary})` : '#0f172a',
-    background: background ? `hsl(${background})` : '#ffffff'
+    primary: primary || 'oklch(0.205 0 0)',
+    background: background || 'oklch(1 0 0)'
   }
 }

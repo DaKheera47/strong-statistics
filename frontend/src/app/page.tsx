@@ -32,6 +32,9 @@ export default function Home() {
               <Link href='/workouts'>
                 <Button variant='outline'>All Workouts</Button>
               </Link>
+              <Link href='/settings'>
+                <Button variant='outline'>Settings</Button>
+              </Link>
               <ThemeToggle />
             </div>
           </div>

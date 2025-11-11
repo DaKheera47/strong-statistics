@@ -10,6 +10,8 @@ export const STORAGE_KEYS = {
   VOLUME_SPARKLINES_LIMIT: `${KEY_PREFIX}volume-sparklines-limit`,
   MAX_WEIGHT_SPARKLINES_LIMIT: `${KEY_PREFIX}max-weight-sparklines-limit`,
   REP_RANGE_DISTRIBUTION_LIMIT: `${KEY_PREFIX}rep-range-distribution-limit`,
+  THEME_COLORS: `${KEY_PREFIX}theme-colors`,
+  PRIMARY_COLOR: `${KEY_PREFIX}primary-color`,
 } as const;
 
 // Default limits
@@ -109,4 +111,40 @@ export function getRepRangeDistributionLimit(): number {
  */
 export function setRepRangeDistributionLimit(limit: number): void {
   setInStorage(STORAGE_KEYS.REP_RANGE_DISTRIBUTION_LIMIT, limit);
+}
+
+/**
+ * Get primary color from localStorage
+ */
+export function getPrimaryColor(): string | null {
+  return getFromStorage<string | null>(STORAGE_KEYS.PRIMARY_COLOR, null);
+}
+
+/**
+ * Set primary color in localStorage
+ */
+export function setPrimaryColor(color: string | null): void {
+  if (color === null) {
+    removeFromStorage(STORAGE_KEYS.PRIMARY_COLOR);
+  } else {
+    setInStorage(STORAGE_KEYS.PRIMARY_COLOR, color);
+  }
+}
+
+/**
+ * Get theme color palette from localStorage
+ */
+export function getThemeColors(): Record<string, string> | null {
+  return getFromStorage<Record<string, string> | null>(STORAGE_KEYS.THEME_COLORS, null);
+}
+
+/**
+ * Set theme color palette in localStorage
+ */
+export function setThemeColors(colors: Record<string, string> | null): void {
+  if (colors === null) {
+    removeFromStorage(STORAGE_KEYS.THEME_COLORS);
+  } else {
+    setInStorage(STORAGE_KEYS.THEME_COLORS, colors);
+  }
 }
