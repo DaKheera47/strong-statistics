@@ -19,6 +19,7 @@ const navItems = [
   { href: "/", label: "Dashboard" },
   { href: "/workouts", label: "All Workouts" },
   { href: "/webui-ingest", label: "Ingest CSV" },
+  { href: "/settings", label: "Settings" },
 ];
 
 export const Navbar = () => {
