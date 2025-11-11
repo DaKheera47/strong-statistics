@@ -18,6 +18,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 
 interface ExerciseWithLastActivity {
   name: string;
@@ -105,7 +106,7 @@ export function ExerciseSelector({ value, onValueChange, exercises }: ExerciseSe
                     key={exercise.name}
                     onSelect={() => handleSelect(exercise.name)}
                   >
-                    <Checkbox 
+                    <Checkbox
                       checked={value.includes(exercise.name)}
                       className="mr-2"
                     />
@@ -115,9 +116,16 @@ export function ExerciseSelector({ value, onValueChange, exercises }: ExerciseSe
                       {exercise.name}
                     </span>
                     {!isRecent && (
-                      <span className="ml-auto text-xs text-muted-foreground">
-                        inactive
-                      </span>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="ml-auto text-xs text-muted-foreground">
+                            inactive
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          No activity in the last 2 weeks
+                        </TooltipContent>
+                      </Tooltip>
                     )}
                   </CommandItem>
                 );

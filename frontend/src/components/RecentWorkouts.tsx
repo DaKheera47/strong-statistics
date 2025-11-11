@@ -259,7 +259,6 @@ export default function RecentWorkouts() {
         }
 
         setWorkoutDetails(detailsMap);
-
       } catch (err) {
         setError(err instanceof Error ? err.message : "An error occurred");
       } finally {
@@ -376,7 +375,7 @@ export default function RecentWorkouts() {
           isAccordion={true}
         />
         <AccordionContent className='space-y-4'>
-          <div className='grid grid-cols-1 gap-4'>
+          <div className='grid grid-cols-1 lg:grid-cols-2 gap-4'>
             {workouts.map((workout) => {
               const key = `${workout.date}-${workout.workout_name}`;
               const detail = workoutDetails.get(key);
