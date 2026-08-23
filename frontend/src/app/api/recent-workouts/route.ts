@@ -3,6 +3,16 @@ export const runtime = "nodejs";
 import { NextResponse } from "next/server";
 import { DatabaseSync } from "node:sqlite";
 
+function normalizeSetFlag(value: unknown): boolean {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "number") return value !== 0;
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    return normalized === "1" || normalized === "true" || normalized === "yes";
+  }
+  return false;
+}
+
 export interface RecentWorkoutData {
   date: string;
   workout_name: string;
@@ -26,6 +36,8 @@ export interface WorkoutDetailData {
       distance: number | null;
       seconds: number | null;
       estimated_1rm: number | null;
+      is_warmup: boolean;
+      is_failure: boolean;
     }[];
   }[];
 }
@@ -43,6 +55,8 @@ interface RawSetRow {
   seconds: number | null;
   id: number;
   estimated_1rm: number | null;
+  is_warmup: unknown;
+  is_failure: unknown;
 }
 
 // Internal structure for grouping sets per exercise
@@ -53,6 +67,8 @@ interface SetEntry {
   distance: number | null;
   seconds: number | null;
   estimated_1rm: number | null;
+  is_warmup: boolean;
+  is_failure: boolean;
 }
 
 export async function GET(request: Request) {
@@ -66,6 +82,12 @@ export async function GET(request: Request) {
 
     if (workoutDate && workoutName) {
       // Fetch detailed workout data
+      const pragmaColumns = db.prepare("PRAGMA table_info(sets)").all() as unknown as {
+        name: string;
+      }[];
+      const setColumns = new Set(pragmaColumns.map((column) => column.name));
+      const warmupColumn = setColumns.has("is_warmup") ? "is_warmup" : setColumns.has("warmup") ? "warmup" : null;
+      const failureColumn = setColumns.has("is_failure") ? "is_failure" : setColumns.has("failure") ? "failure" : null;
       const query = `
         SELECT 
           date,
@@ -82,7 +104,9 @@ export async function GET(request: Request) {
             WHEN weight IS NOT NULL AND reps IS NOT NULL AND reps > 0 
             THEN weight * (1 + reps / 30.0)
             ELSE NULL
-          END as estimated_1rm
+          END as estimated_1rm,
+          COALESCE(${warmupColumn ?? "0"}, 0) as is_warmup,
+          COALESCE(${failureColumn ?? "0"}, 0) as is_failure
         FROM sets
         WHERE date = ? AND workout_name = ?
         ORDER BY id
@@ -123,6 +147,8 @@ export async function GET(request: Request) {
           distance: row.distance,
           seconds: row.seconds,
           estimated_1rm: row.estimated_1rm,
+          is_warmup: normalizeSetFlag(row.is_warmup),
+          is_failure: normalizeSetFlag(row.is_failure),
         });
       });
 
